@@ -89,3 +89,10 @@ function Root() {
 }
 
 createRoot(document.getElementById('root')).render(<Root />);
+
+// PWA: ติดตั้งได้ + offline บางส่วน
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

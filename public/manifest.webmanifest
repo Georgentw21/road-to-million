@@ -1,0 +1,15 @@
+{
+  "name": "Road To Million Journal",
+  "short_name": "RTM Journal",
+  "description": "บันทึกการเทรดส่วนตัว — เส้นทางสู่ล้านแรก",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08080B",
+  "theme_color": "#0e0e13",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

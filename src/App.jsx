@@ -116,6 +116,8 @@ class App extends React.Component {
     editVisionId: null,
     goal: 1000000,
     editGoal: false,
+    // tags / อารมณ์
+    tags: ['ตามแผน', 'อดทนดี', 'FOMO', 'Revenge', 'รีบเข้า', 'ฝืนเทรนด์'],
     // setups
     setups: [
       { id: 's1', name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
@@ -151,7 +153,7 @@ class App extends React.Component {
       weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), preItems: clone(s.preItems),
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
-      goal: s.goal, trades: [], images: {},
+      goal: s.goal, tags: clone(s.tags), trades: [], images: {},
     };
   })();
 
@@ -225,7 +227,7 @@ class App extends React.Component {
       weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, preItems: s.preItems,
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
-      goal: s.goal,
+      goal: s.goal, tags: s.tags,
     };
   }
   _persist() {
@@ -294,7 +296,7 @@ class App extends React.Component {
 
   _seedTrades() {
     const T = (id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, et, xt, notes, status) =>
-      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, lot: '1.0', entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1' });
+      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, lot: '1.0', entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1', tags: pnl > 0 ? ['ตามแผน'] : (pnl < 0 ? ['รีบเข้า'] : []) });
     return [
       T('t1', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'London', '2418.5', '2410.0', '2440.0', 2.1, 1240, '2026-06-22T13:30', '2026-06-22T16:45', 'เทรนด์ขาขึ้นชัด เข้าที่ pullback EMA20 ตรงแผน', 'CLOSED'),
       T('t2', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'New York', '2435.0', '2428.0', '2455.0', 2.5, 0, '2026-06-22T19:10', '', 'ไม้ที่สองของวัน รอ target', 'OPEN'),
@@ -368,6 +370,10 @@ class App extends React.Component {
   delVision(id) { const v = this.state.visionItems.filter(x => x.id !== id); this.setState({ visionItems: v }); this._save('rtm_vision', v); }
   editVision(id) { this.setState({ editVisionId: id }); }
   commitVision(id, e) { const t = e && e.target ? e.target.value : ''; const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
+  // ===== tags =====
+  toggleDraftTag(tag) { const d = this.state.draft; if (!d) return; const has = (d.tags || []).includes(tag); const tags = has ? d.tags.filter(x => x !== tag) : [...(d.tags || []), tag]; this.setState({ draft: { ...d, tags } }); }
+  addTag(name) { name = (name || '').trim(); if (!name) return; let tags = this.state.tags; if (!tags.includes(name)) tags = tags.concat([name]); const d = this.state.draft; const dtags = d ? ((d.tags || []).includes(name) ? d.tags : [...(d.tags || []), name]) : []; this.setState({ tags, draft: d ? { ...d, tags: dtags } : d }); this._save(); }
+  delTagGlobal(name, e) { if (e) e.stopPropagation(); if (!window.confirm('ลบแท็ก "' + name + '" ออกจากรายการ?')) return; const tags = this.state.tags.filter(x => x !== name); this.setState({ tags }); this._save(); }
   startGoal() { this.setState({ editGoal: true }); }
   commitGoal(e) { const n = parseFloat(String(e && e.target ? e.target.value : '').replace(/[^0-9.]/g, '')) || 0; this.setState({ editGoal: false, goal: n > 0 ? n : 1000000 }); this._save(); }
   onGoalKey(e) { if (e.key === 'Enter') e.target.blur(); }
@@ -381,7 +387,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [] },
       draftIsNew: true, showTrade: true, showDay: false,
     });
   }
@@ -574,9 +580,43 @@ class App extends React.Component {
       { label: 'Max win streak', val: String(mw), color: GOLD }, { label: 'Max loss streak', val: String(ml), color: '#ECEAE3' },
     ];
 
+    // expectancy ($/ไม้) + current streak
+    const expectancy = closed.length ? net / closed.length : 0;
+    let cs = 0, sign = 0;
+    for (let i = chrono.length - 1; i >= 0; i--) { const p = chrono[i].pnl; const s = p > 0 ? 1 : (p < 0 ? -1 : 0); if (s === 0) continue; if (sign === 0) { sign = s; cs = 1; } else if (s === sign) cs++; else break; }
+    const curStreakStr = sign === 0 ? '—' : (sign > 0 ? ('ชนะ ' + cs + ' ไม้ติด') : ('แพ้ ' + cs + ' ไม้ติด'));
+    const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#ECEAE3');
+
+    // drawdown (underwater) chart
+    let peak2 = curve[0]; const dd = [];
+    curve.forEach(v => { if (v > peak2) peak2 = v; dd.push(peak2 > 0 ? (peak2 - v) / peak2 * 100 : 0); });
+    const maxDDv = Math.max(0.0001, ...dd);
+    const Wd = 640, Hd = 120;
+    const xd = (i) => np <= 1 ? 0 : (i / (np - 1)) * Wd;
+    const yd = (d) => (d / maxDDv) * (Hd - 10);
+    const ddLine = dd.map((d, i) => (i === 0 ? 'M' : 'L') + xd(i).toFixed(1) + ' ' + yd(d).toFixed(1)).join(' ');
+    const ddArea = ddLine + ` L${Wd} 0 L0 0 Z`;
+
+    // by symbol
+    const symMap = {};
+    closed.forEach(t => { const k = t.sym || '—'; const m = symMap[k] || (symMap[k] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; });
+    const symArr = Object.keys(symMap).map(k => ({ name: k, net: symMap[k].net, n: symMap[k].n, wr: symMap[k].n ? Math.round(symMap[k].w / symMap[k].n * 100) : 0 }));
+    const symMaxAbs = Math.max(1, ...symArr.map(s => Math.abs(s.net)));
+    const symbolBars = symArr.sort((a, b) => b.net - a.net).map(s => ({ name: s.name, meta: s.n + 't · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / symMaxAbs * 100) + '%' }));
+
+    // by tag / อารมณ์
+    const tagMap = {};
+    closed.forEach(t => (t.tags || []).forEach(tag => { const m = tagMap[tag] || (tagMap[tag] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; }));
+    const tagArr = Object.keys(tagMap).map(tag => ({ name: tag, net: tagMap[tag].net, n: tagMap[tag].n, wr: tagMap[tag].n ? Math.round(tagMap[tag].w / tagMap[tag].n * 100) : 0 }));
+    const tagMaxAbs = Math.max(1, ...tagArr.map(s => Math.abs(s.net)));
+    const tagStats = tagArr.sort((a, b) => a.net - b.net).map(s => ({ name: s.name, meta: s.n + ' ไม้ · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
+
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
     const progPct = Math.max(0, Math.min(100, equity / g * 100));
     return {
+      expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
+      ddLine, ddArea, symbolBars, tagStats,
+      maxWinStreak: String(mw), maxLossStreak: String(ml),
       kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       kNet: fm(net), kNetColor: pc(net), kWin: winRate.toFixed(1) + '%',
       kPf: grossL ? pf.toFixed(2) : (grossP > 0 ? '∞' : '0.00'),
@@ -843,6 +883,9 @@ class App extends React.Component {
         setStop: (e) => this.setD('stop', e.target.value), setTarget: (e) => this.setD('target', e.target.value),
         setRR: (e) => this.setD('rr', e.target.value), setPnl: (e) => this.setD('pnl', e.target.value),
         setLot: (e) => this.setD('lot', e.target.value),
+        dTags: d.tags || [], tagList: st.tags,
+        toggleTag: (tag) => this.toggleDraftTag(tag), delTag: (tag, e) => this.delTagGlobal(tag, e),
+        addTagKey: (e) => { if (e.key === 'Enter') { this.addTag(e.target.value); e.target.value = ''; } },
         setStatus: (e) => this.setD('status', e.target.value), setEntryTime: (e) => this.setD('entryTime', e.target.value),
         setExitTime: (e) => this.setD('exitTime', e.target.value), setNotes: (e) => this.setD('notes', e.target.value),
         setBuy: () => this.setD('side', 'BUY'), setSell: () => this.setD('side', 'SELL'),
@@ -920,6 +963,9 @@ class App extends React.Component {
       setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length,
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       dowBars, sessionBars, rDist, anaStats, setupCards,
+      expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor,
+      ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats,
+      maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }),
@@ -1131,6 +1177,16 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>วิเคราะห์เชิงลึก <span style={css('font-style:italic;color:#E2C588')}>— รู้จุดแข็ง รู้จุดรั่ว</span></div></div>
+        <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
+          {[
+            { l: 'Expectancy / ไม้', v: V.expectancyStr, c: '#E2C588' },
+            { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
+            { l: 'Max Drawdown', v: V.anaDD, c: '#DC6A63' },
+            { l: 'สตรีคปัจจุบัน', v: V.curStreakStr, c: V.curStreakColor },
+          ].map((m, i) => (
+            <div key={i} className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600'), color: m.c }}>{m.v}</div></div>
+          ))}
+        </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
           <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .06s both;transition:.18s')}>
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L ตามวันในสัปดาห์</div>
@@ -1165,6 +1221,35 @@ class App extends React.Component {
                 <div key={i} style={css('padding:13px 15px;border-radius:11px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>{s.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:18px;font-weight:600'), color: s.color }}>{s.val}</div></div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px')}>
+          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Drawdown (ใต้น้ำ)</div><span style={css('font-size:11px;color:#5E5E68')}>ยิ่งลึก = ถอยจากจุดสูงสุดมาก</span></div>
+            <svg viewBox="0 0 640 120" preserveAspectRatio="none" style={css('width:100%;height:120px;display:block')}>
+              <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#DC6A63" stopOpacity="0"/><stop offset="100%" stopColor="#DC6A63" stopOpacity=".4"/></linearGradient></defs>
+              <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(255,255,255,.1)"/>
+              <path d={V.ddArea} fill="url(#ddg)"/>
+              <path className="eq-line" d={V.ddLine} fill="none" stroke="#DC6A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .26s both;transition:.18s')}>
+            <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:14px')}>P&amp;L ตาม Symbol</div>
+            <div style={css('display:flex;flex-direction:column;gap:11px')}>
+              {V.symbolBars.length ? V.symbolBars.map((s, i) => (
+                <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+              )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีข้อมูล</div>}
+            </div>
+          </div>
+        </div>
+
+        <div className="hv-brd-gold" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L ตาม Tag / อารมณ์ <span style={css('font-size:12px;color:#5E5E68;font-family:\'Plus Jakarta Sans\'')}>— แท็กไหนทำให้เสีย</span></div></div>
+          <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:11px 24px')}>
+            {V.tagStats.length ? V.tagStats.map((s, i) => (
+              <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+            )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีแท็กในเทรด — ใส่แท็กตอนบันทึกออเดอร์เพื่อดูว่าอารมณ์ไหนทำให้เสีย</div>}
           </div>
         </div>
       </div>
@@ -1413,6 +1498,21 @@ class App extends React.Component {
               <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#E2C588')}>{V.holdingDur}</div>
             </div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>บันทึก / เหตุผลที่เข้า</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="ทำไมถึงเข้าเทรดนี้? ตรงกับแผนไหม? อารมณ์ตอนเทรด?" rows="3" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.5')}></textarea></div>
+            <div>
+              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:9px;letter-spacing:.04em')}>Tags / อารมณ์ <span style={css('color:#5E5E68')}>(แตะเพื่อเลือก · ✕ ลบแท็ก · พิมพ์เพิ่มแล้ว Enter)</span></div>
+              <div style={css('display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px')}>
+                {V.tagList.map((tag) => {
+                  const on = V.dTags.includes(tag);
+                  return (
+                    <span key={tag} onClick={() => V.toggleTag(tag)} style={{ ...css('display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;font-size:12.5px;cursor:pointer;transition:.14s'), background: on ? 'rgba(201,166,95,.16)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (on ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.1)'), color: on ? '#E2C588' : '#9A9AA4' }}>
+                      {tag}
+                      <span onClick={(e) => V.delTag(tag, e)} className="hv-deltext" style={{ color: '#5E5E68', fontSize: 11 }}>✕</span>
+                    </span>
+                  );
+                })}
+              </div>
+              <input placeholder="เพิ่มแท็กใหม่ เช่น News, ข้ามแผน แล้วกด Enter" onKeyDown={V.addTagKey} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
+            </div>
             <div>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>รูปภาพ / สกรีนช็อตกราฟ <span style={css('color:#5E5E68')}>(แนบได้หลายรูป)</span></div><span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มรูป</span></div>
               <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>
