@@ -138,6 +138,7 @@ class App extends React.Component {
     // ui
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
+    calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
@@ -421,6 +422,7 @@ class App extends React.Component {
   }
   deleteTrade() { if (!window.confirm('ลบออเดอร์นี้?')) return; const arr = this.state.trades.filter(t => t.id !== this.state.draft.id); this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr); }
 
+  calStep(delta) { let m = this.state.calMonth + delta, y = this.state.calYear; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } this.setState({ calYear: y, calMonth: m }); }
   openDay(dateISO) { this.setState({ showDay: true, dayDate: dateISO }); }
   closeDay() { this.setState({ showDay: false }); }
 
@@ -734,19 +736,27 @@ class App extends React.Component {
       border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
     }));
 
-    // ---- calendar (June 2026) ----
+    // ---- calendar (เลือกเดือนได้) ----
+    const calYear = st.calYear, calMonth = st.calMonth; // calMonth 0-indexed
+    const monthPrefix = calYear + '-' + String(calMonth + 1).padStart(2, '0');
     const dayPnl = {}; const dayTradesMap = {};
     trades.forEach(t => {
+      if (String(t.date).slice(0, 7) !== monthPrefix) return;
       const dnum = parseInt(t.date.slice(8, 10), 10);
       if (!dayTradesMap[dnum]) { dayTradesMap[dnum] = []; dayPnl[dnum] = 0; }
       dayTradesMap[dnum].push(t);
       if (t.status !== 'OPEN') dayPnl[dnum] += t.pnl;
     });
-    const firstDow = new Date(2026, 5, 1).getDay();
-    const today = 22;
+    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const _now = new Date();
+    const isCurMonth = _now.getFullYear() === calYear && _now.getMonth() === calMonth;
+    const today = isCurMonth ? _now.getDate() : -1;
+    const calMonthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date(calYear, calMonth, 1));
+    const calMonthShort = new Intl.DateTimeFormat('th-TH', { month: 'long' }).format(new Date(calYear, calMonth, 1));
     const calDays = [];
     for (let i = 0; i < firstDow; i++) calDays.push({ day: '', pnl: '', trades: '', dot: '', bg: 'transparent', border: 'none', dayColor: 'transparent', fg: 'transparent', dotColor: 'transparent', cursor: 'default', click: null });
-    for (let d = 1; d <= 30; d++) {
+    for (let d = 1; d <= daysInMonth; d++) {
       const has = !!dayTradesMap[d];
       const isToday = d === today;
       if (!has) {
@@ -762,7 +772,7 @@ class App extends React.Component {
           bg, border: isToday ? '1.5px solid #E2C588' : '1px solid rgba(255,255,255,.07)',
           dayColor: isToday ? '#E2C588' : '#ECEAE3', fg: pc(v),
           cursor: 'pointer',
-          click: () => this.openDay('2026-06-' + String(d).padStart(2, '0')),
+          click: () => this.openDay(monthPrefix + '-' + String(d).padStart(2, '0')),
         });
       }
     }
@@ -770,16 +780,16 @@ class App extends React.Component {
 
     // weekly summary
     const wkRange = (a, b) => { let s = 0, td = 0; for (let d = a; d <= b; d++) { if (dayTradesMap[d]) { td += dayTradesMap[d].length; s += (dayPnl[d] || 0); } } return { s, td }; };
-    const wkDefs = [[1, 7, 'สัปดาห์ 1 · 1–7'], [8, 14, 'สัปดาห์ 2 · 8–14'], [15, 21, 'สัปดาห์ 3 · 15–21'], [22, 28, 'สัปดาห์ 4 · 22–28']];
+    const wkDefs = [[1, 7, 'สัปดาห์ 1 · 1–7'], [8, 14, 'สัปดาห์ 2 · 8–14'], [15, 21, 'สัปดาห์ 3 · 15–21'], [22, 31, 'สัปดาห์ 4 · 22–สิ้นเดือน']];
     const weeks = wkDefs.map(([a, b, label]) => { const r = wkRange(a, b); return { label, pnl: r.td ? this._fmtMoney(r.s) : '—', color: r.s >= 0 ? GREEN : RED, meta: r.td ? (r.td + ' ออเดอร์') : 'ไม่มีการเทรด' }; });
 
     // ---- mini heatmap ----
     const heat = [];
     for (let i = 0; i < firstDow; i++) heat.push({ label: '', bg: 'transparent', fg: 'transparent', border: 'none', title: '' });
-    for (let d = 1; d <= 30; d++) {
+    for (let d = 1; d <= daysInMonth; d++) {
       const has = !!dayTradesMap[d]; const isToday = d === today;
       if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : 'none', title: '' }); }
-      else { const v = dayPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' มิ.ย. · ' + this._fmtMoney(v) }); }
+      else { const v = dayPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' ' + calMonthShort + ' · ' + this._fmtMoney(v) }); }
     }
 
     // ---- analytics (จากเทรดจริง) ----
@@ -988,6 +998,7 @@ class App extends React.Component {
       logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value }),
       logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value }),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
+      calMonthLabel, calMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       dowBars, sessionBars, rDist, anaStats, setupCards,
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats,
@@ -1116,7 +1127,7 @@ class App extends React.Component {
             ))}
           </div>
           <div style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>มิถุนายน · P&amp;L รายวัน</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ปฏิทิน →</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.calMonthShort} · P&amp;L รายวัน</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ปฏิทิน →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
               {['อา','จ','อ','พ','พฤ','ศ','ส'].map((d,i)=>(<div key={i} style={css('text-align:center;font-size:9px;color:#5E5E68')}>{d}</div>))}
             </div>
@@ -1135,7 +1146,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>มิถุนายน 2026</div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3;min-width:200px;text-align:center')}>{V.calMonthLabel}</div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#5E5E68;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
