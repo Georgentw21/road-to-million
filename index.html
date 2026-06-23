@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Road To Million Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%}
+body{background:#08080B;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#ECEAE3;overflow:hidden}
+@keyframes rise{from{transform:translateY(16px)}to{transform:none}}
+@keyframes fade{from{transform:translateY(10px)}to{transform:none}}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-36px) scale(1.1)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-58px,34px) scale(1.14)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(95,192,141,.5)}70%{box-shadow:0 0 0 8px rgba(95,192,141,0)}100%{box-shadow:0 0 0 0 rgba(95,192,141,0)}}
+@keyframes sweep{0%{transform:translateX(-130%)}100%{transform:translateX(240%)}}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes pop{from{transform:scale(.96)}to{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rtm-scroll::-webkit-scrollbar{width:10px;height:10px}
+.rtm-scroll::-webkit-scrollbar-thumb{background:linear-gradient(#C9A65F,rgba(201,166,95,.35));border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+.rtm-scroll::-webkit-scrollbar-track{background:transparent}
+input,textarea,select{font-family:inherit}
+select option{background:#15151c;color:#ECEAE3}
+
+/* hover / focus states */
+.hv-nav:hover{color:#ECEAE3!important;background:rgba(255,255,255,.05)!important}
+.hv-addbtn:hover{transform:translateY(-3px)!important;box-shadow:0 16px 30px -10px rgba(201,166,95,.9)!important}
+.hv-addbtn:active{transform:translateY(-1px)!important}
+.hv-op:hover{opacity:.85}
+.hv-port:hover{border-color:rgba(201,166,95,.4)!important}
+.hv-k-gold:hover{background:rgba(201,166,95,.07)!important;transform:translateY(-2px)!important}
+.hv-k-green:hover{background:rgba(95,192,141,.07)!important;transform:translateY(-2px)!important}
+.hv-k-blue:hover{background:rgba(123,167,217,.07)!important;transform:translateY(-2px)!important}
+.hv-k-purple:hover{background:rgba(155,140,255,.07)!important;transform:translateY(-2px)!important}
+.hv-k-red:hover{background:rgba(220,106,99,.07)!important;transform:translateY(-2px)!important}
+.hv-brd-gold:hover{border-color:rgba(201,166,95,.22)!important}
+.hv-brd-green:hover{border-color:rgba(95,192,141,.25)!important}
+.hv-row:hover{background:rgba(201,166,95,.05)!important}
+.hv-scale:hover{transform:scale(1.12)!important}
+.hv-tab:hover{color:#ECEAE3!important}
+.hv-day:hover{transform:translateY(-2px)!important;border-color:rgba(201,166,95,.4)!important}
+.hv-lift:hover{transform:translateY(-1px)!important}
+.hv-setbtn:hover{transform:translateY(-2px)!important;box-shadow:0 12px 26px -12px rgba(201,166,95,.8)!important}
+.hv-card:hover{transform:translateY(-3px)!important;border-color:rgba(201,166,95,.25)!important;box-shadow:0 18px 40px -22px rgba(0,0,0,.8)!important}
+.hv-del:hover{color:#DC6A63!important;border-color:rgba(220,106,99,.4)!important;background:rgba(220,106,99,.08)!important}
+.hv-deltext:hover{color:#DC6A63!important}
+.hv-edittext:hover{color:#E2C588!important}
+.hv-chk:hover{background:rgba(201,166,95,.04)!important}
+.hv-goldbg:hover{background:rgba(201,166,95,.08)!important}
+.hv-close:hover{color:#ECEAE3!important;border-color:rgba(255,255,255,.25)!important}
+.hv-slide:hover{transform:translateX(3px)!important;border-color:rgba(201,166,95,.3)!important}
+.hv-save:hover{transform:translateY(-2px)!important;box-shadow:0 14px 30px -12px rgba(201,166,95,.8)!important}
+.hv-cancel:hover{color:#ECEAE3!important}
+.hv-deloutline:hover{background:rgba(220,106,99,.1)!important}
+.hv-visdel:hover{color:#DC6A63!important;border-color:rgba(220,106,99,.5)!important}
+.hv-period:hover{border-color:rgba(201,166,95,.4)!important}
+.hv-focus:focus{border-color:rgba(201,166,95,.5)!important}
+.hv-imgslot:hover{border-color:rgba(201,166,95,.45)!important;background:rgba(201,166,95,.05)!important}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
