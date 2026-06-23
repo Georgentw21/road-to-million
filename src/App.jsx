@@ -136,7 +136,21 @@ class App extends React.Component {
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
+    showReset: false,
   };
+
+  // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
+  _pristine = (() => {
+    const s = this.state;
+    const clone = (x) => JSON.parse(JSON.stringify(x));
+    return {
+      accountName: s.accountName, affirmation: s.affirmation, affirmDetails: clone(s.affirmDetails),
+      weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), preItems: clone(s.preItems),
+      checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
+      portfolios: clone(s.portfolios), currentPortfolioId: 'all',
+      trades: [], images: {},
+    };
+  })();
 
   componentDidMount() {
     this._tick();
@@ -224,6 +238,13 @@ class App extends React.Component {
   // ===== portfolios =====
   selectPortfolio(id) { this.setState({ currentPortfolioId: id, showPortMenu: false }); }
   openAccount() { this.setState({ showPortMenu: false, showUserMenu: false, view: 'account' }); }
+  // ===== reset journal =====
+  openReset() { this.setState({ showReset: true, showUserMenu: false }); }
+  closeReset() { this.setState({ showReset: false }); }
+  resetJournal() {
+    const d = JSON.parse(JSON.stringify(this._pristine));
+    this.setState({ ...d, showReset: false, showUserMenu: false, view: 'dashboard' }, () => { this._loaded = true; this._persist(); });
+  }
   setNewPortName(v) { this.setState({ newPortName: v }); }
   addPortfolioNamed() {
     const name = (this.state.newPortName || '').trim();
@@ -741,6 +762,7 @@ class App extends React.Component {
       avatarLetter: ((this.props.userEmail || st.accountName || 'G').trim().charAt(0) || 'G').toUpperCase(),
       userEmail: this.props.userEmail || '',
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
+      showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
       exportWord: () => this.exportWord(),
       stop: (e) => e.stopPropagation(),
       // KPI
@@ -1253,6 +1275,24 @@ class App extends React.Component {
     );
   }
 
+  renderResetModal(V) {
+    return (
+      <div onClick={V.closeReset} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
+        <div onClick={V.stop} style={css('width:440px;max-width:92vw;border-radius:20px;background:linear-gradient(180deg,#1a1014,#0e0e13);border:1px solid rgba(220,106,99,.3);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both;padding:28px 28px 24px;text-align:center')}>
+          <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </div>
+          <div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3;margin-bottom:10px')}>ล้างข้อมูลทั้งหมด?</div>
+          <div style={css('font-size:13.5px;color:#9A9AA4;line-height:1.6;margin-bottom:22px')}>การเทรด พอร์ต เช็กลิสต์ และรูปที่อ้างอิงไว้ จะถูกลบและกลับเป็นค่าเริ่มต้น <b style={css('color:#DC6A63')}>การกระทำนี้ย้อนกลับไม่ได้</b></div>
+          <div style={css('display:flex;gap:12px')}>
+            <div onClick={V.closeReset} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.14);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>ยกเลิก</div>
+            <div onClick={V.doReset} className="hv-deloutline" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(220,106,99,.5);background:rgba(220,106,99,.12);color:#DC6A63;font-size:14px;font-weight:700;cursor:pointer;transition:.14s')}>ยืนยันล้างข้อมูล</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   renderSetupModal(V) {
     return (
       <div onClick={V.closeSetup} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
@@ -1354,6 +1394,7 @@ class App extends React.Component {
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'บัญชีของฉัน'}</div>
                     <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>บัญชี &amp; พอร์ต</div>
                     <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Playbook · หลักคิด</div>
+                    <div onClick={V.openReset} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63', borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 4 }}>ล้างข้อมูลทั้งหมด (Reset)</div>
                     <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>ออกจากระบบ</div>
                   </div>
                 )}
@@ -1386,6 +1427,7 @@ class App extends React.Component {
         {V.showDay && this.renderDayModal(V)}
         {V.showTrade && this.renderTradeModal(V)}
         {V.showSetup && this.renderSetupModal(V)}
+        {V.showReset && this.renderResetModal(V)}
       </div>
     );
   }
