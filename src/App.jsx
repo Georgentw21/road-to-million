@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageSlot } from './ImageSlot.jsx';
-import { loadJournal, saveJournal } from './dataStore.js';
+import { loadJournal, saveJournal, getImageUrl } from './dataStore.js';
 import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
@@ -114,6 +114,8 @@ class App extends React.Component {
       { id: 'v3', title: 'อิสรภาพทางการเงิน' },
     ],
     editVisionId: null,
+    goal: 1000000,
+    editGoal: false,
     // setups
     setups: [
       { id: 's1', name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
@@ -137,6 +139,7 @@ class App extends React.Component {
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
     showReset: false,
+    exporting: false,
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -148,7 +151,7 @@ class App extends React.Component {
       weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), preItems: clone(s.preItems),
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
-      trades: [], images: {},
+      goal: s.goal, trades: [], images: {},
     };
   })();
 
@@ -222,6 +225,7 @@ class App extends React.Component {
       weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, preItems: s.preItems,
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
+      goal: s.goal,
     };
   }
   _persist() {
@@ -268,21 +272,29 @@ class App extends React.Component {
   _portfolioName(id) { const p = this.state.portfolios.find(x => x.id === id); return p ? p.name : '—'; }
 
   // ===== Word export =====
-  exportWord() {
+  async exportWord() {
     const cp = this.state.currentPortfolioId;
+    const imgs = this.state.images || {};
     const rows = this.state.trades
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === (this.state.portfolios[0] && this.state.portfolios[0].id)))
-      .map(t => ({
-        date: t.date, sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
-        session: t.session, portfolioName: this._portfolioName(t.portfolioId),
-        pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: t.rr || 0, status: t.status, notes: t.notes || '',
-      }));
-    exportWeeklyWord(rows, this.state.accountName);
+      .map(t => {
+        const urls = [];
+        for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
+        return {
+          date: t.date, sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
+          session: t.session, lot: (t.lot != null && t.lot !== '') ? String(t.lot) : '', portfolioName: this._portfolioName(t.portfolioId),
+          pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: t.rr || 0, status: t.status, notes: t.notes || '', images: urls,
+        };
+      });
+    this.setState({ exporting: true });
+    try { await exportWeeklyWord(rows, this.state.accountName); }
+    catch (e) { window.alert('สร้างไฟล์ Word ไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
+    finally { this.setState({ exporting: false }); }
   }
 
   _seedTrades() {
     const T = (id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, et, xt, notes, status) =>
-      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1' });
+      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, lot: '1.0', entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1' });
     return [
       T('t1', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'London', '2418.5', '2410.0', '2440.0', 2.1, 1240, '2026-06-22T13:30', '2026-06-22T16:45', 'เทรนด์ขาขึ้นชัด เข้าที่ pullback EMA20 ตรงแผน', 'CLOSED'),
       T('t2', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'New York', '2435.0', '2428.0', '2455.0', 2.5, 0, '2026-06-22T19:10', '', 'ไม้ที่สองของวัน รอ target', 'OPEN'),
@@ -356,6 +368,9 @@ class App extends React.Component {
   delVision(id) { const v = this.state.visionItems.filter(x => x.id !== id); this.setState({ visionItems: v }); this._save('rtm_vision', v); }
   editVision(id) { this.setState({ editVisionId: id }); }
   commitVision(id, e) { const t = e && e.target ? e.target.value : ''; const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
+  startGoal() { this.setState({ editGoal: true }); }
+  commitGoal(e) { const n = parseFloat(String(e && e.target ? e.target.value : '').replace(/[^0-9.]/g, '')) || 0; this.setState({ editGoal: false, goal: n > 0 ? n : 1000000 }); this._save(); }
+  onGoalKey(e) { if (e.key === 'Enter') e.target.blur(); }
 
   // ===== trades =====
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
@@ -366,7 +381,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf },
       draftIsNew: true, showTrade: true, showDay: false,
     });
   }
@@ -484,7 +499,7 @@ class App extends React.Component {
   }
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
-  _stats(trades, setups, portfolios, cpId, firstPf) {
+  _stats(trades, setups, portfolios, cpId, firstPf, goal) {
     const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
@@ -559,8 +574,8 @@ class App extends React.Component {
       { label: 'Max win streak', val: String(mw), color: GOLD }, { label: 'Max loss streak', val: String(ml), color: '#ECEAE3' },
     ];
 
-    const goal = 1000000;
-    const progPct = Math.max(0, Math.min(100, equity / goal * 100));
+    const g = Number(goal) > 0 ? Number(goal) : 1000000;
+    const progPct = Math.max(0, Math.min(100, equity / g * 100));
     return {
       kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       kNet: fm(net), kNetColor: pc(net), kWin: winRate.toFixed(1) + '%',
@@ -573,6 +588,7 @@ class App extends React.Component {
       dowBars, sessionBars, rDist, anaStats,
       milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
+      goalStr: '$' + Math.round(g).toLocaleString('en-US'), goalNum: g,
     };
   }
 
@@ -609,7 +625,7 @@ class App extends React.Component {
     });
 
     // ---- stats computed from real trades ----
-    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf);
+    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal);
     const setupBars = S.setupBars;
 
     // ---- trade row mapper ----
@@ -629,6 +645,7 @@ class App extends React.Component {
         status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#5E5E68',
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime),
+        lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         open: () => this.openTrade(t.id),
       };
     };
@@ -820,11 +837,12 @@ class App extends React.Component {
         tradeModalTag: st.draftIsNew ? 'New entry' : 'Edit · แก้ไขออเดอร์',
         tradeModalTitle: st.draftIsNew ? 'บันทึกการเทรด' : ((d.sym || 'ออเดอร์') + ' · ' + d.date),
         dSym: d.sym, dSetup: d.setupId, dSession: d.session, dEntry: d.entry, dStop: d.stop, dTarget: d.target,
-        dRR: String(d.rr), dPnl: String(d.pnl), dStatus: d.status, dEntryTime: d.entryTime, dExitTime: d.exitTime, dNotes: d.notes,
+        dRR: String(d.rr), dPnl: String(d.pnl), dLot: d.lot != null ? String(d.lot) : '', dStatus: d.status, dEntryTime: d.entryTime, dExitTime: d.exitTime, dNotes: d.notes,
         setSym: (e) => this.setD('sym', e.target.value), setSetup: (e) => this.setD('setupId', e.target.value),
         setSession: (e) => this.setD('session', e.target.value), setEntry: (e) => this.setD('entry', e.target.value),
         setStop: (e) => this.setD('stop', e.target.value), setTarget: (e) => this.setD('target', e.target.value),
         setRR: (e) => this.setD('rr', e.target.value), setPnl: (e) => this.setD('pnl', e.target.value),
+        setLot: (e) => this.setD('lot', e.target.value),
         setStatus: (e) => this.setD('status', e.target.value), setEntryTime: (e) => this.setD('entryTime', e.target.value),
         setExitTime: (e) => this.setD('exitTime', e.target.value), setNotes: (e) => this.setD('notes', e.target.value),
         setBuy: () => this.setD('side', 'BUY'), setSell: () => this.setD('side', 'SELL'),
@@ -889,7 +907,7 @@ class App extends React.Component {
       userEmail: this.props.userEmail || '',
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
       showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
-      exportWord: () => this.exportWord(),
+      exportWord: () => this.exportWord(), exporting: st.exporting,
       stop: (e) => e.stopPropagation(),
       // KPI
       kEquity: S.kEquity, kNet: S.kNet, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
@@ -897,6 +915,8 @@ class App extends React.Component {
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN,
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
+      goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal,
+      startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
       setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length,
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       dowBars, sessionBars, rDist, anaStats, setupCards,
@@ -1083,19 +1103,20 @@ class App extends React.Component {
             {V.logFilters.map((f, i) => (
               <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
             ))}
-            <span onClick={V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ Word</span>
+            <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word (มีรูปแนบ)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ เพิ่มออเดอร์</span>
           </div>
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
-          <div style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
+          <div style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
           {V.filteredTrades.map((t) => (
-            <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}>
+            <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.dateShort}</span>
               <span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span>
               <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
               <span style={css('color:#9A9AA4')}>{t.setupName}</span>
               <span style={{ ...css('font-size:11.5px'), color: t.sessionColor }}>{t.session}</span>
+              <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
               <span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</span>
               <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
@@ -1303,7 +1324,11 @@ class App extends React.Component {
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress</div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} <span style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4')}>/ $1,000,000</span></div></div>
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress</div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Spectral',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
+            ) : (
+              <span onClick={V.startGoal} title="คลิกเพื่อแก้เป้าหมาย" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
+            )}</div></div>
             <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div>
           </div>
           <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
@@ -1367,10 +1392,11 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} style={css(V.sellStyle)}>SELL / Short</div></div></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
             </div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
+            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry price</div><input value={V.dEntry} onChange={V.setEntry} placeholder="2418.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Stop loss</div><input value={V.dStop} onChange={V.setStop} placeholder="2410.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Target</div><input value={V.dTarget} onChange={V.setTarget} placeholder="2435.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Lot / Size</div><input value={V.dLot} onChange={V.setLot} placeholder="1.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>

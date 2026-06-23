@@ -14,8 +14,22 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// rows: [{date, sym, side, setupName, session, portfolioName, pnlNum, status, rr, notes}]
-export function exportWeeklyWord(rows, accountName) {
+// โหลดรูปจาก URL -> base64 (ฝังในไฟล์ Word เพื่อให้รูปติดไปด้วยเสมอ)
+async function toDataURL(url) {
+  try {
+    const r = await fetch(url);
+    const b = await r.blob();
+    return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+  } catch (e) { return null; }
+}
+
+// rows: [{date, sym, side, setupName, session, portfolioName, pnlNum, lot, status, rr, notes, images:[url...]}]
+export async function exportWeeklyWord(rows, accountName) {
+  // ฝังรูปทั้งหมดเป็น base64 ก่อน
+  const allUrls = [];
+  rows.forEach((r) => (r.images || []).forEach((u) => { if (u && !allUrls.includes(u)) allUrls.push(u); }));
+  const dataMap = {};
+  await Promise.all(allUrls.map(async (u) => { dataMap[u] = await toDataURL(u); }));
   const groups = {};
   rows.forEach((r) => {
     const wk = isoWeek(r.date);
@@ -36,18 +50,28 @@ export function exportWeeklyWord(rows, accountName) {
     body += `<p style="font-family:Arial;font-size:12px;color:#444;margin:0 0 8px">รวม ${list.length} ออเดอร์ · Net P&amp;L: <b style="color:${net >= 0 ? '#2e7d32' : '#c62828'}">${money(net)}</b> · Win rate: ${wr}%</p>`;
     body += '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-family:Arial;font-size:12px;width:100%">';
     body += '<tr style="background:#f3ecd9">' +
-      ['วันที่', 'Symbol', 'Side', 'Setup', 'Session', 'พอร์ต', 'P&L', 'R', 'สถานะ', 'บันทึก']
+      ['วันที่', 'Symbol', 'Side', 'Setup', 'Session', 'Lot', 'พอร์ต', 'P&L', 'R', 'สถานะ', 'บันทึก']
         .map((h) => `<th align="left">${h}</th>`).join('') + '</tr>';
     list.forEach((r) => {
       const pnl = r.status === 'OPEN' ? '—' : money(r.pnlNum);
       const rr = r.status === 'OPEN' ? '—' : ((r.rr >= 0 ? '+' : '−') + Math.abs(r.rr).toFixed(1) + 'R');
       body += '<tr>' + [
-        r.date, r.sym, r.side, r.setupName, r.session, r.portfolioName || '-',
+        r.date, r.sym, r.side, r.setupName, r.session, (r.lot || '—'), r.portfolioName || '-',
         `<span style="color:${r.pnlNum >= 0 ? '#2e7d32' : '#c62828'}">${pnl}</span>`,
         rr, r.status, esc(r.notes),
       ].map((c) => `<td valign="top">${c}</td>`).join('') + '</tr>';
     });
     body += '</table>';
+
+    // รูปประกอบของออเดอร์ในสัปดาห์นี้
+    const withImgs = list.filter((r) => (r.images || []).some((u) => dataMap[u]));
+    if (withImgs.length) {
+      body += '<p style="font-family:Arial;font-size:12px;color:#7a5c1e;margin:14px 0 6px"><b>ภาพประกอบ</b></p>';
+      withImgs.forEach((r) => {
+        body += `<p style="font-family:Arial;font-size:12px;color:#222;margin:8px 0 4px"><b>${esc(r.sym)}</b> · ${esc(r.date)}</p>`;
+        (r.images || []).forEach((u) => { if (dataMap[u]) body += `<img src="${dataMap[u]}" style="max-width:360px;max-height:240px;margin:0 8px 8px 0;border:1px solid #ccc"/>`; });
+      });
+    }
   });
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:20px">
