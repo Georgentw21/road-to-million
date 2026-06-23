@@ -163,6 +163,12 @@ class App extends React.Component {
     this._loadFromCloud();
     this._fetchPrices();
     this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
+    this._onKey = (e) => {
+      if (e.key === 'Escape') this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPortMenu: false, showUserMenu: false });
+    };
+    this._onDocDown = () => { if (this.state.showPortMenu || this.state.showUserMenu) this.setState({ showPortMenu: false, showUserMenu: false }); };
+    window.addEventListener('keydown', this._onKey);
+    document.addEventListener('mousedown', this._onDocDown);
   }
   async _fetchPrices() {
     try {
@@ -181,7 +187,7 @@ class App extends React.Component {
       this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); });
     }
   }
-  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); }
+  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); }
 
   _now() {
     try { return new Date().toLocaleTimeString('en-GB', { hour12: false }); }
@@ -405,7 +411,7 @@ class App extends React.Component {
     arr.sort((a, b) => b.date.localeCompare(a.date));
     this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr);
   }
-  deleteTrade() { const arr = this.state.trades.filter(t => t.id !== this.state.draft.id); this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr); }
+  deleteTrade() { if (!window.confirm('ลบออเดอร์นี้?')) return; const arr = this.state.trades.filter(t => t.id !== this.state.draft.id); this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr); }
 
   openDay(dateISO) { this.setState({ showDay: true, dayDate: dateISO }); }
   closeDay() { this.setState({ showDay: false }); }
@@ -426,8 +432,8 @@ class App extends React.Component {
     else arr = this.state.setups.map(x => x.id === s.id ? clean : x);
     this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr);
   }
-  deleteSetup() { const arr = this.state.setups.filter(x => x.id !== this.state.sDraft.id); this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr); }
-  deleteSetup2(id) { const arr = this.state.setups.filter(x => x.id !== id); this.setState({ setups: arr }); this._save('rtm_setups', arr); }
+  deleteSetup() { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== this.state.sDraft.id); this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr); }
+  deleteSetup2(id) { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== id); this.setState({ setups: arr }); this._save('rtm_setups', arr); }
 
   _fmtMoney(n) { return (n >= 0 ? '+$' : '−$') + Math.abs(Math.round(n)).toLocaleString('en-US'); }
   _fmtDur(et, xt) {
@@ -1639,7 +1645,7 @@ class App extends React.Component {
                   <div key={i} style={{ ...css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11px'), border: '1px solid ' + (s.active ? 'rgba(95,192,141,.3)' : 'rgba(255,255,255,.08)'), color: s.active ? '#ECEAE3' : '#5E5E68' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: s.active ? '#5FC08D' : '#5E5E68', animation: s.active ? 'pulse 2.2s infinite' : 'none' }}></span>{s.label}</div>
                 ))}
               </div>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
                   <div style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
@@ -1654,7 +1660,7 @@ class App extends React.Component {
                   </div>
                 )}
               </div>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.toggleUserMenu} title="บัญชีของฉัน" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Spectral',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
                   <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>

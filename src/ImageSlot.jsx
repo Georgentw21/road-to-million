@@ -78,7 +78,7 @@ export function ImageSlot({ slotId, value, onChange, placeholder, style, rounded
       >
         {url ? (
           <>
-            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             {/* hover toolbar */}
             <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
               <button onClick={pick} title="เปลี่ยนรูป" style={tbBtn}>เปลี่ยน</button>
