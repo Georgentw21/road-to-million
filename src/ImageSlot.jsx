@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { uploadImage, getImageUrl } from './dataStore';
 
 // ย่อรูปก่อนอัป (ประหยัดพื้นที่ 3-5 เท่า): scale ด้านยาวสุดไม่เกิน maxDim, แปลงเป็น JPEG
@@ -102,12 +103,13 @@ export function ImageSlot({ slotId, value, onChange, placeholder, style, rounded
           onChange={(e) => { const f = e.target.files && e.target.files[0]; handleFile(f); e.target.value = ''; }} />
       </div>
 
-      {/* lightbox ขยายรูป */}
-      {zoom && url && (
-        <div onClick={() => setZoom(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(4,4,7,.9)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fade .2s both', cursor: 'zoom-out' }}>
-          <img src={url} alt="" style={{ maxWidth: '92vw', maxHeight: '90vh', borderRadius: 10, boxShadow: '0 40px 120px -20px rgba(0,0,0,.9)' }} />
-          <div style={{ position: 'absolute', top: 18, right: 22, color: '#ECEAE3', fontSize: 26, cursor: 'pointer', lineHeight: 1 }}>✕</div>
-        </div>
+      {/* lightbox ขยายรูป — portal ไปที่ body เพื่อให้เต็มจอจริง (ไม่ติด transform ของ modal) */}
+      {zoom && url && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setZoom(false)} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(4,4,7,.92)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fade .2s both', cursor: 'zoom-out' }}>
+          <img src={url} alt="" style={{ maxWidth: '96vw', maxHeight: '94vh', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: 10, boxShadow: '0 40px 120px -20px rgba(0,0,0,.9)' }} />
+          <div style={{ position: 'fixed', top: 18, right: 22, color: '#ECEAE3', fontSize: 30, cursor: 'pointer', lineHeight: 1, textShadow: '0 2px 8px rgba(0,0,0,.8)' }}>✕</div>
+        </div>,
+        document.body
       )}
     </>
   );

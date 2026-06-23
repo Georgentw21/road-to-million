@@ -139,6 +139,7 @@ class App extends React.Component {
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
+    eqRange: 'ALL',
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
@@ -166,7 +167,10 @@ class App extends React.Component {
     this._fetchPrices();
     this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
     this._onKey = (e) => {
-      if (e.key === 'Escape') this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPortMenu: false, showUserMenu: false });
+      if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPortMenu: false, showUserMenu: false }); return; }
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
+      if ((e.key === 'n' || e.key === 'N') && !this.state.showTrade && !this.state.showSetup && !this.state.showDay && !this.state.showReset) { e.preventDefault(); this.openNew(); }
     };
     this._onDocDown = () => { if (this.state.showPortMenu || this.state.showUserMenu) this.setState({ showPortMenu: false, showUserMenu: false }); };
     window.addEventListener('keydown', this._onKey);
@@ -421,6 +425,7 @@ class App extends React.Component {
     this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr);
   }
   deleteTrade() { if (!window.confirm('ลบออเดอร์นี้?')) return; const arr = this.state.trades.filter(t => t.id !== this.state.draft.id); this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr); }
+  duplicateTrade() { const d = this.state.draft; if (!d) return; this.setState({ draft: { ...d, id: 't' + Date.now() }, draftIsNew: true }); }
 
   calStep(delta) { let m = this.state.calMonth + delta, y = this.state.calYear; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } this.setState({ calYear: y, calMonth: m }); }
   openDay(dateISO) { this.setState({ showDay: true, dayDate: dateISO }); }
@@ -522,7 +527,7 @@ class App extends React.Component {
   }
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
-  _stats(trades, setups, portfolios, cpId, firstPf, goal) {
+  _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange) {
     const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
@@ -545,15 +550,23 @@ class App extends React.Component {
     let peak = curve[0], maxDD = 0;
     curve.forEach(v => { if (v > peak) peak = v; const dd = peak > 0 ? (peak - v) / peak * 100 : 0; if (dd > maxDD) maxDD = dd; });
 
+    // display curve ตามช่วงเวลา (ALL/3M/1M) — เริ่ม cumulative จาก equity ณ ต้นช่วง
+    let cutoff = null;
+    if (eqRange === '1M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 1); cutoff = dt.toISOString().slice(0, 10); }
+    else if (eqRange === '3M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 3); cutoff = dt.toISOString().slice(0, 10); }
+    let dispBase = startBal; const dispTrades = [];
+    chrono.forEach(t => { if (cutoff && t.date < cutoff) dispBase += (t.pnl || 0); else dispTrades.push(t); });
+    const dcurve = [dispBase]; let dc = dispBase; dispTrades.forEach(t => { dc += t.pnl || 0; dcurve.push(dc); });
+
     const W = 640, H = 230, pad = 16;
-    let minV = Math.min(...curve), maxV = Math.max(...curve);
+    let minV = Math.min(...dcurve), maxV = Math.max(...dcurve);
     if (minV === maxV) { minV -= 1; maxV += 1; }
-    const np = curve.length;
+    const np = dcurve.length;
     const xAt = (i) => np <= 1 ? 0 : (i / (np - 1)) * W;
     const yAt = (v) => pad + (H - 2 * pad) * (1 - (v - minV) / (maxV - minV));
     let line;
-    if (np === 1) line = `M0 ${yAt(curve[0]).toFixed(1)} L${W} ${yAt(curve[0]).toFixed(1)}`;
-    else line = curve.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
+    if (np === 1) line = `M0 ${yAt(dcurve[0]).toFixed(1)} L${W} ${yAt(dcurve[0]).toFixed(1)}`;
+    else line = dcurve.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
     const area = line + ` L${W} ${H} L0 ${H} Z`;
 
     const bySetup = setups.map(s => {
@@ -641,7 +654,8 @@ class App extends React.Component {
       kDD: maxDD.toFixed(1) + '%',
       donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
-      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(curve[np - 1]).toFixed(1),
+      startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
+      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(dcurve[np - 1]).toFixed(1),
       dowBars, sessionBars, rDist, anaStats,
       milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
@@ -682,7 +696,7 @@ class App extends React.Component {
     });
 
     // ---- stats computed from real trades ----
-    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal);
+    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange);
     const setupBars = S.setupBars;
 
     // ---- trade row mapper ----
@@ -933,6 +947,7 @@ class App extends React.Component {
         pnlBorder: (parseFloat(d.pnl) < 0) ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)',
         pnlInputColor: (parseFloat(d.pnl) < 0) ? '#DC6A63' : (parseFloat(d.pnl) > 0 ? '#5FC08D' : '#ECEAE3'),
         saveTrade: () => this.saveTrade(), deleteTrade: () => this.deleteTrade(),
+        duplicateTrade: () => this.duplicateTrade(), canDuplicate: !st.draftIsNew,
         openNewForDay: () => this.openNew(st.dayDate),
       };
     }
@@ -993,7 +1008,8 @@ class App extends React.Component {
       // KPI
       kEquity: S.kEquity, kNet: S.kNet, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
       donut: S.donut,
-      totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN,
+      totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr,
+      eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal,
@@ -1003,6 +1019,8 @@ class App extends React.Component {
       logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value }),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       calMonthLabel, calMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
+      calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
+      calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
       dowBars, sessionBars, rDist, anaStats, setupCards,
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats,
@@ -1098,10 +1116,10 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
           <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Equity curve</div><div style={css('font-size:11.5px;color:#5E5E68;margin-top:2px')}>เส้นทางสู่ล้านแรก · since $100,000</div></div><div style={css('display:flex;gap:5px')}>
-              <span style={css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer')}>ALL</span>
-              <span className="hv-tab" style={css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>3M</span>
-              <span className="hv-tab" style={css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>1M</span>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Equity curve</div><div style={css('font-size:11.5px;color:#5E5E68;margin-top:2px')}>เส้นทางสู่ล้านแรก · since {V.startBalStr}</div></div><div style={css('display:flex;gap:5px')}>
+              {['ALL', '3M', '1M'].map((rg) => (
+                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
+              ))}
             </div></div>
             <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
@@ -1155,7 +1173,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3;min-width:200px;text-align:center')}>{V.calMonthLabel}</div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>วันนี้</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>วันนี้</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#5E5E68;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
@@ -1579,6 +1597,9 @@ class App extends React.Component {
             <div style={css('display:flex;gap:12px;margin-top:4px')}>
               {V.canDelete && (
                 <div onClick={V.deleteTrade} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>ลบ</div>
+              )}
+              {V.canDuplicate && (
+                <div onClick={V.duplicateTrade} className="hv-lift" title="คัดลอกเป็นออเดอร์ใหม่" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(201,166,95,.35);color:#E2C588;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>คัดลอก</div>
               )}
               <div onClick={V.closeTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>ยกเลิก</div>
               <div onClick={V.saveTrade} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>บันทึก</div>
