@@ -411,12 +411,13 @@ class App extends React.Component {
   closeDay() { this.setState({ showDay: false }); }
 
   // ===== setups =====
-  openSetup(id) { const s = this.state.setups.find(x => x.id === id); if (s) this.setState({ sDraft: { ...s }, setupIsNew: false, showSetup: true }); }
+  openSetup(id) { const s = this.state.setups.find(x => x.id === id); if (s) this.setState({ sDraft: { imgCount: 1, ...s }, setupIsNew: false, showSetup: true }); }
   openNewSetup() {
-    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '' }, setupIsNew: true, showSetup: true });
+    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true });
   }
   closeSetup() { this.setState({ showSetup: false }); }
   setS(field, v) { this.setState({ sDraft: { ...this.state.sDraft, [field]: v } }); }
+  addSetupImg() { const s = this.state.sDraft; const c = s.imgCount || 1; if (c < 6) this.setState({ sDraft: { ...s, imgCount: c + 1 } }); }
   saveSetup() {
     const s = this.state.sDraft;
     const clean = { ...s, glyph: (s.name || '?').trim().charAt(0).toUpperCase() || '★' };
@@ -917,6 +918,8 @@ class App extends React.Component {
         setSName: (e) => this.setS('name', e.target.value), setSDesc: (e) => this.setS('desc', e.target.value), setSUsage: (e) => this.setS('usage', e.target.value),
         accentChoices: choices.map(c => ({ color: c, pick: () => this.setS('accent', c), border: sd.accent === c ? '2px solid #fff' : '2px solid transparent' })),
         canDeleteSetup: !st.setupIsNew,
+        setupImgs: (() => { const c = sd.imgCount || 1; const a = []; for (let n = 0; n < c; n++) a.push({ n, slotId: n === 0 ? ('setup-' + sd.id + '-chart') : ('setup-' + sd.id + '-chart-' + n) }); return a; })(),
+        canAddSetupImg: (sd.imgCount || 1) < 6, addSetupImg: () => this.addSetupImg(),
         saveSetup: () => this.saveSetup(), deleteSetup: () => this.deleteSetup(),
       };
     }
@@ -1568,8 +1571,13 @@ class App extends React.Component {
             </div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>คำอธิบายสั้น</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>วิธีใช้ / เงื่อนไขการเข้า — How to use</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="อธิบายว่า setup นี้ใช้ยังไง เข้าเมื่อไหร่ ตั้ง SL/TP ตรงไหน..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
-            <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:9px;letter-spacing:.04em')}>กราฟตัวอย่างการเข้าออเดอร์ของ setup นี้</div>
-              <ImageSlot slotId={'setup-' + V.sId + '-chart'} value={this.state.images['setup-' + V.sId + '-chart']} onChange={(p) => this.setImage('setup-' + V.sId + '-chart', p)} rounded placeholder="ลากรูปกราฟตัวอย่างมาวาง" style={{ width: '100%', height: '260px' }} />
+            <div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>กราฟตัวอย่างการเข้าออเดอร์ของ setup นี้ <span style={css('color:#5E5E68')}>(หลายรูปได้)</span></div>{V.canAddSetupImg && <span onClick={V.addSetupImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มรูป</span>}</div>
+              <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:10px')}>
+                {V.setupImgs.map((im) => (
+                  <ImageSlot key={im.n} slotId={im.slotId} value={this.state.images[im.slotId]} onChange={(p) => this.setImage(im.slotId, p)} rounded placeholder="ลากรูปกราฟตัวอย่างมาวาง" style={{ width: '100%', height: '220px' }} />
+                ))}
+              </div>
             </div>
             <div style={css('display:flex;gap:12px;margin-top:4px')}>
               {V.canDeleteSetup && (
