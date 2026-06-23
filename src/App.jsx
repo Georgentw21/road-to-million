@@ -122,7 +122,7 @@ class App extends React.Component {
       { id: 's4', name: 'Reversal', glyph: 'V', accent: '#DC6A63', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
     ],
     // portfolios
-    portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก' }],
+    portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก', startBalance: 100000 }],
     currentPortfolioId: 'all',
     newPortName: '',
     showPortMenu: false,
@@ -447,6 +447,135 @@ class App extends React.Component {
     );
   }
 
+  // ===== dynamic checklist periods (อิงวันจริง → สัปดาห์/เดือนใหม่โผล่อัตโนมัติ) =====
+  _isoWeekKey(d) {
+    const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = (dt.getUTCDay() + 6) % 7;
+    dt.setUTCDate(dt.getUTCDate() - day + 3);
+    const firstThu = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+    const week = 1 + Math.round(((dt - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
+    return dt.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
+  }
+  _recentWeeks(n) {
+    const out = []; const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i * 7);
+      const mon = new Date(d); const wd = (mon.getDay() + 6) % 7; mon.setDate(mon.getDate() - wd);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
+      const label = (i === 0 ? 'สัปดาห์นี้ · ' : '') + mon.getDate() + '–' + sun.getDate() + ' ' + mname;
+      out.push([this._isoWeekKey(d), label]);
+    }
+    return out;
+  }
+  _recentMonths(n) {
+    const out = []; const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      out.push([key, new Intl.DateTimeFormat('th-TH', { month: 'short', year: 'numeric' }).format(d)]);
+    }
+    return out;
+  }
+  setPortfolioBalance(id, v) {
+    const num = parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
+    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, startBalance: num } : p);
+    this.setState({ portfolios }); this._save();
+  }
+
+  // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
+  _stats(trades, setups, portfolios, cpId, firstPf) {
+    const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
+    const pc = (n) => n >= 0 ? GREEN : RED;
+    const fm = (n) => this._fmtMoney(n);
+    const closed = trades.filter(t => t.status !== 'OPEN');
+    const wins = closed.filter(t => (t.pnl || 0) > 0);
+    const losses = closed.filter(t => (t.pnl || 0) < 0);
+    const net = closed.reduce((s, t) => s + (t.pnl || 0), 0);
+    const grossP = wins.reduce((s, t) => s + t.pnl, 0);
+    const grossL = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+    const winRate = closed.length ? (wins.length / closed.length * 100) : 0;
+    const pf = grossL ? (grossP / grossL) : (grossP > 0 ? 99 : 0);
+    const avgR = closed.length ? closed.reduce((s, t) => s + (t.rr || 0), 0) / closed.length : 0;
+    const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
+    const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
+    const equity = startBal + net;
+
+    const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
+    const curve = [startBal]; let cum = startBal;
+    chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
+    let peak = curve[0], maxDD = 0;
+    curve.forEach(v => { if (v > peak) peak = v; const dd = peak > 0 ? (peak - v) / peak * 100 : 0; if (dd > maxDD) maxDD = dd; });
+
+    const W = 640, H = 230, pad = 16;
+    let minV = Math.min(...curve), maxV = Math.max(...curve);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    const np = curve.length;
+    const xAt = (i) => np <= 1 ? 0 : (i / (np - 1)) * W;
+    const yAt = (v) => pad + (H - 2 * pad) * (1 - (v - minV) / (maxV - minV));
+    let line;
+    if (np === 1) line = `M0 ${yAt(curve[0]).toFixed(1)} L${W} ${yAt(curve[0]).toFixed(1)}`;
+    else line = curve.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
+    const area = line + ` L${W} ${H} L0 ${H} Z`;
+
+    const bySetup = setups.map(s => {
+      const ts = closed.filter(t => t.setupId === s.id);
+      const p = ts.reduce((a, t) => a + (t.pnl || 0), 0);
+      const w = ts.filter(t => t.pnl > 0).length;
+      return { name: s.name, pnl: p, count: ts.length, wr: ts.length ? Math.round(w / ts.length * 100) : 0 };
+    });
+    const maxAbs = Math.max(1, ...bySetup.map(s => Math.abs(s.pnl)));
+    const setupBars = bySetup.slice().sort((a, b) => b.pnl - a.pnl).map(s => ({
+      name: s.name, meta: s.count + 't · ' + s.wr + '% wr', pnl: fm(s.pnl), color: pc(s.pnl), w: (Math.abs(s.pnl) / maxAbs * 100) + '%',
+    }));
+
+    const dowFull = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+    const dowSum = [0, 0, 0, 0, 0, 0, 0];
+    closed.forEach(t => { dowSum[new Date(t.date + 'T00:00').getDay()] += t.pnl || 0; });
+    const dowIdx = [1, 2, 3, 4, 5];
+    const dowMax = Math.max(1, ...dowIdx.map(i => Math.abs(dowSum[i])));
+    const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: (dowSum[i] >= 0 ? '+$' : '−$') + (Math.abs(dowSum[i]) / 1000).toFixed(1) + 'k', color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
+
+    const sesDefs = [['Tokyo', BLUE, '123,167,217'], ['London', GOLD, '226,197,136'], ['New York', PURPLE, '155,140,255']];
+    const sesSum = {}; closed.forEach(t => { sesSum[t.session] = (sesSum[t.session] || 0) + (t.pnl || 0); });
+    const sesMax = Math.max(1, ...sesDefs.map(d => Math.abs(sesSum[d[0]] || 0)));
+    const sessionBars = sesDefs.map(([l, c, rgb]) => { const v = sesSum[l] || 0; return { label: l, val: (v >= 0 ? '+$' : '−$') + (Math.abs(v) / 1000).toFixed(1) + 'k', color: c, labelColor: c, bg: `linear-gradient(180deg,${c},rgba(${rgb},.2))`, glow: `0 6px 22px -8px rgba(${rgb},.6)`, h: (Math.abs(v) / sesMax * 100) + '%' }; });
+
+    const buckets = [['<-2R', v => v < -2], ['-2R', v => v >= -2 && v < -1.5], ['-1R', v => v >= -1.5 && v < -0.5], ['0R', v => v >= -0.5 && v < 0.5], ['+1R', v => v >= 0.5 && v < 1.5], ['+2R', v => v >= 1.5 && v < 2.5], ['+3R', v => v >= 2.5 && v < 3.5], ['>3R', v => v >= 3.5]];
+    const rCounts = buckets.map(([l, f]) => ({ l, n: closed.filter(t => f(t.rr || 0)).length }));
+    const rMax = Math.max(1, ...rCounts.map(b => b.n));
+    const rDist = rCounts.map(b => ({ label: b.l, bg: (b.l.startsWith('-') || b.l.startsWith('<')) ? 'rgba(220,106,99,.55)' : (b.l === '0R' ? 'rgba(255,255,255,.18)' : 'rgba(95,192,141,.6)'), h: (b.n / rMax * 100) + '%' }));
+
+    const pnls = closed.map(t => t.pnl || 0);
+    const best = pnls.length ? Math.max(...pnls) : 0;
+    const worst = pnls.length ? Math.min(...pnls) : 0;
+    const avgWin = wins.length ? grossP / wins.length : 0;
+    const avgLoss = losses.length ? -grossL / losses.length : 0;
+    let mw = 0, ml = 0, cw = 0, cl = 0;
+    chrono.forEach(t => { if (t.pnl > 0) { cw++; cl = 0; if (cw > mw) mw = cw; } else if (t.pnl < 0) { cl++; cw = 0; if (cl > ml) ml = cl; } });
+    const anaStats = [
+      { label: 'Best trade', val: fm(best), color: GREEN }, { label: 'Worst trade', val: fm(worst), color: RED },
+      { label: 'Avg win', val: fm(avgWin), color: GREEN }, { label: 'Avg loss', val: fm(avgLoss), color: RED },
+      { label: 'Max win streak', val: String(mw), color: GOLD }, { label: 'Max loss streak', val: String(ml), color: '#ECEAE3' },
+    ];
+
+    const goal = 1000000;
+    const progPct = Math.max(0, Math.min(100, equity / goal * 100));
+    return {
+      kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
+      kNet: fm(net), kNetColor: pc(net), kWin: winRate.toFixed(1) + '%',
+      kPf: grossL ? pf.toFixed(2) : (grossP > 0 ? '∞' : '0.00'),
+      kR: (avgR >= 0 ? '+' : '−') + Math.abs(avgR).toFixed(2) + 'R',
+      kDD: maxDD.toFixed(1) + '%',
+      donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
+      totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
+      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(curve[np - 1]).toFixed(1),
+      dowBars, sessionBars, rDist, anaStats,
+      milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
+      milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
+    };
+  }
+
   renderVals() {
     const GREEN = '#5FC08D', RED = '#DC6A63', BLUE = '#7BA7D9', GOLD = '#E2C588', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
@@ -469,6 +598,9 @@ class App extends React.Component {
         wr: closed ? Math.round(wins / closed * 100) : 0,
         avgRStr: ((rrN ? rrSum / rrN : 0) >= 0 ? '+' : '−') + Math.abs(rrN ? rrSum / rrN : 0).toFixed(2) + 'R',
         avgRColor: (rrN ? rrSum / rrN : 0) >= 0 ? GREEN : RED,
+        startBalance: Number(p.startBalance) || 0,
+        equityStr: '$' + Math.round((Number(p.startBalance) || 0) + net).toLocaleString('en-US'),
+        setBalance: (e) => this.setPortfolioBalance(p.id, e.target.value),
         isCurrent: cpId === p.id,
         select: () => this.selectPortfolio(p.id),
         del: (e) => this.delPortfolio(p.id, e),
@@ -476,12 +608,9 @@ class App extends React.Component {
       };
     });
 
-    // ---- dashboard By-setup bars ----
-    const maxAbs = Math.max(1, ...setups.map(s => Math.abs(s.pnl)));
-    const setupBars = setups.slice().sort((a, b) => b.pnl - a.pnl).map(s => ({
-      name: s.name, meta: s.trades + 't · ' + s.wr + '% wr', pnl: this._fmtMoney(s.pnl),
-      color: pc(s.pnl), w: (Math.abs(s.pnl) / maxAbs * 100) + '%',
-    }));
+    // ---- stats computed from real trades ----
+    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf);
+    const setupBars = S.setupBars;
 
     // ---- trade row mapper ----
     const sessColor = (s) => s === 'Tokyo' ? BLUE : (s === 'London' ? GOLD : PURPLE);
@@ -574,30 +703,23 @@ class App extends React.Component {
       else { const v = dayPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' มิ.ย. · ' + this._fmtMoney(v) }); }
     }
 
-    // ---- analytics ----
-    const dowRaw = [{ l: 'จันทร์', v: 8420 }, { l: 'อังคาร', v: 3240 }, { l: 'พุธ', v: 14800 }, { l: 'พฤหัส', v: -2180 }, { l: 'ศุกร์', v: 11200 }];
-    const dowMax = 14800;
-    const dowBars = dowRaw.map(x => ({ label: x.l, val: (x.v >= 0 ? '+$' : '−$') + (Math.abs(x.v) / 1000).toFixed(1) + 'k', color: pc(x.v), bg: x.v >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(x.v) / dowMax * 100) + '%' }));
-    const sesRaw = [{ l: 'Tokyo', v: 6800, c: BLUE }, { l: 'London', v: 28400, c: GOLD }, { l: 'New York', v: 12620, c: PURPLE }];
-    const sesMax = 28400;
-    const hx = (c) => { const m = { '#7BA7D9': '123,167,217', '#E2C588': '226,197,136', '#9B8CFF': '155,140,255' }; return m[c]; };
-    const sessionBars = sesRaw.map(x => ({ label: x.l, val: '+$' + (x.v / 1000).toFixed(1) + 'k', color: x.c, labelColor: x.c, bg: `linear-gradient(180deg,${x.c},rgba(${hx(x.c)},.2))`, glow: `0 6px 22px -8px rgba(${hx(x.c)},.6)`, h: (x.v / sesMax * 100) + '%' }));
-    const rRaw = [{ l: '<-2R', v: 6 }, { l: '-2R', v: 12 }, { l: '-1R', v: 38 }, { l: '0R', v: 8 }, { l: '+1R', v: 32 }, { l: '+2R', v: 28 }, { l: '+3R', v: 16 }, { l: '>3R', v: 7 }];
-    const rMax = 38;
-    const rDist = rRaw.map(x => ({ label: x.l, bg: (x.l.startsWith('-') || x.l.startsWith('<')) ? 'rgba(220,106,99,.55)' : (x.l === '0R' ? 'rgba(255,255,255,.18)' : 'rgba(95,192,141,.6)'), h: (x.v / rMax * 100) + '%' }));
-    const anaStats = [
-      { label: 'Best trade', val: '+$3,420', color: GREEN }, { label: 'Worst trade', val: '−$1,180', color: RED },
-      { label: 'Avg win', val: '+$842', color: GREEN }, { label: 'Avg loss', val: '−$364', color: RED },
-      { label: 'Max win streak', val: '7', color: GOLD }, { label: 'Max loss streak', val: '3', color: '#ECEAE3' },
-    ];
+    // ---- analytics (จากเทรดจริง) ----
+    const dowBars = S.dowBars, sessionBars = S.sessionBars, rDist = S.rDist, anaStats = S.anaStats;
 
-    // ---- setup cards ----
-    const setupCards = setups.map(s => ({
-      id: s.id, name: s.name || '(ไม่มีชื่อ)', glyph: s.glyph, accent: s.accent, iconBg: this._tint(s.accent), desc: s.desc || '—',
-      wrStr: s.wr + '%', tradesStr: String(s.trades), avgRStr: (s.avgR >= 0 ? '+' : '−') + Math.abs(s.avgR).toFixed(1) + 'R', rColor: s.avgR >= 0 ? GREEN : RED,
-      pnlStr: this._fmtMoney(s.pnl), pnlColor: pc(s.pnl), wrW: s.wr + '%',
-      open: () => this.openSetup(s.id), del: (e) => { e.stopPropagation(); this.deleteSetup2(s.id); },
-    }));
+    // ---- setup cards (จากเทรดจริง) ----
+    const setupCards = setups.map(s => {
+      const ts = trades.filter(t => t.setupId === s.id && t.status !== 'OPEN');
+      const p = ts.reduce((a, t) => a + (t.pnl || 0), 0);
+      const w = ts.filter(t => t.pnl > 0).length;
+      const wr = ts.length ? Math.round(w / ts.length * 100) : 0;
+      const avgR = ts.length ? ts.reduce((a, t) => a + (t.rr || 0), 0) / ts.length : 0;
+      return {
+        id: s.id, name: s.name || '(ไม่มีชื่อ)', glyph: s.glyph, accent: s.accent, iconBg: this._tint(s.accent), desc: s.desc || '—',
+        wrStr: wr + '%', tradesStr: String(ts.length), avgRStr: (avgR >= 0 ? '+' : '−') + Math.abs(avgR).toFixed(1) + 'R', rColor: avgR >= 0 ? GREEN : RED,
+        pnlStr: this._fmtMoney(p), pnlColor: pc(p), wrW: wr + '%',
+        open: () => this.openSetup(s.id), del: (e) => { e.stopPropagation(); this.deleteSetup2(s.id); },
+      };
+    });
 
     // ---- checklist ----
     const tab = st.checkTab;
@@ -605,10 +727,14 @@ class App extends React.Component {
     const which = isWeekly ? 'weekly' : 'monthly';
     const items = isWeekly ? st.weeklyItems : st.monthlyItems;
     const scope = isWeekly ? 'weekly' : 'monthly';
-    const periodKey = isWeekly ? st.weekKey : st.monthKey;
-    const weekDefs = [['2026-W26', 'สัปดาห์นี้ · 22–28'], ['2026-W25', '15–21 มิ.ย.'], ['2026-W24', '8–14 มิ.ย.'], ['2026-W23', '1–7 มิ.ย.']];
-    const monthDefs = [['2026-06', 'มิ.ย. 2026'], ['2026-05', 'พ.ค. 2026'], ['2026-04', 'เม.ย. 2026']];
+    const weekDefs = this._recentWeeks(4);
+    const monthDefs = this._recentMonths(3);
     const defs = isWeekly ? weekDefs : monthDefs;
+    const curKey = defs[0][0];
+    const inList = (k) => defs.some(d => d[0] === k);
+    const periodKey = isWeekly
+      ? (inList(st.weekKey) ? st.weekKey : curKey)
+      : (inList(st.monthKey) ? st.monthKey : curKey);
     const periodCheck = (pk) => { const c = (st.checks[scope] && st.checks[scope][pk]) || {}; let done = 0; items.forEach(it => { if (c[it.id]) done++; }); return { done, total: items.length }; };
     const periods = defs.map(([key, label]) => {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
@@ -766,8 +892,11 @@ class App extends React.Component {
       exportWord: () => this.exportWord(),
       stop: (e) => e.stopPropagation(),
       // KPI
-      kEquity: '$147,820', kNet: '+$47,820', kWin: '61.4%', kPf: '2.31', kR: '+0.74R', kDD: '5.6%',
-      donut: 'conic-gradient(#5FC08D 0% 61.4%, rgba(255,255,255,.07) 61.4%)',
+      kEquity: S.kEquity, kNet: S.kNet, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
+      donut: S.donut,
+      totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN,
+      equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY,
+      milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length,
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       dowBars, sessionBars, rDist, anaStats, setupCards,
@@ -820,6 +949,10 @@ class App extends React.Component {
                 {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>กำลังดู</span>}
                 <span onClick={p.del} title="ลบพอร์ต" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#5E5E68;cursor:pointer;transition:.14s;flex:none')}>✕</span>
               </div>
+              <div style={css('display:flex;gap:12px;margin-bottom:14px')}>
+                <div style={{ flex: 1 }}><div style={LBL}>ทุนเริ่มต้น ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:100%;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;outline:none')} /></div>
+                <div style={{ flex: 1 }}><div style={LBL}>Equity ปัจจุบัน</div><div style={{ ...VAL, color: '#E2C588', paddingTop: 6 }}>{p.equityStr}</div></div>
+              </div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
                 <div><div style={LBL}>Net P&amp;L</div><div style={{ ...VAL, color: p.netColor }}>{p.netStr}</div></div>
                 <div><div style={LBL}>Win rate</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.wr}%</div></div>
@@ -861,21 +994,21 @@ class App extends React.Component {
             <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
               <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
-              <path d="M0 200 L46 188 L92 194 L138 168 L184 176 L230 144 L276 154 L322 116 L368 126 L414 88 L460 100 L506 64 L552 74 L598 38 L640 20 L640 230 L0 230 Z" fill="url(#cv)"/>
-              <path className="eq-line" d="M0 200 L46 188 L92 194 L138 168 L184 176 L230 144 L276 154 L322 116 L368 126 L414 88 L460 100 L506 64 L552 74 L598 38 L640 20" fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="640" cy="20" r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
+              <path d={V.equityArea} fill="url(#cv)"/>
+              <path className="eq-line" d={V.equityLine} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="640" cy={V.equityLastY} r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
             </svg>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
               <div style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
-              <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>145 trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● 89 wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● 56 losses</div></div>
+              <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div></div>
             </div>
             <div className="hv-brd-gold" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#5E5E68')}>net P&amp;L</span></div>
               <div style={css('display:flex;flex-direction:column;gap:11px')}>
                 {V.setupBars.map((s, i) => (
-                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
                 ))}
               </div>
             </div>
@@ -982,7 +1115,7 @@ class App extends React.Component {
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L ตามวันในสัปดาห์</div>
             <div style={css('display:flex;align-items:flex-end;gap:14px;height:150px')}>
               {V.dowBars.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -990,7 +1123,7 @@ class App extends React.Component {
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L ตาม session</div><span style={css('font-size:11px;color:#5E5E68')}>แยกสีตามตลาด</span></div>
             <div style={css('display:flex;align-items:flex-end;gap:18px;height:150px')}>
               {V.sessionBars.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -1000,7 +1133,7 @@ class App extends React.Component {
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>การกระจายตัวของ R-multiple</div>
             <div style={css('display:flex;align-items:flex-end;gap:8px;height:140px')}>
               {V.rDist.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h }}></div><span style={css('font-size:9px;color:#5E5E68;font-family:JetBrains Mono')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h }}></div><span style={css('font-size:9px;color:#5E5E68;font-family:JetBrains Mono')}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -1035,7 +1168,7 @@ class App extends React.Component {
                 <div><div style={css('font-size:10px;color:#5E5E68;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Avg R</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.rColor }}>{s.avgRStr}</div></div>
                 <div><div style={css('font-size:10px;color:#5E5E68;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.pnlColor }}>{s.pnlStr}</div></div>
               </div>
-              <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:12px')}><div style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
+              <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:12px')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
               <div style={css('font-size:11.5px;color:#C9A65F;display:flex;align-items:center;gap:5px')}>ดูรายละเอียด &amp; กราฟตัวอย่าง <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             </div>
           ))}
@@ -1170,10 +1303,10 @@ class App extends React.Component {
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress</div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>$147,820 <span style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4')}>/ $1,000,000</span></div></div>
-            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>14.8%</div>
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress</div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} <span style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4')}>/ $1,000,000</span></div></div>
+            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div>
           </div>
-          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={css('height:100%;width:14.8%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden')}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
+          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
           <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#5E5E68')}><span>$100k start</span><span>$250k</span><span>$500k</span><span>$1M 🏁</span></div>
         </div>
 
