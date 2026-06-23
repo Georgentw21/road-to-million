@@ -20,6 +20,37 @@ function css(str){
   return o;
 }
 
+// ตัวเลขนับขึ้น (count-up) สำหรับตัวเลขสรุป
+function CountUp({ value, dur = 900 }) {
+  const [disp, setDisp] = React.useState(value);
+  React.useEffect(() => {
+    const s = String(value);
+    const m = s.match(/-?[\d,]*\.?\d+/);
+    if (!m) { setDisp(s); return; }
+    const numStr = m[0].replace(/,/g, '');
+    const target = parseFloat(numStr);
+    if (isNaN(target)) { setDisp(s); return; }
+    const decimals = (numStr.split('.')[1] || '').length;
+    const grouped = m[0].includes(',') || Math.abs(target) >= 1000;
+    const prefix = s.slice(0, m.index);
+    const suffix = s.slice(m.index + m[0].length);
+    let raf, start = null;
+    const step = (ts) => {
+      if (start == null) start = ts;
+      const p = Math.min(1, (ts - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const cur = target * eased;
+      let body = decimals ? cur.toFixed(decimals) : String(Math.round(cur));
+      if (grouped) body = Number(body).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      setDisp(prefix + body + suffix);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, dur]);
+  return <Fragment>{disp}</Fragment>;
+}
+
 class App extends React.Component {
   state = {
     images: {},
@@ -93,6 +124,7 @@ class App extends React.Component {
     // portfolios
     portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก' }],
     currentPortfolioId: 'all',
+    newPortName: '',
     showPortMenu: false,
     showUserMenu: false,
     // live prices
@@ -191,12 +223,18 @@ class App extends React.Component {
 
   // ===== portfolios =====
   selectPortfolio(id) { this.setState({ currentPortfolioId: id, showPortMenu: false }); }
-  addPortfolio() {
-    const name = (window.prompt('ตั้งชื่อพอร์ตใหม่:', 'พอร์ตใหม่') || '').trim();
+  openAccount() { this.setState({ showPortMenu: false, showUserMenu: false, view: 'account' }); }
+  setNewPortName(v) { this.setState({ newPortName: v }); }
+  addPortfolioNamed() {
+    const name = (this.state.newPortName || '').trim();
     if (!name) return;
     const pf = { id: 'pf' + Date.now(), name };
     const portfolios = this.state.portfolios.concat([pf]);
-    this.setState({ portfolios, currentPortfolioId: pf.id, showPortMenu: false }); this._save();
+    this.setState({ portfolios, newPortName: '', currentPortfolioId: pf.id }); this._save();
+  }
+  renamePortfolio(id, name) {
+    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, name } : p);
+    this.setState({ portfolios }); this._save();
   }
   delPortfolio(id, e) {
     if (e) e.stopPropagation();
@@ -398,6 +436,24 @@ class App extends React.Component {
     const trades = (cpId === 'all')
       ? st.trades
       : st.trades.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
+
+    // ---- per-portfolio stats (Account page) ----
+    const portfolioStats = st.portfolios.map(p => {
+      const ts = st.trades.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
+      let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
+      ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += (t.rr || 0); rrN++; } });
+      return {
+        id: p.id, name: p.name, trades: ts.length,
+        netStr: this._fmtMoney(net), netColor: pc(net),
+        wr: closed ? Math.round(wins / closed * 100) : 0,
+        avgRStr: ((rrN ? rrSum / rrN : 0) >= 0 ? '+' : '−') + Math.abs(rrN ? rrSum / rrN : 0).toFixed(2) + 'R',
+        avgRColor: (rrN ? rrSum / rrN : 0) >= 0 ? GREEN : RED,
+        isCurrent: cpId === p.id,
+        select: () => this.selectPortfolio(p.id),
+        del: (e) => this.delPortfolio(p.id, e),
+        rename: (e) => this.renamePortfolio(p.id, e.target.value),
+      };
+    });
 
     // ---- dashboard By-setup bars ----
     const maxAbs = Math.max(1, ...setups.map(s => Math.abs(s.pnl)));
@@ -677,7 +733,10 @@ class App extends React.Component {
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'ทุกพอร์ต' : this._portfolioName(cpId),
       showPortMenu: st.showPortMenu, togglePortMenu: () => this.setState({ showPortMenu: !st.showPortMenu, showUserMenu: false }),
-      selectPortfolio: (id) => this.selectPortfolio(id), addPortfolio: () => this.addPortfolio(), delPortfolio: (id, e) => this.delPortfolio(id, e),
+      selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
+      openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
+      portfolioStats, newPortName: st.newPortName, setNewPortName: (e) => this.setNewPortName(e.target.value),
+      addPortfolioNamed: () => this.addPortfolioNamed(), addPortKey: (e) => { if (e.key === 'Enter') this.addPortfolioNamed(); },
       showUserMenu: st.showUserMenu, toggleUserMenu: () => this.setState({ showUserMenu: !st.showUserMenu, showPortMenu: false }),
       avatarLetter: ((this.props.userEmail || st.accountName || 'G').trim().charAt(0) || 'G').toUpperCase(),
       userEmail: this.props.userEmail || '',
@@ -711,6 +770,47 @@ class App extends React.Component {
   }
 
   // ===================== VIEWS =====================
+  renderAccount(V) {
+    const LBL = css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px');
+    const VAL = css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600');
+    return (
+      <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>บัญชี &amp; พอร์ตของฉัน <span style={css('font-style:italic;color:#E2C588')}>— จัดการพอร์ตและดูสถิติ</span></div></div>
+
+        <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Spectral',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={css('font-size:15px;color:#ECEAE3;font-weight:600')}>{V.accountName}</div><div style={css('font-size:12.5px;color:#9A9AA4')}>{V.userEmail || '—'}</div></div>
+          <div onClick={V.signOut} className="hv-deloutline" style={css('padding:10px 16px;border-radius:10px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:13px;font-weight:600;cursor:pointer;transition:.14s')}>ออกจากระบบ</div>
+        </div>
+
+        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#5E5E68;margin-bottom:10px')}>เพิ่มพอร์ตใหม่</div>
+        <div style={css('display:flex;gap:10px;margin-bottom:20px;animation:rise .5s .08s both')}>
+          <input value={V.newPortName} onChange={V.setNewPortName} onKeyDown={V.addPortKey} placeholder="ชื่อพอร์ต เช่น FTMO Challenge, พอร์ตจริง, พอร์ตทดลอง" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#ECEAE3;font-size:14px;outline:none')} />
+          <div onClick={V.addPortfolioNamed} className="hv-save" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ เพิ่มพอร์ต</div>
+        </div>
+
+        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#5E5E68;margin-bottom:12px')}>พอร์ตทั้งหมด · คลิกเพื่อเลือกดู</div>
+        <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
+          {V.portfolioStats.map((p) => (
+            <div key={p.id} onClick={p.select} className="hv-card" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.07)') }}>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px')}>
+                <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="คลิกเพื่อแก้ชื่อ" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Spectral\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:4px 8px;outline:none')} />
+                {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>กำลังดู</span>}
+                <span onClick={p.del} title="ลบพอร์ต" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#5E5E68;cursor:pointer;transition:.14s;flex:none')}>✕</span>
+              </div>
+              <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
+                <div><div style={LBL}>Net P&amp;L</div><div style={{ ...VAL, color: p.netColor }}>{p.netStr}</div></div>
+                <div><div style={LBL}>Win rate</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.wr}%</div></div>
+                <div><div style={LBL}>Avg R</div><div style={{ ...VAL, color: p.avgRColor }}>{p.avgRStr}</div></div>
+                <div><div style={LBL}>ออเดอร์</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.trades}</div></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:fade .4s both')}>
@@ -721,12 +821,12 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}>{V.kEquity}</div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .08s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#5FC08D')}>{V.kNet}</div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}>{V.kWin}</div></div>
-          <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}>{V.kPf}</div></div>
-          <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}>{V.kR}</div></div>
-          <div className="hv-k-red" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#DC6A63')}>{V.kDD}</div></div>
+          <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
+          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .08s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#5FC08D')}><CountUp value={V.kNet} /></div></div>
+          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
+          <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
+          <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
+          <div className="hv-k-red" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
@@ -740,13 +840,13 @@ class App extends React.Component {
               <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
               <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
               <path d="M0 200 L46 188 L92 194 L138 168 L184 176 L230 144 L276 154 L322 116 L368 126 L414 88 L460 100 L506 64 L552 74 L598 38 L640 20 L640 230 L0 230 Z" fill="url(#cv)"/>
-              <path d="M0 200 L46 188 L92 194 L138 168 L184 176 L230 144 L276 154 L322 116 L368 126 L414 88 L460 100 L506 64 L552 74 L598 38 L640 20" fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path className="eq-line" d="M0 200 L46 188 L92 194 L138 168 L184 176 L230 144 L276 154 L322 116 L368 126 L414 88 L460 100 L506 64 L552 74 L598 38 L640 20" fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               <circle cx="640" cy="20" r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
             </svg>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
-              <div style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}>{V.kWin}</span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
+              <div style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
               <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>145 trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● 89 wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● 56 losses</div></div>
             </div>
             <div className="hv-brd-gold" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
@@ -1217,7 +1317,7 @@ class App extends React.Component {
         <div style={css('position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column')}>
 
           {/* TOPBAR */}
-          <div style={css('flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(10,10,13,.55);backdrop-filter:blur(14px)')}>
+          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(10,10,13,.55);backdrop-filter:blur(14px)')}>
             <div style={css('display:flex;align-items:baseline;gap:16px;min-width:0')}>
               {V.editName ? (
                 <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Spectral\',serif;font-size:21px;font-weight:500;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:220px')} />
@@ -1243,7 +1343,7 @@ class App extends React.Component {
                         <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#5E5E68', cursor: 'pointer', paddingLeft: 10 }}>✕</span>
                       </div>
                     ))}
-                    <div onClick={V.addPortfolio} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ เพิ่มพอร์ต</div>
+                    <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ เพิ่ม / จัดการพอร์ต</div>
                   </div>
                 )}
               </div>
@@ -1252,7 +1352,8 @@ class App extends React.Component {
                 {V.showUserMenu && (
                   <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'บัญชีของฉัน'}</div>
-                    <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>ตั้งค่า · Playbook</div>
+                    <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>บัญชี &amp; พอร์ต</div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Playbook · หลักคิด</div>
                     <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>ออกจากระบบ</div>
                   </div>
                 )}
@@ -1270,6 +1371,7 @@ class App extends React.Component {
 
           {/* VIEWPORT */}
           <div className="rtm-scroll" style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
+            {V.isAccount && this.renderAccount(V)}
             {V.isDash && this.renderDashboard(V)}
             {V.isCal && this.renderCalendar(V)}
             {V.isLog && this.renderTradeLog(V)}
