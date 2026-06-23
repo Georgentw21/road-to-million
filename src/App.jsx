@@ -137,6 +137,7 @@ class App extends React.Component {
     trades: [],
     // ui
     logFilter: 'all',
+    logSearch: '', logSort: 'date-desc',
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
@@ -398,7 +399,14 @@ class App extends React.Component {
     });
   }
   closeTrade() { this.setState({ showTrade: false }); }
-  setD(field, v) { this.setState({ draft: { ...this.state.draft, [field]: v } }); }
+  setD(field, v) {
+    const d = { ...this.state.draft, [field]: v };
+    if (field === 'entry' || field === 'stop' || field === 'target') {
+      const e = parseFloat(d.entry), s = parseFloat(d.stop), t = parseFloat(d.target);
+      if (!isNaN(e) && !isNaN(s) && !isNaN(t) && Math.abs(e - s) > 0) d.rr = (Math.abs(t - e) / Math.abs(e - s)).toFixed(2);
+    }
+    this.setState({ draft: d });
+  }
   addImg() { const d = this.state.draft; if (d.imgCount < 6) this.setState({ draft: { ...d, imgCount: d.imgCount + 1 } }); }
   saveTrade() {
     const d = this.state.draft;
@@ -693,6 +701,7 @@ class App extends React.Component {
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
+        notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date,
         open: () => this.openTrade(t.id),
       };
     };
@@ -702,15 +711,21 @@ class App extends React.Component {
 
     // log filter
     const lf = st.logFilter;
-    const filteredTrades = allMapped.filter(t => {
-      if (lf === 'all') return true;
-      if (lf === 'win') return t.status !== 'OPEN' && !t.pnlColor.includes('220');
-      if (lf === 'loss') return t.status !== 'OPEN' && t.pnlColor === RED;
-      if (lf === 'open') return t.status === 'OPEN';
-      if (lf === 'long') return t.side === 'BUY';
-      if (lf === 'short') return t.side === 'SELL';
+    const q = (st.logSearch || '').trim().toLowerCase();
+    let filteredTrades = allMapped.filter(t => {
+      if (lf === 'win') { if (!(t.status !== 'OPEN' && !t.pnlColor.includes('220'))) return false; }
+      else if (lf === 'loss') { if (!(t.status !== 'OPEN' && t.pnlColor === RED)) return false; }
+      else if (lf === 'open') { if (t.status !== 'OPEN') return false; }
+      else if (lf === 'long') { if (t.side !== 'BUY') return false; }
+      else if (lf === 'short') { if (t.side !== 'SELL') return false; }
+      if (q && !((t.sym + ' ' + t.setupName + ' ' + t.notes).toLowerCase().includes(q))) return false;
       return true;
     });
+    const so = st.logSort;
+    if (so === 'date-asc') filteredTrades.sort((a, b) => a.dateRaw.localeCompare(b.dateRaw));
+    else if (so === 'pnl-desc') filteredTrades.sort((a, b) => b.pnlNum - a.pnlNum);
+    else if (so === 'pnl-asc') filteredTrades.sort((a, b) => a.pnlNum - b.pnlNum);
+    // date-desc = ค่าเริ่มต้น (เรียงอยู่แล้ว)
     const filterDefs = [['all', 'ทั้งหมด'], ['win', 'Win'], ['loss', 'Loss'], ['open', 'Open'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
       label, click: () => this.setState({ logFilter: k }),
@@ -969,7 +984,9 @@ class App extends React.Component {
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
-      setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length,
+      setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: filteredTrades.length,
+      logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value }),
+      logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value }),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       dowBars, sessionBars, rDist, anaStats, setupCards,
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor,
@@ -1161,6 +1178,15 @@ class App extends React.Component {
             <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word (มีรูปแนบ)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ เพิ่มออเดอร์</span>
           </div>
+        </div>
+        <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
+          <input value={V.logSearch} onChange={V.setLogSearch} placeholder="🔍 ค้นหา symbol / setup / โน้ต…" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
+          <select value={V.logSort} onChange={V.setLogSort} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
+            <option value="date-desc">ใหม่ → เก่า</option>
+            <option value="date-asc">เก่า → ใหม่</option>
+            <option value="pnl-desc">กำไรมากสุด</option>
+            <option value="pnl-asc">ขาดทุนมากสุด</option>
+          </select>
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
