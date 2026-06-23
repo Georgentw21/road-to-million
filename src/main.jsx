@@ -85,7 +85,7 @@ function Root() {
 
   if (session === undefined) return <Splash />;
   if (!session) return <Login />;
-  return <App onSignOut={() => supabase.auth.signOut()} />;
+  return <App userEmail={session.user && session.user.email} onSignOut={() => supabase.auth.signOut()} />;
 }
 
 createRoot(document.getElementById('root')).render(<Root />);

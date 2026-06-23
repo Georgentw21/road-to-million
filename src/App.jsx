@@ -1,6 +1,7 @@
 import React from 'react';
 import { ImageSlot } from './ImageSlot.jsx';
 import { loadJournal, saveJournal } from './dataStore.js';
+import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
 /* CSS string -> React style object (lets us copy the prototype's inline styles verbatim) */
@@ -89,6 +90,13 @@ class App extends React.Component {
       { id: 's3', name: 'Wyckoff', glyph: 'W', accent: '#9B8CFF', desc: 'สะสม/กระจาย แล้ว spring', pnl: 8940, wr: 58, trades: 24, avgR: 0.9, usage: 'ใช้กับโครงสร้าง accumulation / distribution\n• ระบุ phase ให้ชัดก่อน\n• รอ spring (กดต่ำกว่าฐาน) หรือ upthrust\n• ยืนยันด้วย sign of strength\n• เป้าหมายตาม count ของ trading range' },
       { id: 's4', name: 'Reversal', glyph: 'V', accent: '#DC6A63', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
     ],
+    // portfolios
+    portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก' }],
+    currentPortfolioId: 'all',
+    showPortMenu: false,
+    showUserMenu: false,
+    // live prices
+    livePrices: null,
     // trades
     trades: [],
     // ui
@@ -102,6 +110,16 @@ class App extends React.Component {
     this._tick();
     this._clock = setInterval(() => this._tick(), 1000);
     this._loadFromCloud();
+    this._fetchPrices();
+    this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
+  }
+  async _fetchPrices() {
+    try {
+      const r = await fetch('/api/prices');
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j && j.data && j.data.length) this.setState({ livePrices: j.data });
+    } catch (e) { /* fallback ใช้ราคา default */ }
   }
   async _loadFromCloud() {
     let data = null;
@@ -112,13 +130,44 @@ class App extends React.Component {
       this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); });
     }
   }
-  componentWillUnmount() { clearInterval(this._clock); clearTimeout(this._saveTimer); }
+  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); }
 
   _now() {
-    try { return new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour12: false }); }
+    try { return new Date().toLocaleTimeString('en-GB', { hour12: false }); }
     catch (e) { return new Date().toTimeString().slice(0, 8); }
   }
+  _tzAbbr() {
+    try {
+      const s = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).format(new Date());
+      const m = s.match(/[A-Z]{2,5}[+-]?\d*$/);
+      let z = m ? m[0] : '';
+      if (!z || /^\d/.test(z)) { const off = -new Date().getTimezoneOffset() / 60; z = 'UTC' + (off >= 0 ? '+' : '') + off; }
+      return z;
+    } catch (e) { return ''; }
+  }
   _tick() { const el = document.querySelector('#rtm-clock'); if (el) el.textContent = this._now(); }
+  // สถานะ session ของแต่ละตลาด (คำนวณจากเวลาจริง รองรับ DST ผ่าน timeZone)
+  _sessions() {
+    const hourIn = (tz) => {
+      try { return parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false, weekday: 'short' }).formatToParts(new Date()).find(p => p.type === 'hour').value, 10); }
+      catch (e) { return -1; }
+    };
+    const dayIn = (tz) => {
+      try { return new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(new Date()); }
+      catch (e) { return ''; }
+    };
+    const weekday = (tz) => { const d = dayIn(tz); return d !== 'Sat' && d !== 'Sun'; };
+    const mk = (label, tz, open, close) => {
+      const h = hourIn(tz);
+      const active = weekday(tz) && h >= open && h < close;
+      return { label, active };
+    };
+    return [
+      mk('London', 'Europe/London', 8, 16),
+      mk('New York', 'America/New_York', 8, 17),
+      mk('Tokyo', 'Asia/Tokyo', 9, 15),
+    ];
+  }
 
   _blob() {
     const s = this.state;
@@ -126,7 +175,7 @@ class App extends React.Component {
       accountName: s.accountName, affirmation: s.affirmation, affirmDetails: s.affirmDetails,
       weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, preItems: s.preItems,
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
-      images: s.images,
+      images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
     };
   }
   _persist() {
@@ -140,9 +189,41 @@ class App extends React.Component {
     this.setState({ images }); this._save();
   }
 
+  // ===== portfolios =====
+  selectPortfolio(id) { this.setState({ currentPortfolioId: id, showPortMenu: false }); }
+  addPortfolio() {
+    const name = (window.prompt('ตั้งชื่อพอร์ตใหม่:', 'พอร์ตใหม่') || '').trim();
+    if (!name) return;
+    const pf = { id: 'pf' + Date.now(), name };
+    const portfolios = this.state.portfolios.concat([pf]);
+    this.setState({ portfolios, currentPortfolioId: pf.id, showPortMenu: false }); this._save();
+  }
+  delPortfolio(id, e) {
+    if (e) e.stopPropagation();
+    if (this.state.portfolios.length <= 1) { window.alert('ต้องมีอย่างน้อย 1 พอร์ต'); return; }
+    if (!window.confirm('ลบพอร์ตนี้? (ออเดอร์ในพอร์ตจะยังอยู่ แต่จะไม่ถูกจัดกลุ่ม)')) return;
+    const portfolios = this.state.portfolios.filter(p => p.id !== id);
+    const cur = this.state.currentPortfolioId === id ? 'all' : this.state.currentPortfolioId;
+    this.setState({ portfolios, currentPortfolioId: cur }); this._save();
+  }
+  _portfolioName(id) { const p = this.state.portfolios.find(x => x.id === id); return p ? p.name : '—'; }
+
+  // ===== Word export =====
+  exportWord() {
+    const cp = this.state.currentPortfolioId;
+    const rows = this.state.trades
+      .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === (this.state.portfolios[0] && this.state.portfolios[0].id)))
+      .map(t => ({
+        date: t.date, sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
+        session: t.session, portfolioName: this._portfolioName(t.portfolioId),
+        pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: t.rr || 0, status: t.status, notes: t.notes || '',
+      }));
+    exportWeeklyWord(rows, this.state.accountName);
+  }
+
   _seedTrades() {
     const T = (id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, et, xt, notes, status) =>
-      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, entryTime: et, exitTime: xt, notes, status, imgCount: 2 });
+      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1' });
     return [
       T('t1', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'London', '2418.5', '2410.0', '2440.0', 2.1, 1240, '2026-06-22T13:30', '2026-06-22T16:45', 'เทรนด์ขาขึ้นชัด เข้าที่ pullback EMA20 ตรงแผน', 'CLOSED'),
       T('t2', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'New York', '2435.0', '2428.0', '2455.0', 2.5, 0, '2026-06-22T19:10', '', 'ไม้ที่สองของวัน รอ target', 'OPEN'),
@@ -223,8 +304,10 @@ class App extends React.Component {
   openNew(dateISO) {
     const today = '2026-06-22';
     const d = (typeof dateISO === 'string') ? dateISO : today;
+    const cp = this.state.currentPortfolioId;
+    const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2 },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf },
       draftIsNew: true, showTrade: true, showDay: false,
     });
   }
@@ -285,10 +368,13 @@ class App extends React.Component {
     return m[c] || 'rgba(201,166,95,.14)';
   }
   _ticker() {
-    const items = [
-      ['XAUUSD', '3,348.60', '+0.54%', true], ['EURUSD', '1.1720', '−0.12%', false], ['GBPJPY', '193.45', '+0.38%', true],
-      ['US30', '43,920', '+0.26%', true], ['NAS100', '22,140', '−0.31%', false], ['BTCUSD', '104,820', '+1.62%', true], ['USDJPY', '146.30', '+0.08%', true],
-    ];
+    const live = this.state.livePrices;
+    const items = (live && live.length)
+      ? live.map(p => [p.label, p.price, p.changePct, p.up])
+      : [
+        ['XAUUSD', '—', '·', true], ['EURUSD', '—', '·', false], ['GBPJPY', '—', '·', true],
+        ['US30', '—', '·', true], ['NAS100', '—', '·', false], ['BTCUSD', '—', '·', true], ['USDJPY', '—', '·', true],
+      ];
     return (
       <Fragment>
         {items.map((it, i) => (
@@ -307,7 +393,11 @@ class App extends React.Component {
     const pc = (n) => n >= 0 ? GREEN : RED;
     const st = this.state;
     const setups = st.setups;
-    const trades = st.trades;
+    const cpId = st.currentPortfolioId;
+    const firstPf = st.portfolios[0] ? st.portfolios[0].id : null;
+    const trades = (cpId === 'all')
+      ? st.trades
+      : st.trades.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
 
     // ---- dashboard By-setup bars ----
     const maxAbs = Math.max(1, ...setups.map(s => Math.abs(s.pnl)));
@@ -539,6 +629,9 @@ class App extends React.Component {
         sellStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'SELL' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
         holdingDur: this._fmtDur(d.entryTime, d.exitTime),
         setupOptions: setups.map(s => ({ id: s.id, name: s.name || '(setup)' })),
+        dPortfolio: d.portfolioId || (st.portfolios[0] ? st.portfolios[0].id : ''),
+        setPortfolio: (e) => this.setD('portfolioId', e.target.value),
+        portfolioOptions: st.portfolios.map(p => ({ id: p.id, name: p.name })),
         tradeImgs: imgs,
         canDelete: !st.draftIsNew,
         pnlBorder: (parseFloat(d.pnl) < 0) ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)',
@@ -579,7 +672,17 @@ class App extends React.Component {
       affirmation: st.affirmation, editAffirm: st.editAffirm, notEditAffirm: !st.editAffirm,
       startAffirm: () => this.startAffirm(), commitAffirm: (e) => this.commitAffirm(e), onAffirmKey: (e) => this.onAffirmKey(e),
       affirmDetails, addAffirmDetail: () => this.addAffirmDetail(),
-      clock: this._now(), tickerA: this._ticker(), tickerB: this._ticker(),
+      clock: this._now(), tzAbbr: this._tzAbbr(), sessions: this._sessions(),
+      tickerA: this._ticker(), tickerB: this._ticker(),
+      portfolios: st.portfolios, currentPortfolioId: cpId,
+      currentPortfolioName: cpId === 'all' ? 'ทุกพอร์ต' : this._portfolioName(cpId),
+      showPortMenu: st.showPortMenu, togglePortMenu: () => this.setState({ showPortMenu: !st.showPortMenu, showUserMenu: false }),
+      selectPortfolio: (id) => this.selectPortfolio(id), addPortfolio: () => this.addPortfolio(), delPortfolio: (id, e) => this.delPortfolio(id, e),
+      showUserMenu: st.showUserMenu, toggleUserMenu: () => this.setState({ showUserMenu: !st.showUserMenu, showPortMenu: false }),
+      avatarLetter: ((this.props.userEmail || st.accountName || 'G').trim().charAt(0) || 'G').toUpperCase(),
+      userEmail: this.props.userEmail || '',
+      signOut: () => this.props.onSignOut && this.props.onSignOut(),
+      exportWord: () => this.exportWord(),
       stop: (e) => e.stopPropagation(),
       // KPI
       kEquity: '$147,820', kNet: '+$47,820', kWin: '61.4%', kPf: '2.31', kR: '+0.74R', kDD: '5.6%',
@@ -725,6 +828,7 @@ class App extends React.Component {
             {V.logFilters.map((f, i) => (
               <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
             ))}
+            <span onClick={V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ Word</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ เพิ่มออเดอร์</span>
           </div>
         </div>
@@ -999,6 +1103,7 @@ class App extends React.Component {
         <div onClick={V.stop} className="rtm-scroll" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
+            <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>พอร์ต (Portfolio)</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup</div><select value={V.dSetup} onChange={V.setSetup} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
@@ -1119,16 +1224,39 @@ class App extends React.Component {
               ) : (
                 <div onClick={V.startName} title="คลิกเพื่อแก้ชื่อ" className="hv-op" style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Spectral\',serif;font-size:21px;font-weight:500;color:#ECEAE3;letter-spacing:-.01em')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#5E5E68" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
-              <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#C9A65F')}><span id="rtm-clock">{V.clock}</span> <span style={css('color:#5E5E68')}>ICT</span></span>
+              <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#C9A65F')}><span id="rtm-clock">{V.clock}</span> <span style={css('color:#5E5E68')}>{V.tzAbbr}</span></span>
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
               <div style={css('display:flex;gap:6px')}>
-                <div style={css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid rgba(95,192,141,.3);font-size:11px;color:#ECEAE3')}><span style={css('width:6px;height:6px;border-radius:50%;background:#5FC08D;animation:pulse 2.2s infinite')}></span>London</div>
-                <div style={css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid rgba(95,192,141,.3);font-size:11px;color:#ECEAE3')}><span style={css('width:6px;height:6px;border-radius:50%;background:#5FC08D;animation:pulse 2.2s infinite')}></span>New York</div>
-                <div style={css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-size:11px;color:#5E5E68')}><span style={css('width:6px;height:6px;border-radius:50%;background:#5E5E68')}></span>Tokyo</div>
+                {V.sessions.map((s, i) => (
+                  <div key={i} style={{ ...css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11px'), border: '1px solid ' + (s.active ? 'rgba(95,192,141,.3)' : 'rgba(255,255,255,.08)'), color: s.active ? '#ECEAE3' : '#5E5E68' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: s.active ? '#5FC08D' : '#5E5E68', animation: s.active ? 'pulse 2.2s infinite' : 'none' }}></span>{s.label}</div>
+                ))}
               </div>
-              <div className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>All portfolios<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
-              <div onClick={() => this.props.onSignOut && this.props.onSignOut()} title="ออกจากระบบ" style={css('width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,#C9A65F,#8a6d2e);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a1408;cursor:pointer')}>RM</div>
+              <div style={{ position: 'relative' }}>
+                <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
+                {V.showPortMenu && (
+                  <div style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>ทุกพอร์ต</div>
+                    {V.portfolios.map((p) => (
+                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
+                        <span>{p.name}</span>
+                        <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#5E5E68', cursor: 'pointer', paddingLeft: 10 }}>✕</span>
+                      </div>
+                    ))}
+                    <div onClick={V.addPortfolio} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ เพิ่มพอร์ต</div>
+                  </div>
+                )}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <div onClick={V.toggleUserMenu} title="บัญชีของฉัน" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Spectral',serif", transition: '.15s' }}>{V.avatarLetter}</div>
+                {V.showUserMenu && (
+                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'บัญชีของฉัน'}</div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>ตั้งค่า · Playbook</div>
+                    <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>ออกจากระบบ</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

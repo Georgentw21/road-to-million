@@ -60,6 +60,23 @@ select option{background:#15151c;color:#ECEAE3}
 .hv-period:hover{border-color:rgba(201,166,95,.4)!important}
 .hv-focus:focus{border-color:rgba(201,166,95,.5)!important}
 .hv-imgslot:hover{border-color:rgba(201,166,95,.45)!important;background:rgba(201,166,95,.05)!important}
+
+/* ===== extra polish / animations ===== */
+@keyframes glowSoft{0%,100%{box-shadow:0 10px 24px -10px rgba(201,166,95,.55)}50%{box-shadow:0 12px 32px -8px rgba(201,166,95,.95)}}
+@keyframes sheen2{0%{transform:translateX(-160%) skewX(-18deg)}55%,100%{transform:translateX(360%) skewX(-18deg)}}
+@keyframes floatSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.hv-addbtn{animation:glowSoft 3.4s ease-in-out infinite}
+.hv-card{transition:transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s !important}
+.hv-nav{transition:transform .16s, color .16s, background .16s !important}
+.hv-nav:hover{transform:translateY(-2px) scale(1.05)}
+/* sweeping sheen across gold buttons */
+.hv-save, .hv-setbtn, .hv-addbtn{position:relative;overflow:hidden}
+.hv-save::after, .hv-setbtn::after, .hv-addbtn::after{content:"";position:absolute;top:0;left:0;width:45%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-160%) skewX(-18deg);animation:sheen2 4s ease-in-out infinite;pointer-events:none}
+/* smooth entrance for the whole shell */
+#root{animation:fade .5s both}
+/* nicer focus ring on inputs */
+.hv-focus{transition:border-color .15s, box-shadow .15s}
+.hv-focus:focus{box-shadow:0 0 0 3px rgba(201,166,95,.12)!important}
 </style>
 </head>
 <body>
