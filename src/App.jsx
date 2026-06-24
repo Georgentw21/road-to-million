@@ -1277,10 +1277,10 @@ class App extends React.Component {
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:fade .4s both')}>
-        <div style={css('position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;padding:15px 20px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.15),rgba(155,140,255,.09) 50%,rgba(95,208,200,.09));border:1px solid rgba(201,166,95,.26);animation:rise .55s both')}>
-          <span style={css('font-family:\'Spectral\',serif;font-size:36px;color:#C9A65F;line-height:.4;flex:none')}>“</span>
-          <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={css('flex:1;font-family:\'Spectral\',serif;font-style:italic;font-size:18px;line-height:1.4;color:#F3E9D2;cursor:pointer')}>{V.affirmation}</div>
-          <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
+        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s both')}>
+          <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F')}><span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span></div>
+          <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
+          <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
@@ -1626,7 +1626,6 @@ class App extends React.Component {
           <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
           <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Trader affirmation</div>
           <div style={css('display:flex;align-items:flex-start;gap:14px;margin-bottom:18px')}>
-            <span style={css('font-family:\'Spectral\',serif;font-size:40px;color:#C9A65F;line-height:.7;flex:none')}>“</span>
             {V.editAffirm ? (
               <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Spectral\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 12px;outline:none')} />
             ) : (
