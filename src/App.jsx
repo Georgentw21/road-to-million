@@ -277,8 +277,10 @@ class App extends React.Component {
   openReset() { this.setState({ showReset: true, showUserMenu: false }); }
   closeReset() { this.setState({ showReset: false }); }
   resetJournal() {
+    const paths = Object.values(this.state.images || {}).filter(Boolean);
     const d = JSON.parse(JSON.stringify(this._pristine));
     this.setState({ ...d, showReset: false, showUserMenu: false, view: 'dashboard' }, () => { this._loaded = true; this._persist(); });
+    deleteImages(paths);
   }
   setNewPortName(v) { this.setState({ newPortName: v }); }
   addPortfolioNamed() {
