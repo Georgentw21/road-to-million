@@ -37,6 +37,13 @@ export async function uploadImage(slotId, file) {
   return path;
 }
 
+// ลบรูปออกจาก Storage (เวลาลบเทรด/setup/vision)
+export async function deleteImages(paths) {
+  const list = (paths || []).filter(Boolean);
+  if (!list.length) return;
+  try { await supabase.storage.from('images').remove(list); } catch (e) { console.error('[deleteImages]', e); }
+}
+
 // แปลง storage path -> URL สำหรับแสดงผล
 export function getImageUrl(path) {
   if (!path) return null;

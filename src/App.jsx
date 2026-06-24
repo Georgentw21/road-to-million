@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageSlot } from './ImageSlot.jsx';
-import { loadJournal, saveJournal, getImageUrl } from './dataStore.js';
+import { loadJournal, saveJournal, getImageUrl, deleteImages } from './dataStore.js';
 import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
@@ -260,6 +260,15 @@ class App extends React.Component {
     const images = { ...this.state.images, [slotId]: path };
     this.setState({ images }); this._save();
   }
+  // ลบ reference รูปที่ key ตรงเงื่อนไข + คืน {images, paths} สำหรับลบใน Storage
+  _purgedImages(predicate) {
+    const imgs = this.state.images || {};
+    const keys = Object.keys(imgs).filter(predicate);
+    const paths = keys.map(k => imgs[k]).filter(Boolean);
+    const next = { ...imgs };
+    keys.forEach(k => delete next[k]);
+    return { images: next, paths };
+  }
 
   // ===== portfolios =====
   selectPortfolio(id) { this.setState({ currentPortfolioId: id, showPortMenu: false }); }
@@ -404,7 +413,7 @@ class App extends React.Component {
 
   // vision
   addVision() { const v = this.state.visionItems.concat([{ id: 'v' + Date.now(), title: 'เป้าหมายใหม่' }]); this.setState({ visionItems: v }); this._save('rtm_vision', v); }
-  delVision(id) { const v = this.state.visionItems.filter(x => x.id !== id); this.setState({ visionItems: v }); this._save('rtm_vision', v); }
+  delVision(id) { const v = this.state.visionItems.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k === 'vision-' + id); this.setState({ visionItems: v, images }); this._save(); deleteImages(paths); }
   editVision(id) { this.setState({ editVisionId: id }); }
   commitVision(id, e) { const t = e && e.target ? e.target.value : ''; const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
   // ===== tags =====
@@ -452,7 +461,13 @@ class App extends React.Component {
     arr.sort((a, b) => b.date.localeCompare(a.date));
     this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr);
   }
-  deleteTrade() { if (!window.confirm('ลบออเดอร์นี้?')) return; const arr = this.state.trades.filter(t => t.id !== this.state.draft.id); this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr); }
+  deleteTrade() {
+    if (!window.confirm('ลบออเดอร์นี้?')) return;
+    const id = this.state.draft.id;
+    const { images, paths } = this._purgedImages(k => k.startsWith('trade-' + id + '-'));
+    const arr = this.state.trades.filter(t => t.id !== id);
+    this.setState({ trades: arr, images, showTrade: false }); this._save(); deleteImages(paths);
+  }
   duplicateTrade() { const d = this.state.draft; if (!d) return; this.setState({ draft: { ...d, id: 't' + Date.now() }, draftIsNew: true }); }
 
   calStep(delta) { let m = this.state.calMonth + delta, y = this.state.calYear; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } this.setState({ calYear: y, calMonth: m }); }
@@ -475,8 +490,8 @@ class App extends React.Component {
     else arr = this.state.setups.map(x => x.id === s.id ? clean : x);
     this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr);
   }
-  deleteSetup() { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== this.state.sDraft.id); this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr); }
-  deleteSetup2(id) { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== id); this.setState({ setups: arr }); this._save('rtm_setups', arr); }
+  deleteSetup() { if (!window.confirm('ลบ setup นี้?')) return; const id = this.state.sDraft.id; const arr = this.state.setups.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k.startsWith('setup-' + id + '-chart')); this.setState({ setups: arr, images, showSetup: false }); this._save(); deleteImages(paths); }
+  deleteSetup2(id) { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k.startsWith('setup-' + id + '-chart')); this.setState({ setups: arr, images }); this._save(); deleteImages(paths); }
 
   _fmtMoney(n) { return (n >= 0 ? '+$' : '−$') + Math.abs(Math.round(n)).toLocaleString('en-US'); }
   _fmtDur(et, xt) {
@@ -1057,7 +1072,7 @@ class App extends React.Component {
         setPortfolio: (e) => this.setD('portfolioId', e.target.value),
         portfolioOptions: st.portfolios.map(p => ({ id: p.id, name: p.name })),
         tradeImgs: imgs,
-        canDelete: !st.draftIsNew,
+        canDelete: !st.draftIsNew, dStatusOpen: d.status === 'OPEN', canAddImg: (d.imgCount || 2) < 6,
         pnlBorder: (parseFloat(d.pnl) < 0) ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)',
         pnlInputColor: (parseFloat(d.pnl) < 0) ? '#DC6A63' : (parseFloat(d.pnl) > 0 ? '#5FC08D' : '#ECEAE3'),
         saveTrade: () => this.saveTrade(), deleteTrade: () => this.deleteTrade(),
@@ -1738,7 +1753,7 @@ class App extends React.Component {
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 หรือ -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dStatusOpen ? '' : V.dPnl} onChange={V.setPnl} disabled={V.dStatusOpen} placeholder={V.dStatusOpen ? 'ยังไม่ปิดออเดอร์' : '1240 หรือ -680'} className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor, opacity: V.dStatusOpen ? 0.5 : 1, cursor: V.dStatusOpen ? 'not-allowed' : 'text' }} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Status</div><select value={V.dStatus} onChange={V.setStatus} style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="CLOSED">Closed</option><option value="OPEN">Open</option></select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
@@ -1767,7 +1782,7 @@ class App extends React.Component {
               <input placeholder="เพิ่มแท็กใหม่ เช่น News, ข้ามแผน แล้วกด Enter" onKeyDown={V.addTagKey} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
             </div>
             <div>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>รูปภาพ / สกรีนช็อตกราฟ <span style={css('color:#5E5E68')}>(แนบได้หลายรูป)</span></div><span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มรูป</span></div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>รูปภาพ / สกรีนช็อตกราฟ <span style={css('color:#5E5E68')}>(แนบได้หลายรูป)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มรูป</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>
                 {V.tradeImgs.map((im) => (
                   <ImageSlot key={im.n} slotId={'trade-' + im.tid + '-img-' + im.n} value={this.state.images['trade-' + im.tid + '-img-' + im.n]} onChange={(p) => this.setImage('trade-' + im.tid + '-img-' + im.n, p)} rounded placeholder="ลากรูปกราฟมาวาง" style={{ width: '100%', height: '120px' }} />
