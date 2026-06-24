@@ -961,8 +961,10 @@ class App extends React.Component {
     const readyPct = items.length ? Math.round(cdone / items.length * 100) : 0;
     const checkPeriodLabel = (defs.find(d => d[0] === periodKey) || ['', ''])[1];
 
-    // pre-trade
-    const preChecks = (st.checks.pre && st.checks.pre.today) || {};
+    // pre-trade — คีย์ตามวันที่จริง → รีเซ็ตเองทุกวัน
+    const _pd = new Date();
+    const preKey = _pd.getFullYear() + '-' + String(_pd.getMonth() + 1).padStart(2, '0') + '-' + String(_pd.getDate()).padStart(2, '0');
+    const preChecks = (st.checks.pre && st.checks.pre[preKey]) || {};
     const preItems = st.preItems.map((it, i) => {
       const done = !!preChecks[it.id]; const editing = st.editCheck === ('pre:' + it.id);
       return {
@@ -970,7 +972,7 @@ class App extends React.Component {
         boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
         boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
         textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
-        toggle: () => this.toggleCheck('pre', 'today', it.id),
+        toggle: () => this.toggleCheck('pre', preKey, it.id),
         editing, notEditing: !editing,
         edit: () => this.editItem('pre', it.id), commit: (e) => this.commitItem('pre', it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
         del: () => this.delItem('pre', it.id),
@@ -1085,12 +1087,16 @@ class App extends React.Component {
       let pdone = 0;
       const planItems = planItemsSrc.map((it, i) => {
         const done = !!cur[it.id]; if (done) pdone++;
+        const editing = st.editCheck === (scope + ':' + it.id);
         return {
           text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
           boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
           boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
           textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
           toggle: () => this.toggleCheck(scope, key, it.id),
+          editing, notEditing: !editing,
+          edit: () => this.editItem(scope, it.id), commit: (e) => this.commitItem(scope, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+          del: () => this.delItem(scope, it.id),
         };
       });
       planVals = {
@@ -1098,6 +1104,7 @@ class App extends React.Component {
         planTag: scope === 'weekly' ? 'Weekly planning' : 'Monthly planning',
         planLabel: st.planLabel, planItems, planFrac: pdone + ' / ' + planItemsSrc.length,
         planClose: () => this.closePlan(),
+        planAddKey: (e) => { if (e.key === 'Enter') { this.addItem(scope, e.target.value); e.target.value = ''; } },
       };
     }
 
@@ -1445,7 +1452,7 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px')}>
           <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Drawdown (ใต้น้ำ)</div><span style={css('font-size:11px;color:#5E5E68')}>ยิ่งลึก = ถอยจากจุดสูงสุดมาก</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#5E5E68')}>ยิ่งลึก = ถอยจากจุดสูงสุดมาก</span></div>
             <svg viewBox="0 0 640 120" preserveAspectRatio="none" style={css('width:100%;height:120px;display:block')}>
               <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#DC6A63" stopOpacity="0"/><stop offset="100%" stopColor="#DC6A63" stopOpacity=".4"/></linearGradient></defs>
               <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(255,255,255,.1)"/>
@@ -1781,11 +1788,23 @@ class App extends React.Component {
           </div>
           <div style={css('padding:10px 8px')}>
             {V.planItems.map((c, i) => (
-              <div key={i} className="hv-chk" onClick={c.toggle} style={{ ...css('display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;transition:.14s'), borderTop: c.border }}>
-                <div style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-                <span style={{ ...css('flex:1;font-size:14px'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
+              <div key={i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:14px 20px;transition:.14s'), borderTop: c.border }}>
+                <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                {c.editing ? (
+                  <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                ) : (
+                  <Fragment>
+                    <span onClick={c.toggle} style={{ ...css('flex:1;font-size:14px;cursor:pointer'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
+                    <div onClick={c.edit} className="hv-edittext" style={css('flex:none;color:#5E5E68;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                    <div onClick={c.del} className="hv-deltext" style={css('flex:none;color:#5E5E68;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+                  </Fragment>
+                )}
               </div>
             ))}
+            <div style={css('display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
+              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <input placeholder="เพิ่มรายการใหม่ แล้วกด Enter" onKeyDown={V.planAddKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+            </div>
           </div>
           <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)')}>
             <span style={css('font-size:12px;color:#5E5E68;font-family:JetBrains Mono')}>เสร็จ {V.planFrac}</span>
