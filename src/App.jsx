@@ -442,9 +442,10 @@ class App extends React.Component {
   addImg() { const d = this.state.draft; if (d.imgCount < 6) this.setState({ draft: { ...d, imgCount: d.imgCount + 1 } }); }
   saveTrade() {
     const d = this.state.draft;
+    if (!d.sym || !d.sym.trim()) { window.alert('กรุณาใส่ Symbol ก่อนบันทึก'); return; }
     const num = parseFloat(String(d.pnl).replace(/[^0-9.\-]/g, '')) || 0;
     const rrn = parseFloat(String(d.rr).replace(/[^0-9.\-]/g, '')) || 0;
-    const clean = { ...d, pnl: d.status === 'OPEN' ? 0 : num, rr: rrn };
+    const clean = { ...d, sym: d.sym.trim().toUpperCase(), pnl: d.status === 'OPEN' ? 0 : num, rr: rrn };
     let arr;
     if (this.state.draftIsNew) arr = [clean].concat(this.state.trades);
     else arr = this.state.trades.map(t => t.id === d.id ? clean : t);
@@ -891,13 +892,29 @@ class App extends React.Component {
     const wkDefs = [[1, 7, 'สัปดาห์ 1 · 1–7'], [8, 14, 'สัปดาห์ 2 · 8–14'], [15, 21, 'สัปดาห์ 3 · 15–21'], [22, 31, 'สัปดาห์ 4 · 22–สิ้นเดือน']];
     const weeks = wkDefs.map(([a, b, label]) => { const r = wkRange(a, b); return { label, pnl: r.td ? this._fmtMoney(r.s) : '—', color: r.s >= 0 ? GREEN : RED, meta: r.td ? (r.td + ' ออเดอร์') : 'ไม่มีการเทรด' }; });
 
-    // ---- mini heatmap ----
+    // ---- mini heatmap (Dashboard = เดือนปัจจุบันเสมอ แยกจากปฏิทินที่เลื่อนได้) ----
     const heat = [];
-    for (let i = 0; i < firstDow; i++) heat.push({ label: '', bg: 'transparent', fg: 'transparent', border: 'none', title: '' });
-    for (let d = 1; d <= daysInMonth; d++) {
-      const has = !!dayTradesMap[d]; const isToday = d === today;
-      if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : 'none', title: '' }); }
-      else { const v = dayPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' ' + calMonthShort + ' · ' + this._fmtMoney(v) }); }
+    let dashMonthShort = '';
+    {
+      const hn = new Date();
+      const hPrefix = hn.getFullYear() + '-' + String(hn.getMonth() + 1).padStart(2, '0');
+      dashMonthShort = new Intl.DateTimeFormat('th-TH', { month: 'long' }).format(hn);
+      const hFirstDow = new Date(hn.getFullYear(), hn.getMonth(), 1).getDay();
+      const hDays = new Date(hn.getFullYear(), hn.getMonth() + 1, 0).getDate();
+      const hToday = hn.getDate();
+      const hPnl = {}; const hHas = {};
+      trades.forEach(t => {
+        if (String(t.date).slice(0, 7) !== hPrefix) return;
+        const dn = parseInt(t.date.slice(8, 10), 10);
+        if (!hHas[dn]) { hHas[dn] = true; hPnl[dn] = 0; }
+        if (t.status !== 'OPEN') hPnl[dn] += t.pnl || 0;
+      });
+      for (let i = 0; i < hFirstDow; i++) heat.push({ label: '', bg: 'transparent', fg: 'transparent', border: 'none', title: '' });
+      for (let d = 1; d <= hDays; d++) {
+        const has = !!hHas[d]; const isToday = d === hToday;
+        if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : 'none', title: '' }); }
+        else { const v = hPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' ' + dashMonthShort + ' · ' + this._fmtMoney(v) }); }
+      }
     }
 
     // ---- analytics (จากเทรดจริง) ----
@@ -997,13 +1014,13 @@ class App extends React.Component {
       return { id: v.id, title: v.title, editing, notEditing: !editing, edit: () => this.editVision(v.id), commit: (e) => this.commitVision(v.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); }, del: () => this.delVision(v.id) };
     });
 
-    // ---- day modal ----
+    // ---- day modal (กรองด้วยวันที่จริง ไม่ผูกกับเดือนที่เปิดในปฏิทิน) ----
     let dayObj = {};
     if (st.dayDate) {
-      const dnum = parseInt(st.dayDate.slice(8, 10), 10);
-      const list = (dayTradesMap[dnum] || []).map(mapTrade);
+      const dayRaw = trades.filter(t => t.date === st.dayDate);
+      const list = dayRaw.map(mapTrade);
       const dd = new Date(st.dayDate + 'T00:00');
-      const total = dayPnl[dnum] || 0;
+      const total = dayRaw.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0);
       dayObj = {
         dayTitle: dd.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' }),
         dayTrades: list, dayCount: list.length,
@@ -1158,7 +1175,7 @@ class App extends React.Component {
       logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value }),
       logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value }),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
-      calMonthLabel, calMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
+      calMonthLabel, calMonthShort, dashMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
       calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
       dowBars, sessionBars, rDist, anaStats, setupCards,
@@ -1300,7 +1317,7 @@ class App extends React.Component {
             )}
           </div>
           <div style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.calMonthShort} · P&amp;L รายวัน</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ปฏิทิน →</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · P&amp;L รายวัน</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ปฏิทิน →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
               {['อา','จ','อ','พ','พฤ','ศ','ส'].map((d,i)=>(<div key={i} style={css('text-align:center;font-size:9px;color:#5E5E68')}>{d}</div>))}
             </div>
