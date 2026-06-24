@@ -741,6 +741,7 @@ class App extends React.Component {
       milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
       goalStr: '$' + Math.round(g).toLocaleString('en-US'), goalNum: g,
+      milestoneMarks: ['$0', '$' + Math.round(g / 3).toLocaleString('en-US'), '$' + Math.round(2 * g / 3).toLocaleString('en-US'), '$' + Math.round(g).toLocaleString('en-US') + ' 🏁'],
     };
   }
 
@@ -798,7 +799,7 @@ class App extends React.Component {
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
-        notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date,
+        notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
       };
     };
@@ -810,8 +811,8 @@ class App extends React.Component {
     const lf = st.logFilter;
     const q = (st.logSearch || '').trim().toLowerCase();
     let filteredTrades = allMapped.filter(t => {
-      if (lf === 'win') { if (!(t.status !== 'OPEN' && !t.pnlColor.includes('220'))) return false; }
-      else if (lf === 'loss') { if (!(t.status !== 'OPEN' && t.pnlColor === RED)) return false; }
+      if (lf === 'win') { if (!(t.status !== 'OPEN' && t.pnlNum > 0)) return false; }
+      else if (lf === 'loss') { if (!(t.status !== 'OPEN' && t.pnlNum < 0)) return false; }
       else if (lf === 'open') { if (t.status !== 'OPEN') return false; }
       else if (lf === 'long') { if (t.side !== 'BUY') return false; }
       else if (lf === 'short') { if (t.side !== 'SELL') return false; }
@@ -1125,13 +1126,13 @@ class App extends React.Component {
       exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
       stop: (e) => e.stopPropagation(),
       // KPI
-      kEquity: S.kEquity, kNet: S.kNet, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
+      kEquity: S.kEquity, kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
       donut: S.donut,
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr,
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
-      goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal,
+      goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
       setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: filteredTrades.length,
       logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value }),
@@ -1228,7 +1229,7 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
           <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .08s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#5FC08D')}><CountUp value={V.kNet} /></div></div>
+          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .08s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
           <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
           <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
           <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
@@ -1616,7 +1617,7 @@ class App extends React.Component {
             <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div>
           </div>
           <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
-          <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#5E5E68')}><span>$100k start</span><span>$250k</span><span>$500k</span><span>$1M 🏁</span></div>
+          <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#5E5E68')}>{V.milestoneMarks.map((m, i) => (<span key={i}>{m}</span>))}</div>
         </div>
 
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#5E5E68;margin:22px 0 12px')}>สิ่งที่ฝันถึง · ลากรูปมาวางในกรอบได้เลย</div>
@@ -1649,7 +1650,7 @@ class App extends React.Component {
             <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#9A9AA4')}><span>รวม {V.dayCount} ออเดอร์</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
             {V.dayTrades.map((t) => (
               <div key={t.id} onClick={t.open} className="hv-slide" style={{ ...css('display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:.14s'), borderLeft: '3px solid ' + t.accent }}>
-                <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div></div>
+                <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#C9A65F;background:rgba(201,166,95,.12);border:1px solid rgba(201,166,95,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
                 <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</div><div style={css('font-size:11px;color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</div></div>
               </div>
             ))}
