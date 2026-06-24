@@ -419,12 +419,14 @@ class App extends React.Component {
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
   openNew(dateISO) {
-    const today = '2026-06-22';
+    const n = new Date();
+    const today = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
     const d = (typeof dateISO === 'string') ? dateISO : today;
+    const hh = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T09:00', exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [] },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [] },
       draftIsNew: true, showTrade: true, showDay: false,
     });
   }
@@ -1248,7 +1250,7 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
           <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .08s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
+          <div className="hv-k-green" style={{ ...css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
           <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
           <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
           <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
