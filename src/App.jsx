@@ -311,6 +311,23 @@ class App extends React.Component {
     catch (e) { window.alert('สร้างไฟล์ Word ไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
     finally { this.setState({ exporting: false }); }
   }
+  exportCSV() {
+    const cp = this.state.currentPortfolioId;
+    const firstPf = this.state.portfolios[0] && this.state.portfolios[0].id;
+    const rows = this.state.trades.filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf));
+    const headers = ['date', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'pnl', 'status', 'portfolio', 'tags', 'notes'];
+    const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [headers.join(',')];
+    rows.forEach(t => {
+      lines.push([t.date, t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.status === 'OPEN' ? '' : t.pnl), t.status, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+    });
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'trades-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   _seedTrades() {
     const T = (id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, et, xt, notes, status) =>
@@ -670,6 +687,11 @@ class App extends React.Component {
 
     // expectancy ($/ไม้) + current streak
     const expectancy = closed.length ? net / closed.length : 0;
+    const dayNet = {};
+    closed.forEach(t => { dayNet[t.date] = (dayNet[t.date] || 0) + (t.pnl || 0); });
+    const tradeDaysN = Object.keys(dayNet).length;
+    const greenDaysN = Object.values(dayNet).filter(v => v > 0).length;
+    const consistencyStr = (tradeDaysN ? Math.round(greenDaysN / tradeDaysN * 100) : 0) + '%';
     let cs = 0, sign = 0;
     for (let i = chrono.length - 1; i >= 0; i--) { const p = chrono[i].pnl; const s = p > 0 ? 1 : (p < 0 ? -1 : 0); if (s === 0) continue; if (sign === 0) { sign = s; cs = 1; } else if (s === sign) cs++; else break; }
     const curStreakStr = sign === 0 ? '—' : (sign > 0 ? ('ชนะ ' + cs + ' ไม้ติด') : ('แพ้ ' + cs + ' ไม้ติด'));
@@ -703,6 +725,7 @@ class App extends React.Component {
     const progPct = Math.max(0, Math.min(100, equity / g * 100));
     return {
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
+      consistencyStr, tradeDaysN, greenDaysN,
       ddLine, ddArea, symbolBars, tagStats,
       maxWinStreak: String(mw), maxLossStreak: String(ml),
       kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
@@ -1022,6 +1045,19 @@ class App extends React.Component {
         setSName: (e) => this.setS('name', e.target.value), setSDesc: (e) => this.setS('desc', e.target.value), setSUsage: (e) => this.setS('usage', e.target.value),
         accentChoices: choices.map(c => ({ color: c, pick: () => this.setS('accent', c), border: sd.accent === c ? '2px solid #fff' : '2px solid transparent' })),
         canDeleteSetup: !st.setupIsNew,
+        setupStats: (() => {
+          const sts = st.trades.filter(t => t.setupId === sd.id && t.status !== 'OPEN');
+          const sp = sts.reduce((a, t) => a + (t.pnl || 0), 0);
+          const sw = sts.filter(t => t.pnl > 0).length;
+          const sr = sts.length ? sts.reduce((a, t) => a + (t.rr || 0), 0) / sts.length : 0;
+          return [
+            { l: 'Net P&L', v: this._fmtMoney(sp), c: pc(sp) },
+            { l: 'Win rate', v: (sts.length ? Math.round(sw / sts.length * 100) : 0) + '%', c: '#ECEAE3' },
+            { l: 'Trades', v: String(sts.length), c: '#ECEAE3' },
+            { l: 'Avg R', v: (sr >= 0 ? '+' : '−') + Math.abs(sr).toFixed(2) + 'R', c: sr >= 0 ? GREEN : RED },
+          ];
+        })(),
+        showSetupStats: !st.setupIsNew,
         setupImgs: (() => { const c = sd.imgCount || 1; const a = []; for (let n = 0; n < c; n++) a.push({ n, slotId: n === 0 ? ('setup-' + sd.id + '-chart') : ('setup-' + sd.id + '-chart-' + n) }); return a; })(),
         canAddSetupImg: (sd.imgCount || 1) < 6, addSetupImg: () => this.addSetupImg(),
         saveSetup: () => this.saveSetup(), deleteSetup: () => this.deleteSetup(),
@@ -1086,7 +1122,7 @@ class App extends React.Component {
       userEmail: this.props.userEmail || '',
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
       showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
-      exportWord: () => this.exportWord(), exporting: st.exporting,
+      exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
       stop: (e) => e.stopPropagation(),
       // KPI
       kEquity: S.kEquity, kNet: S.kNet, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
@@ -1105,7 +1141,7 @@ class App extends React.Component {
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
       calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
       dowBars, sessionBars, rDist, anaStats, setupCards,
-      expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor,
+      expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats,
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
@@ -1298,6 +1334,7 @@ class App extends React.Component {
             {V.logFilters.map((f, i) => (
               <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
             ))}
+            <span onClick={V.exportCSV} className="hv-lift" title="ดาวน์โหลดเป็น CSV (เปิดใน Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
             <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word (มีรูปแนบ)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ เพิ่มออเดอร์</span>
           </div>
@@ -1335,11 +1372,12 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>วิเคราะห์เชิงลึก <span style={css('font-style:italic;color:#E2C588')}>— รู้จุดแข็ง รู้จุดรั่ว</span></div></div>
-        <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
+        <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
             { l: 'Expectancy / ไม้', v: V.expectancyStr, c: '#E2C588' },
             { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
             { l: 'Max Drawdown', v: V.anaDD, c: '#DC6A63' },
+            { l: 'วันเขียว', v: V.consistencyStr, c: '#5FC08D' },
             { l: 'สตรีคปัจจุบัน', v: V.curStreakStr, c: V.curStreakColor },
           ].map((m, i) => (
             <div key={i} className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600'), color: m.c }}>{m.v}</div></div>
@@ -1762,6 +1800,13 @@ class App extends React.Component {
                 ))}
               </div></div>
             </div>
+            {V.showSetupStats && (
+              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
+                {V.setupStats.map((s, i) => (
+                  <div key={i} style={css('padding:12px 14px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#5E5E68;margin-bottom:6px')}>{s.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px;font-weight:600'), color: s.c }}>{s.v}</div></div>
+                ))}
+              </div>
+            )}
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>คำอธิบายสั้น</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>วิธีใช้ / เงื่อนไขการเข้า — How to use</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="อธิบายว่า setup นี้ใช้ยังไง เข้าเมื่อไหร่ ตั้ง SL/TP ตรงไหน..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
             <div>
