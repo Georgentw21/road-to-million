@@ -145,7 +145,7 @@ class App extends React.Component {
     // เตือนวางแผนล่วงหน้า (ก่อนขึ้นสัปดาห์/เดือนใหม่)
     planReminders: true,
     dismissedReminders: {},
-    showPlan: false, planScope: 'weekly', planKey: '', planLabel: '',
+    showPlan: false, planAuto: false, planScope: 'weekly', planKey: '', planLabel: '',
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
@@ -595,9 +595,10 @@ class App extends React.Component {
     if (!this.state.planReminders) return;
     const dis = this.state.dismissedReminders || {};
     const first = this._dueReminders().find(d => !dis[d.scope + ':' + d.key]);
-    if (first) this.setState({ showPlan: true, planScope: first.scope, planKey: first.key, planLabel: first.label });
+    if (first) this.setState({ showPlan: true, planAuto: true, planScope: first.scope, planKey: first.key, planLabel: first.label });
   }
   closePlan() {
+    if (!this.state.planAuto) { this.setState({ showPlan: false }); return; } // เปิดเอง = ไม่ปิดการเตือน
     const k = this.state.planScope + ':' + this.state.planKey;
     const dis = { ...(this.state.dismissedReminders || {}), [k]: true };
     this.setState({ dismissedReminders: dis, showPlan: false }, () => { this._save(); this._checkPlanReminder(); });
@@ -609,14 +610,14 @@ class App extends React.Component {
     if (this.state.checkTab === 'monthly') {
       const nf = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const key = nf.getFullYear() + '-' + String(nf.getMonth() + 1).padStart(2, '0');
-      this.setState({ showPlan: true, planScope: 'monthly', planKey: key, planLabel: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(nf) });
+      this.setState({ showPlan: true, planAuto: false, planScope: 'monthly', planKey: key, planLabel: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(nf) });
     } else {
       const dow = now.getDay();
       const add = ((8 - dow) % 7) || 7; // จันทร์ถัดไป
       const mon = new Date(now); mon.setDate(now.getDate() + add);
       const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
       const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
-      this.setState({ showPlan: true, planScope: 'weekly', planKey: this._isoWeekKey(mon), planLabel: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
+      this.setState({ showPlan: true, planAuto: false, planScope: 'weekly', planKey: this._isoWeekKey(mon), planLabel: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
     }
   }
   // เลื่อนหน้าต่าง period ใน checklist (dir: +1 ย้อนหลัง, -1 ใหม่/อนาคต)
