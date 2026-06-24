@@ -1274,6 +1274,9 @@ class App extends React.Component {
             {V.recent.map((t) => (
               <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={css('color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</span></div>
             ))}
+            {V.recent.length === 0 && (
+              <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#5E5E68')}>ยังไม่มีออเดอร์ — กด N เพื่อเริ่มบันทึก</div>
+            )}
           </div>
           <div style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.calMonthShort} · P&amp;L รายวัน</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ปฏิทิน →</span></div>
@@ -1364,6 +1367,13 @@ class App extends React.Component {
               <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
             </div>
           ))}
+          {V.filteredTrades.length === 0 && (
+            <div style={css('padding:48px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05)')}>
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#5E5E68" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              <div style={css('font-size:14px;color:#9A9AA4;margin-bottom:6px')}>{V.tradeCount === 0 ? 'ยังไม่มีออเดอร์' : 'ไม่พบออเดอร์ที่ตรงกับตัวกรอง'}</div>
+              <div style={css('font-size:12.5px;color:#5E5E68')}>{V.tradeCount === 0 ? 'กดปุ่ม “+ เพิ่มออเดอร์” หรือกดปุ่ม N เพื่อเริ่มบันทึก' : 'ลองล้างการค้นหา/เปลี่ยนตัวกรอง'}</div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1499,7 +1509,7 @@ class App extends React.Component {
 
   _renderReadiness(stroke, offset, pct, msg, frac) {
     return (
-      <div style={css('padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(201,166,95,.1),rgba(255,255,255,.015));border:1px solid rgba(201,166,95,.22);text-align:center')}>
+      <div style={css('position:sticky;top:0;padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(201,166,95,.1),rgba(255,255,255,.015));border:1px solid rgba(201,166,95,.22);text-align:center')}>
         <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Readiness</div>
         <div style={css('position:relative;width:130px;height:130px;margin:0 auto')}><svg viewBox="0 0 120 120" style={css('width:130px;height:130px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="9"/><circle cx="60" cy="60" r="52" fill="none" stroke={stroke} strokeWidth="9" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .5s' }}/></svg><div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600'), color: stroke }}>{pct}</span></div></div>
         <div style={css('font-size:13px;color:#9A9AA4;margin-top:16px;line-height:1.5')}>{msg}</div>
@@ -1881,7 +1891,7 @@ class App extends React.Component {
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
-                  <div style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>ทุกพอร์ต</div>
                     {V.portfolios.map((p) => (
                       <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
