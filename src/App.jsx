@@ -140,6 +140,8 @@ class App extends React.Component {
     logSearch: '', logSort: 'date-desc',
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
+    // เลื่อนดู period ย้อนหลัง/อนาคตใน checklist
+    periodOffsetW: 0, periodOffsetM: 0,
     // เตือนวางแผนล่วงหน้า (ก่อนขึ้นสัปดาห์/เดือนใหม่)
     planReminders: true,
     dismissedReminders: {},
@@ -522,22 +524,24 @@ class App extends React.Component {
     const week = 1 + Math.round(((dt - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
     return dt.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
   }
-  _recentWeeks(n) {
+  _recentWeeks(n, offset = 0) {
     const out = []; const today = new Date();
     for (let i = 0; i < n; i++) {
-      const d = new Date(today); d.setDate(d.getDate() - i * 7);
+      const k = i + offset;
+      const d = new Date(today); d.setDate(d.getDate() - k * 7);
       const mon = new Date(d); const wd = (mon.getDay() + 6) % 7; mon.setDate(mon.getDate() - wd);
       const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
       const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
-      const label = (i === 0 ? 'สัปดาห์นี้ · ' : '') + mon.getDate() + '–' + sun.getDate() + ' ' + mname;
+      const label = (k === 0 ? 'สัปดาห์นี้ · ' : (k < 0 ? 'อนาคต · ' : '')) + mon.getDate() + '–' + sun.getDate() + ' ' + mname;
       out.push([this._isoWeekKey(d), label]);
     }
     return out;
   }
-  _recentMonths(n) {
+  _recentMonths(n, offset = 0) {
     const out = []; const today = new Date();
     for (let i = 0; i < n; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const k = i + offset;
+      const d = new Date(today.getFullYear(), today.getMonth() - k, 1);
       const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
       out.push([key, new Intl.DateTimeFormat('th-TH', { month: 'short', year: 'numeric' }).format(d)]);
     }
@@ -595,6 +599,12 @@ class App extends React.Component {
       this.setState({ showPlan: true, planScope: 'weekly', planKey: this._isoWeekKey(mon), planLabel: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
     }
   }
+  // เลื่อนหน้าต่าง period ใน checklist (dir: +1 ย้อนหลัง, -1 ใหม่/อนาคต)
+  pagePeriod(dir) {
+    if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: this.state.periodOffsetM + dir * 3 });
+    else this.setState({ periodOffsetW: this.state.periodOffsetW + dir * 4 });
+  }
+  pageReset() { if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: 0 }); else this.setState({ periodOffsetW: 0 }); }
   setPortfolioBalance(id, v) {
     const num = parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
     const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, startBalance: num } : p);
@@ -912,8 +922,9 @@ class App extends React.Component {
     const which = isWeekly ? 'weekly' : 'monthly';
     const items = isWeekly ? st.weeklyItems : st.monthlyItems;
     const scope = isWeekly ? 'weekly' : 'monthly';
-    const weekDefs = this._recentWeeks(4);
-    const monthDefs = this._recentMonths(3);
+    const weekDefs = this._recentWeeks(4, st.periodOffsetW);
+    const monthDefs = this._recentMonths(3, st.periodOffsetM);
+    const periodOffset = isWeekly ? st.periodOffsetW : st.periodOffsetM;
     const defs = isWeekly ? weekDefs : monthDefs;
     const curKey = defs[0][0];
     const inList = (k) => defs.some(d => d[0] === k);
@@ -1150,6 +1161,7 @@ class App extends React.Component {
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }),
       wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(!isWeekly),
       periods, checkItems, checkPeriodLabel, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
+      periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
       addCheckKey: (e) => { if (e.key === 'Enter') { this.addItem(which, e.target.value); e.target.value = ''; } },
       preItems, prePct: prePct + '%', preOffset: 327 - 327 * prePct / 100, preStroke: ringStroke(prePct), preMsg: ringMsg(prePct), preFrac: pdone + ' / ' + st.preItems.length + ' ข้อ',
@@ -1532,13 +1544,18 @@ class App extends React.Component {
           </div>
         </div>
 
-        <div style={css('display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;animation:rise .5s .05s both')}>
-          {V.periods.map((pp, i) => (
-            <div key={i} onClick={pp.click} className="hv-period" style={{ ...css('padding:10px 15px;border-radius:11px;cursor:pointer;transition:.14s'), background: pp.bg, border: pp.border }}>
-              <div style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: pp.dot }}></span><span style={{ ...css('font-size:12.5px;font-weight:600'), color: pp.labelColor }}>{pp.label}</span></div>
-              <div style={css('font-size:10.5px;color:#5E5E68;margin-top:4px;font-family:JetBrains Mono')}>{pp.status}</div>
-            </div>
-          ))}
+        <div style={css('display:flex;gap:10px;margin-bottom:16px;align-items:stretch;animation:rise .5s .05s both')}>
+          <div onClick={V.pageOlder} title="ก่อนหน้า" className="hv-close" style={css('flex:none;width:38px;border-radius:11px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div style={css('flex:1;display:flex;gap:10px;overflow-x:auto')} className="rtm-scroll">
+            {V.periods.map((pp, i) => (
+              <div key={i} onClick={pp.click} className="hv-period" style={{ ...css('flex:1;min-width:130px;padding:10px 15px;border-radius:11px;cursor:pointer;transition:.14s'), background: pp.bg, border: pp.border }}>
+                <div style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: pp.dot }}></span><span style={{ ...css('font-size:12.5px;font-weight:600'), color: pp.labelColor }}>{pp.label}</span></div>
+                <div style={css('font-size:10.5px;color:#5E5E68;margin-top:4px;font-family:JetBrains Mono')}>{pp.status}</div>
+              </div>
+            ))}
+          </div>
+          <div onClick={V.atPresent ? undefined : V.pageNewer} title="ถัดไป" className="hv-close" style={{ ...css('flex:none;width:38px;border-radius:11px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.atPresent ? 'default' : 'pointer', opacity: V.atPresent ? 0.35 : 1 }}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div>
+          {!V.atPresent && <div onClick={V.pageReset} className="hv-lift" title="กลับมาปัจจุบัน" style={css('flex:none;display:flex;align-items:center;padding:0 14px;border-radius:11px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;font-size:12px;font-weight:600;cursor:pointer')}>ปัจจุบัน</div>}
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;animation:rise .5s .1s both')}>
