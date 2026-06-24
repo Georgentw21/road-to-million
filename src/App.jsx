@@ -140,6 +140,10 @@ class App extends React.Component {
     logSearch: '', logSort: 'date-desc',
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
+    // เตือนวางแผนล่วงหน้า (ก่อนขึ้นสัปดาห์/เดือนใหม่)
+    planReminders: true,
+    dismissedReminders: {},
+    showPlan: false, planScope: 'weekly', planKey: '', planLabel: '',
     showDay: false, dayDate: null,
     showTrade: false, draft: null, draftIsNew: false,
     showSetup: false, sDraft: null, setupIsNew: false,
@@ -157,6 +161,7 @@ class App extends React.Component {
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
       goal: s.goal, tags: clone(s.tags), trades: [], images: {},
+      planReminders: s.planReminders, dismissedReminders: {},
     };
   })();
 
@@ -167,7 +172,7 @@ class App extends React.Component {
     this._fetchPrices();
     this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
     this._onKey = (e) => {
-      if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPortMenu: false, showUserMenu: false }); return; }
+      if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPlan: false, showPortMenu: false, showUserMenu: false }); return; }
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
       if ((e.key === 'n' || e.key === 'N') && !this.state.showTrade && !this.state.showSetup && !this.state.showDay && !this.state.showReset) { e.preventDefault(); this.openNew(); }
@@ -188,9 +193,9 @@ class App extends React.Component {
     let data = null;
     try { data = await loadJournal(); } catch (e) { console.error(e); }
     if (data && Object.keys(data).length) {
-      this.setState({ ...data, images: data.images || {} }, () => { this._loaded = true; });
+      this.setState({ ...data, images: data.images || {} }, () => { this._loaded = true; this._checkPlanReminder(); });
     } else {
-      this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); });
+      this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); this._checkPlanReminder(); });
     }
   }
   componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); }
@@ -240,6 +245,7 @@ class App extends React.Component {
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags,
+      planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
     };
   }
   _persist() {
@@ -519,6 +525,58 @@ class App extends React.Component {
       out.push([key, new Intl.DateTimeFormat('th-TH', { month: 'short', year: 'numeric' }).format(d)]);
     }
     return out;
+  }
+
+  // ===== เตือนวางแผนล่วงหน้า =====
+  // คืน reminder ที่ครบกำหนด (ก่อนขึ้นสัปดาห์/เดือนใหม่ ≤2 วัน)
+  _dueReminders() {
+    const now = new Date();
+    const dow = now.getDay(); // 0=Sun..6=Sat
+    const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const due = [];
+    // monthly: 2 วันสุดท้ายของเดือน
+    if (dim - now.getDate() <= 1) {
+      const nf = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const key = nf.getFullYear() + '-' + String(nf.getMonth() + 1).padStart(2, '0');
+      due.push({ scope: 'monthly', key, label: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(nf) });
+    }
+    // weekly: เสาร์ (2 วันก่อน) หรือ อาทิตย์ (1 วันก่อนจันทร์)
+    if (dow === 6 || dow === 0) {
+      const add = dow === 6 ? 2 : 1;
+      const mon = new Date(now); mon.setDate(now.getDate() + add);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
+      due.push({ scope: 'weekly', key: this._isoWeekKey(mon), label: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
+    }
+    return due;
+  }
+  _checkPlanReminder() {
+    if (!this.state.planReminders) return;
+    const dis = this.state.dismissedReminders || {};
+    const first = this._dueReminders().find(d => !dis[d.scope + ':' + d.key]);
+    if (first) this.setState({ showPlan: true, planScope: first.scope, planKey: first.key, planLabel: first.label });
+  }
+  closePlan() {
+    const k = this.state.planScope + ':' + this.state.planKey;
+    const dis = { ...(this.state.dismissedReminders || {}), [k]: true };
+    this.setState({ dismissedReminders: dis, showPlan: false }, () => { this._save(); this._checkPlanReminder(); });
+  }
+  togglePlanReminders() { this.setState({ planReminders: !this.state.planReminders, showUserMenu: false }, () => this._save()); }
+  // เปิดแผนล่วงหน้าเองจากหน้า Checklist (สัปดาห์/เดือนถัดไปตามแท็บ)
+  openPlanManual() {
+    const now = new Date();
+    if (this.state.checkTab === 'monthly') {
+      const nf = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const key = nf.getFullYear() + '-' + String(nf.getMonth() + 1).padStart(2, '0');
+      this.setState({ showPlan: true, planScope: 'monthly', planKey: key, planLabel: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(nf) });
+    } else {
+      const dow = now.getDay();
+      const add = ((8 - dow) % 7) || 7; // จันทร์ถัดไป
+      const mon = new Date(now); mon.setDate(now.getDate() + add);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
+      this.setState({ showPlan: true, planScope: 'weekly', planKey: this._isoWeekKey(mon), planLabel: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
+    }
   }
   setPortfolioBalance(id, v) {
     const num = parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
@@ -970,6 +1028,31 @@ class App extends React.Component {
       };
     }
 
+    // ---- plan reminder modal ----
+    let planVals = {};
+    if (st.showPlan) {
+      const scope = st.planScope, key = st.planKey;
+      const planItemsSrc = scope === 'weekly' ? st.weeklyItems : st.monthlyItems;
+      const cur = (st.checks[scope] && st.checks[scope][key]) || {};
+      let pdone = 0;
+      const planItems = planItemsSrc.map((it, i) => {
+        const done = !!cur[it.id]; if (done) pdone++;
+        return {
+          text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
+          boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
+          boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
+          textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
+          toggle: () => this.toggleCheck(scope, key, it.id),
+        };
+      });
+      planVals = {
+        planTitle: scope === 'weekly' ? 'วางแผนสัปดาห์หน้า' : 'วางแผนเดือนหน้า',
+        planTag: scope === 'weekly' ? 'Weekly planning' : 'Monthly planning',
+        planLabel: st.planLabel, planItems, planFrac: pdone + ' / ' + planItemsSrc.length,
+        planClose: () => this.closePlan(),
+      };
+    }
+
     return {
       navDash: this.navStyle('dashboard'), navCal: this.navStyle('calendar'), navLog: this.navStyle('log'),
       navAna: this.navStyle('analytics'), navSet: this.navStyle('setups'), navCheck: this.navStyle('checklist'),
@@ -1034,6 +1117,8 @@ class App extends React.Component {
       addCheckKey: (e) => { if (e.key === 'Enter') { this.addItem(which, e.target.value); e.target.value = ''; } },
       preItems, prePct: prePct + '%', preOffset: 327 - 327 * prePct / 100, preStroke: ringStroke(prePct), preMsg: ringMsg(prePct), preFrac: pdone + ' / ' + st.preItems.length + ' ข้อ',
       addPreKey: (e) => { if (e.key === 'Enter') { this.addItem('pre', e.target.value); e.target.value = ''; } },
+      showPlan: st.showPlan, ...planVals, openPlanManual: () => this.openPlanManual(),
+      planReminders: st.planReminders, togglePlanReminders: () => this.togglePlanReminders(),
       // vision
       visionItems, addVision: () => this.addVision(),
       // day modal
@@ -1389,9 +1474,12 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Routine checklist</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>เช็กลิสต์ <span style={css('font-style:italic;color:#E2C588')}>รายสัปดาห์ &amp; รายเดือน</span></div></div>
-          <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
-            <span onClick={V.tabWeekly} style={css(V.wkTabStyle)}>Weekly</span>
-            <span onClick={V.tabMonthly} style={css(V.moTabStyle)}>Monthly</span>
+          <div style={css('display:flex;align-items:center;gap:12px')}>
+            <span onClick={V.openPlanManual} className="hv-lift" title="เปิดวางแผนสัปดาห์/เดือนถัดไป" style={css('font-size:12px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>วางแผนล่วงหน้า</span>
+            <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
+              <span onClick={V.tabWeekly} style={css(V.wkTabStyle)}>Weekly</span>
+              <span onClick={V.tabMonthly} style={css(V.moTabStyle)}>Monthly</span>
+            </div>
           </div>
         </div>
 
@@ -1610,6 +1698,38 @@ class App extends React.Component {
     );
   }
 
+  renderPlanModal(V) {
+    return (
+      <div onClick={V.planClose} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
+          <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08))')}>
+            <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
+              <div>
+                <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F')}>{V.planTag}</span></div>
+                <div style={css('font-family:\'Spectral\',serif;font-size:23px;color:#ECEAE3')}>{V.planTitle}</div>
+                <div style={css('font-size:12.5px;color:#9A9AA4;margin-top:4px')}>เตรียมแผนล่วงหน้าก่อนรอบใหม่จะเริ่ม · <span style={css('color:#E2C588')}>{V.planLabel}</span></div>
+              </div>
+              <div onClick={V.planClose} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+            </div>
+          </div>
+          <div style={css('padding:10px 8px')}>
+            {V.planItems.map((c, i) => (
+              <div key={i} className="hv-chk" onClick={c.toggle} style={{ ...css('display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;transition:.14s'), borderTop: c.border }}>
+                <div style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <span style={{ ...css('flex:1;font-size:14px'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
+              </div>
+            ))}
+          </div>
+          <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)')}>
+            <span style={css('font-size:12px;color:#5E5E68;font-family:JetBrains Mono')}>เสร็จ {V.planFrac}</span>
+            <div onClick={V.planClose} className="hv-save" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>เสร็จแล้ว</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   renderResetModal(V) {
     return (
       <div onClick={V.closeReset} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
@@ -1734,6 +1854,7 @@ class App extends React.Component {
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'บัญชีของฉัน'}</div>
                     <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>บัญชี &amp; พอร์ต</div>
                     <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Playbook · หลักคิด</div>
+                    <div onClick={V.togglePlanReminders} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>เตือนวางแผน<span style={{ fontSize: 11, fontWeight: 700, color: V.planReminders ? '#5FC08D' : '#5E5E68' }}>{V.planReminders ? 'เปิด' : 'ปิด'}</span></div>
                     <div onClick={V.openReset} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63', borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 4 }}>ล้างข้อมูลทั้งหมด (Reset)</div>
                     <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>ออกจากระบบ</div>
                   </div>
@@ -1768,6 +1889,7 @@ class App extends React.Component {
         {V.showTrade && this.renderTradeModal(V)}
         {V.showSetup && this.renderSetupModal(V)}
         {V.showReset && this.renderResetModal(V)}
+        {V.showPlan && this.renderPlanModal(V)}
       </div>
     );
   }
