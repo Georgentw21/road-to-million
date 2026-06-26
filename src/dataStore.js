@@ -44,6 +44,24 @@ export async function deleteImages(paths) {
   try { await supabase.storage.from('images').remove(list); } catch (e) { console.error('[deleteImages]', e); }
 }
 
+// รวมขนาดไฟล์รูปทั้งหมดของผู้ใช้ (ไว้โชว์มาตรวัดพื้นที่ใช้งาน Storage)
+export async function imageUsage() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { bytes: 0, count: 0 };
+  let bytes = 0, count = 0, offset = 0; const page = 100;
+  // ไฟล์เก็บแบบ flat ใต้โฟลเดอร์ user.id — ไล่ทีละหน้ากันกรณีรูปเยอะเกิน limit
+  for (let guard = 0; guard < 200; guard++) {
+    const { data, error } = await supabase.storage
+      .from('images')
+      .list(user.id, { limit: page, offset, sortBy: { column: 'name', order: 'asc' } });
+    if (error || !data || !data.length) break;
+    data.forEach((f) => { const s = (f.metadata && f.metadata.size) ? f.metadata.size : 0; bytes += s; count++; });
+    if (data.length < page) break;
+    offset += page;
+  }
+  return { bytes, count };
+}
+
 // แปลง storage path -> URL สำหรับแสดงผล
 export function getImageUrl(path) {
   if (!path) return null;

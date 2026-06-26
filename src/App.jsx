@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageSlot } from './ImageSlot.jsx';
-import { loadJournal, saveJournal, getImageUrl, deleteImages } from './dataStore.js';
+import { loadJournal, saveJournal, getImageUrl, deleteImages, imageUsage } from './dataStore.js';
 import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
@@ -185,6 +185,7 @@ class App extends React.Component {
     newPortName: '',
     showPortMenu: false,
     showUserMenu: false,
+    storage: null, storageLoading: false, // มาตรวัดพื้นที่รูปภาพ (โหลดตอนเปิดเมนู G)
     // live prices
     livePrices: null,
     // trades
@@ -251,6 +252,34 @@ class App extends React.Component {
       const merged = j.data.map(p => (p.ok === false && prevMap[p.label]) ? prevMap[p.label] : p);
       this.setState({ livePrices: merged });
     } catch (e) { /* fallback ใช้ราคา default */ }
+  }
+  // คำนวณพื้นที่รูปที่ใช้ไป (เรียกตอนเปิดเมนูโลโก้ G)
+  async _loadStorageUsage() {
+    if (this.state.storageLoading) return;
+    this.setState({ storageLoading: true });
+    try { const u = await imageUsage(); this.setState({ storage: u, storageLoading: false }); }
+    catch (e) { this.setState({ storageLoading: false }); }
+  }
+  // ค่ามาตรวัดพื้นที่สำหรับเมนูโลโก้ G (รูป = Storage 1 GB, ข้อมูล = Database 500 MB)
+  _storageVals(st) {
+    const IMG_LIMIT = 1024 * 1024 * 1024;   // 1 GB
+    const DATA_LIMIT = 500 * 1024 * 1024;   // 500 MB
+    const fmt = (b) => b >= 1048576 ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB' : (b >= 1024 ? (b / 1024).toFixed(0) + ' KB' : Math.round(b) + ' B');
+    let dataBytes = 0;
+    try { const s = JSON.stringify(this._blob()); dataBytes = (typeof TextEncoder !== 'undefined') ? new TextEncoder().encode(s).length : s.length; } catch (e) { /* ignore */ }
+    const imgReady = !!st.storage;
+    const imgBytes = imgReady ? st.storage.bytes : 0;
+    const imgCount = imgReady ? st.storage.count : 0;
+    const imgPct = Math.min(100, imgBytes / IMG_LIMIT * 100);
+    const dataPct = Math.min(100, dataBytes / DATA_LIMIT * 100);
+    return {
+      storageLoadingFlag: st.storageLoading, storageReady: imgReady,
+      storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB · ' + imgCount + ' รูป') : (st.storageLoading ? 'กำลังคำนวณ…' : 'กำลังโหลด…'),
+      storageImgWidth: imgPct.toFixed(2) + '%',
+      storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E2C588' : '#5FC08D'),
+      storageDataText: fmt(dataBytes) + ' / 500 MB',
+      storageDataWidth: dataPct.toFixed(2) + '%',
+    };
   }
   async _loadFromCloud() {
     let data = null;
@@ -1304,7 +1333,8 @@ class App extends React.Component {
       acctTotalNetColor: pc(st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
       calToday: () => { const n = new Date(); this.setState({ calYear: n.getFullYear(), calMonth: n.getMonth() }); },
       addPortfolioNamed: () => this.addPortfolioNamed(), addPortKey: (e) => { if (e.key === 'Enter') this.addPortfolioNamed(); },
-      showUserMenu: st.showUserMenu, toggleUserMenu: () => this.setState({ showUserMenu: !st.showUserMenu, showPortMenu: false }),
+      showUserMenu: st.showUserMenu, toggleUserMenu: () => { const open = !st.showUserMenu; this.setState({ showUserMenu: open, showPortMenu: false }); if (open) this._loadStorageUsage(); },
+      ...this._storageVals(st),
       avatarLetter: ((this.props.userEmail || st.accountName || 'G').trim().charAt(0) || 'G').toUpperCase(),
       userEmail: this.props.userEmail || '',
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
@@ -2120,6 +2150,13 @@ class App extends React.Component {
                 {V.showUserMenu && (
                   <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'บัญชีของฉัน'}</div>
+                    {/* มาตรวัดพื้นที่ใช้งาน */}
+                    <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#9A9AA4', marginBottom: 5 }}><span>รูปภาพ</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: V.storageImgColor }}>{V.storageImgText}</span></div>
+                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden', marginBottom: 11 }}><div style={{ height: '100%', borderRadius: 99, width: V.storageReady ? V.storageImgWidth : '0%', background: V.storageImgColor, transition: 'width .5s' }}></div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#9A9AA4', marginBottom: 5 }}><span>ข้อมูล</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: '#7BA7D9' }}>{V.storageDataText}</span></div>
+                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 99, width: V.storageDataWidth, background: '#7BA7D9', transition: 'width .5s' }}></div></div>
+                    </div>
                     <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>บัญชี &amp; พอร์ต</div>
                     <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Playbook · หลักคิด</div>
                     <div onClick={V.togglePlanReminders} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>เตือนวางแผน<span style={{ fontSize: 11, fontWeight: 700, color: V.planReminders ? '#5FC08D' : '#5E5E68' }}>{V.planReminders ? 'เปิด' : 'ปิด'}</span></div>
