@@ -274,7 +274,7 @@ class App extends React.Component {
     const dataPct = Math.min(100, dataBytes / DATA_LIMIT * 100);
     return {
       storageLoadingFlag: st.storageLoading, storageReady: imgReady,
-      storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB · ' + imgCount + ' รูป') : (st.storageLoading ? 'กำลังคำนวณ…' : 'กำลังโหลด…'),
+      storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB') : (st.storageLoading ? 'กำลังคำนวณ…' : 'กำลังโหลด…'),
       storageImgWidth: imgPct.toFixed(2) + '%',
       storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E2C588' : '#5FC08D'),
       storageDataText: fmt(dataBytes) + ' / 500 MB',
