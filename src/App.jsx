@@ -133,6 +133,8 @@ class App extends React.Component {
     showUserMenu: false,
     // live prices
     livePrices: null,
+    // economic news (ForexFactory)
+    news: null, newsTs: 0, newsLoading: false, newsFilter: 'all',
     // trades
     trades: [],
     // ui
@@ -191,6 +193,15 @@ class App extends React.Component {
       if (j && j.data && j.data.length) this.setState({ livePrices: j.data });
     } catch (e) { /* fallback ใช้ราคา default */ }
   }
+  async _fetchNews() {
+    this.setState({ newsLoading: true });
+    try {
+      const r = await fetch('/api/calendar');
+      const j = await r.json();
+      this.setState({ news: (j && j.events) || [], newsTs: Date.now(), newsLoading: false });
+    } catch (e) { this.setState({ newsLoading: false }); }
+  }
+  goNews() { this.setView('news'); if (!this.state.news && !this.state.newsLoading) this._fetchNews(); }
   async _loadFromCloud() {
     let data = null;
     try { data = await loadJournal(); } catch (e) { console.error(e); }
@@ -1032,6 +1043,31 @@ class App extends React.Component {
       return { id: v.id, title: v.title, editing, notEditing: !editing, edit: () => this.editVision(v.id), commit: (e) => this.commitVision(v.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); }, del: () => this.delVision(v.id) };
     });
 
+    // ---- economic news (ForexFactory) ----
+    let newsDays = [];
+    if (st.news && st.news.length) {
+      const impactColor = (im) => im === 'High' ? '#DC6A63' : (im === 'Medium' ? '#E2C588' : (im === 'Low' ? '#7BA7D9' : '#5E5E68'));
+      const filtered = st.news.filter(e => st.newsFilter !== 'high' || e.impact === 'High');
+      const byDay = {};
+      filtered.forEach(e => {
+        const d = new Date(e.date);
+        if (isNaN(d.getTime())) return;
+        const dayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        (byDay[dayKey] = byDay[dayKey] || []).push({
+          _t: d.getTime(),
+          time: d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          currency: e.currency, title: e.title, impact: e.impact, impactColor: impactColor(e.impact),
+          forecast: e.forecast || '—', previous: e.previous || '—', actual: e.actual || '',
+        });
+      });
+      const tn = new Date();
+      const todayKey = tn.getFullYear() + '-' + String(tn.getMonth() + 1).padStart(2, '0') + '-' + String(tn.getDate()).padStart(2, '0');
+      newsDays = Object.keys(byDay).sort().map(k => {
+        const dd = new Date(k + 'T00:00');
+        return { dateKey: k, label: dd.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' }), isToday: k === todayKey, events: byDay[k].sort((a, b) => a._t - b._t) };
+      });
+    }
+
     // ---- day modal (กรองด้วยวันที่จริง ไม่ผูกกับเดือนที่เปิดในปฏิทิน) ----
     let dayObj = {};
     if (st.dayDate) {
@@ -1148,13 +1184,16 @@ class App extends React.Component {
     return {
       navDash: this.navStyle('dashboard'), navCal: this.navStyle('calendar'), navLog: this.navStyle('log'),
       navAna: this.navStyle('analytics'), navSet: this.navStyle('setups'), navCheck: this.navStyle('checklist'),
-      navPlay: this.navStyle('playbook'), navVision: this.navStyle('vision'),
+      navPlay: this.navStyle('playbook'), navVision: this.navStyle('vision'), navNews: this.navStyle('news'),
       goDash: () => this.setView('dashboard'), goCal: () => this.setView('calendar'), goLog: () => this.setView('log'),
       goAna: () => this.setView('analytics'), goSet: () => this.setView('setups'), goCheck: () => this.setView('checklist'),
-      goPlay: () => this.setView('playbook'), goVision: () => this.setView('vision'),
+      goPlay: () => this.setView('playbook'), goVision: () => this.setView('vision'), goNews: () => this.goNews(),
       isDash: st.view === 'dashboard', isCal: st.view === 'calendar', isLog: st.view === 'log',
       isAna: st.view === 'analytics', isSet: st.view === 'setups', isCheck: st.view === 'checklist',
-      isPlay: st.view === 'playbook', isVision: st.view === 'vision',
+      isPlay: st.view === 'playbook', isVision: st.view === 'vision', isNews: st.view === 'news',
+      newsDays, newsLoading: st.newsLoading, newsLoaded: st.news != null, newsRawCount: st.news ? st.news.length : 0,
+      newsFilter: st.newsFilter, setNewsAll: () => this.setState({ newsFilter: 'all' }), setNewsHigh: () => this.setState({ newsFilter: 'high' }),
+      refreshNews: () => this._fetchNews(), newsUpdated: st.newsTs ? new Date(st.newsTs).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '',
       accountName: st.accountName, editName: st.editName, notEditName: !st.editName,
       startName: () => this.startName(), commitName: (e) => this.commitName(e), onNameKey: (e) => this.onNameKey(e),
       affirmation: st.affirmation, editAffirm: st.editAffirm, notEditAffirm: !st.editAffirm,
@@ -1270,6 +1309,59 @@ class App extends React.Component {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  renderNews(V) {
+    return (
+      <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
+        <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;animation:rise .5s both')}>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Economic calendar</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>ข่าวเศรษฐกิจสัปดาห์นี้ <span style={css('font-size:13px;color:#5E5E68;font-family:\'Plus Jakarta Sans\'')}>· ForexFactory</span></div></div>
+          <div style={css('display:flex;align-items:center;gap:8px')}>
+            <div style={css('display:flex;gap:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:4px')}>
+              <span onClick={V.setNewsAll} style={css(V.newsFilter === 'all' ? 'font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : 'font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;color:#9A9AA4')}>ทั้งหมด</span>
+              <span onClick={V.setNewsHigh} style={css(V.newsFilter === 'high' ? 'font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : 'font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;color:#DC6A63')}>High impact</span>
+            </div>
+            <div onClick={V.refreshNews} title="รีเฟรช" className="hv-lift" style={css('display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;font-size:12px;font-weight:600;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round"/></svg>รีเฟรช</div>
+          </div>
+        </div>
+
+        <div style={css('display:flex;align-items:center;gap:16px;margin-bottom:16px;font-size:11px;color:#9A9AA4;flex-wrap:wrap')}>
+          <span style={css('display:flex;align-items:center;gap:6px')}><span style={css('width:8px;height:8px;border-radius:50%;background:#DC6A63')}></span>High</span>
+          <span style={css('display:flex;align-items:center;gap:6px')}><span style={css('width:8px;height:8px;border-radius:50%;background:#E2C588')}></span>Medium</span>
+          <span style={css('display:flex;align-items:center;gap:6px')}><span style={css('width:8px;height:8px;border-radius:50%;background:#7BA7D9')}></span>Low</span>
+          {V.newsUpdated && <span style={css('margin-left:auto;color:#5E5E68;font-family:JetBrains Mono')}>อัปเดต {V.newsUpdated}</span>}
+        </div>
+
+        {V.newsLoading && !V.newsLoaded ? (
+          <div style={css('padding:60px;text-align:center')}><div style={{ width: 30, height: 30, margin: '0 auto 14px', borderRadius: '50%', border: '3px solid rgba(226,197,136,.25)', borderTopColor: '#E2C588', animation: 'spin .7s linear infinite' }} /><div style={css('font-size:13px;color:#9A9AA4')}>กำลังโหลดข่าว…</div></div>
+        ) : V.newsDays.length === 0 ? (
+          <div style={css('padding:60px;text-align:center')}>
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#5E5E68" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>
+            <div style={css('font-size:14px;color:#9A9AA4;margin-bottom:6px')}>{V.newsRawCount > 0 ? 'ไม่มีข่าวตามตัวกรอง' : 'โหลดข่าวไม่สำเร็จ'}</div>
+            <div style={css('font-size:12.5px;color:#5E5E68')}>{V.newsRawCount > 0 ? 'ลองเปลี่ยนเป็น “ทั้งหมด”' : 'กดรีเฟรชอีกครั้ง (ข่าวมาจาก ForexFactory feed)'}</div>
+          </div>
+        ) : (
+          <div style={css('display:flex;flex-direction:column;gap:16px')}>
+            {V.newsDays.map((day) => (
+              <div key={day.dateKey} style={{ ...css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s both'), border: day.isToday ? '1px solid rgba(201,166,95,.4)' : '1px solid rgba(255,255,255,.07)' }}>
+                <div style={{ ...css('padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px'), background: day.isToday ? 'rgba(201,166,95,.08)' : 'rgba(255,255,255,.02)' }}><span style={{ ...css('font-family:\'Spectral\',serif;font-size:16px'), color: day.isToday ? '#E2C588' : '#ECEAE3' }}>{day.label}</span>{day.isToday && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:2px 9px;border-radius:6px;font-weight:700')}>วันนี้</span>}<span style={css('margin-left:auto;font-size:11px;color:#5E5E68')}>{day.events.length} เหตุการณ์</span></div>
+                {day.events.map((e, i) => (
+                  <div key={i} style={css('display:grid;grid-template-columns:60px 56px 1fr 80px 80px 80px;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.04);font-size:12.5px;align-items:center')}>
+                    <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{e.time}</span>
+                    <span style={css('display:flex;align-items:center;gap:6px')}><span style={{ width: 7, height: 7, borderRadius: '50%', background: e.impactColor, flex: 'none' }}></span><span style={css('color:#ECEAE3;font-weight:600;font-family:JetBrains Mono')}>{e.currency}</span></span>
+                    <span style={css('color:#ECEAE3')}>{e.title}</span>
+                    <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#5E5E68')}>A:</span> {e.actual || '—'}</span>
+                    <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#5E5E68')}>F:</span> {e.forecast}</span>
+                    <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#5E5E68')}>P:</span> {e.previous}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div style={css('font-size:11px;color:#5E5E68;text-align:center;margin-top:4px')}>A = Actual · F = Forecast · P = Previous · ข้อมูลจาก ForexFactory (faireconomy feed)</div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1932,6 +2024,7 @@ class App extends React.Component {
           <div style={css('width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center;margin-bottom:10px')}><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
           {navIcon(V.navDash, V.goDash, 'Dashboard', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>)}
           {navIcon(V.navCal, V.goCal, 'Calendar', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>)}
+          {navIcon(V.navNews, V.goNews, 'News', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 4h11a2 2 0 012 2v13a1 1 0 001 1H5a2 2 0 01-2-2V5a1 1 0 011-1z"/><path d="M8 8h6M8 12h6M8 16h3"/></svg>)}
           {navIcon(V.navLog, V.goLog, 'Trade Log', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg>)}
           {navIcon(V.navAna, V.goAna, 'Analytics', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 19V5M4 19h16M8 16v-5M13 16V8M18 16v-8" strokeLinecap="round"/></svg>)}
           {navIcon(V.navSet, V.goSet, 'Setups', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l2.4 5.8L20 9l-4.5 3.9L17 19l-5-3-5 3 1.5-6.1L4 9l5.6-1.2z" strokeLinejoin="round"/></svg>)}
@@ -2010,6 +2103,7 @@ class App extends React.Component {
             {V.isCheck && this.renderChecklist(V)}
             {V.isPlay && this.renderPlaybook(V)}
             {V.isVision && this.renderVisionBoard(V)}
+            {V.isNews && this.renderNews(V)}
           </div>
         </div>
 
