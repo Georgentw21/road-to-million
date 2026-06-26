@@ -51,6 +51,57 @@ function CountUp({ value, dur = 900 }) {
   return <Fragment>{disp}</Fragment>;
 }
 
+// กราฟ equity แบบ interactive — เอาเมาส์ชี้เพื่อดูค่าแต่ละจุด
+function EquityCurve({ line, area, points, lastY }) {
+  const VB_W = 640, VB_H = 230;
+  const wrapRef = React.useRef(null);
+  const [hover, setHover] = React.useState(null); // index ของจุดที่ใกล้เมาส์
+  const pts = Array.isArray(points) ? points : [];
+
+  const onMove = (e) => {
+    if (!wrapRef.current || !pts.length) return;
+    const r = wrapRef.current.getBoundingClientRect();
+    if (!r.width) return;
+    const vx = ((e.clientX - r.left) / r.width) * VB_W; // พิกัดในระบบ viewBox
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < pts.length; i++) { const d = Math.abs(pts[i].x - vx); if (d < bestD) { bestD = d; best = i; } }
+    setHover(best);
+  };
+  const leave = () => setHover(null);
+
+  const hp = hover != null ? pts[hover] : null;
+  // ตำแหน่ง tooltip เป็น % เทียบกับกล่อง (preserveAspectRatio=none -> map ตรงตามสัดส่วน)
+  const tipLeft = hp ? (hp.x / VB_W) * 100 : 0;
+  const tipTop = hp ? (hp.y / VB_H) * 100 : 0;
+  const flip = tipLeft > 62; // ถ้าใกล้ขอบขวาให้ tooltip เปิดไปทางซ้าย
+
+  return (
+    <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={leave}
+      style={css('position:relative;width:100%;height:210px')}>
+      <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
+        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
+        <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
+        <path d={area} fill="url(#cv)"/>
+        <path className="eq-line" d={line} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {hp ? (
+          <Fragment>
+            <line x1={hp.x} y1="0" x2={hp.x} y2="230" stroke="rgba(226,197,136,.4)" strokeWidth="1" strokeDasharray="4 4"/>
+            <circle cx={hp.x} cy={hp.y} r="6" fill="#08080B" stroke="#E2C588" strokeWidth="2.5"/>
+          </Fragment>
+        ) : (
+          <circle cx="640" cy={lastY} r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
+        )}
+      </svg>
+      {hp && (
+        <div style={{ ...css('position:absolute;pointer-events:none;z-index:5;background:rgba(12,12,16,.95);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 11px;box-shadow:0 10px 30px -12px rgba(0,0,0,.9);white-space:nowrap'), left: tipLeft + '%', top: tipTop + '%', transform: 'translate(' + (flip ? '-108%' : '8%') + ',-118%)' }}>
+          <div style={css('font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:600;color:#E2C588')}>{hp.valueStr}</div>
+          {hp.label ? <div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>{hp.label}</div> : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 class App extends React.Component {
   state = {
     images: {},
@@ -216,6 +267,15 @@ class App extends React.Component {
     } catch (e) { return ''; }
   }
   _tick() { const el = document.querySelector('#rtm-clock'); if (el) el.textContent = this._now(); }
+  // วันที่วันนี้แบบไทยย่อ เช่น "ศ. 26 มิ.ย."
+  _todayLabel() {
+    try {
+      const d = new Date();
+      const days = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+      const mons = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      return days[d.getDay()] + ' ' + d.getDate() + ' ' + mons[d.getMonth()];
+    } catch (e) { return ''; }
+  }
   // สถานะ session ของแต่ละตลาด (คำนวณจากเวลาจริง รองรับ DST ผ่าน timeZone)
   _blob() {
     const s = this.state;
@@ -654,6 +714,15 @@ class App extends React.Component {
     if (np === 1) line = `M0 ${yAt(dcurve[0]).toFixed(1)} L${W} ${yAt(dcurve[0]).toFixed(1)}`;
     else line = dcurve.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
     const area = line + ` L${W} ${H} L0 ${H} Z`;
+    // จุดข้อมูลสำหรับ hover tooltip
+    const vstr = (v) => '$' + Math.round(v).toLocaleString('en-US');
+    let equityPoints;
+    if (np === 1) {
+      const y0 = +yAt(dcurve[0]).toFixed(1);
+      equityPoints = [{ x: 0, y: y0, valueStr: vstr(dcurve[0]), label: 'เริ่มต้น' }, { x: W, y: y0, valueStr: vstr(dcurve[0]), label: 'ปัจจุบัน' }];
+    } else {
+      equityPoints = dcurve.map((v, i) => ({ x: +xAt(i).toFixed(1), y: +yAt(v).toFixed(1), valueStr: vstr(v), label: i === 0 ? 'เริ่มต้น' : ((dispTrades[i - 1] && dispTrades[i - 1].date ? dispTrades[i - 1].date : '') + (dispTrades[i - 1] && dispTrades[i - 1].sym ? ' · ' + dispTrades[i - 1].sym : '')) }));
+    }
 
     const bySetup = setups.map(s => {
       const ts = closed.filter(t => t.setupId === s.id);
@@ -747,7 +816,10 @@ class App extends React.Component {
       donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
-      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(dcurve[np - 1]).toFixed(1),
+      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(dcurve[np - 1]).toFixed(1), equityPoints,
+      equityPeakStr: '$' + Math.round(peak).toLocaleString('en-US'),
+      equityGrowthStr: (startBal > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / startBal * 100).toFixed(1) + '%') : '—'),
+      equityGrowthColor: pc(net),
       dowBars, sessionBars, rDist, anaStats,
       milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
@@ -1141,7 +1213,7 @@ class App extends React.Component {
       affirmation: st.affirmation, editAffirm: st.editAffirm, notEditAffirm: !st.editAffirm,
       startAffirm: () => this.startAffirm(), commitAffirm: (e) => this.commitAffirm(e), onAffirmKey: (e) => this.onAffirmKey(e),
       affirmDetails, addAffirmDetail: () => this.addAffirmDetail(),
-      clock: this._now(), tzAbbr: this._tzAbbr(),
+      clock: this._now(), tzAbbr: this._tzAbbr(), todayLabel: this._todayLabel(),
       tickerA: this._ticker(), tickerB: this._ticker(),
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'ทุกพอร์ต' : this._portfolioName(cpId),
@@ -1166,7 +1238,8 @@ class App extends React.Component {
       donut: S.donut,
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr,
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
-      equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY,
+      equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints,
+      equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
@@ -1280,13 +1353,13 @@ class App extends React.Component {
                 <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
               ))}
             </div></div>
-            <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
-              <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
-              <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
-              <path d={V.equityArea} fill="url(#cv)"/>
-              <path className="eq-line" d={V.equityLine} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="640" cy={V.equityLastY} r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
-            </svg>
+            <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} />
+            <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
+              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Start</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.startBalStr}</div></div>
+              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Current</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.kEquity}</div></div>
+              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Peak</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#7BA7D9')}>{V.equityPeakStr}</div></div>
+              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Growth</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.equityGrowthColor }}>{V.equityGrowthStr}</div></div>
+            </div>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
@@ -1933,7 +2006,14 @@ class App extends React.Component {
               ) : (
                 <div onClick={V.startName} title="คลิกเพื่อแก้ชื่อ" className="hv-op" style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Spectral\',serif;font-size:21px;font-weight:500;color:#ECEAE3;letter-spacing:-.01em')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#5E5E68" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
-              <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#C9A65F')}><span id="rtm-clock">{V.clock}</span> <span style={css('color:#5E5E68')}>{V.tzAbbr}</span></span>
+              <div style={css('display:flex;align-items:center;gap:10px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:11px;padding:6px 13px')}>
+                <span style={{ ...css('width:7px;height:7px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
+                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:17px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
+                <span style={css('display:flex;flex-direction:column;gap:1px')}>
+                  <span style={css('font-size:11px;font-weight:600;color:#ECEAE3;line-height:1.1')}>{V.todayLabel}</span>
+                  <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:9.5px;letter-spacing:.06em;color:#5E5E68;line-height:1')}>{V.tzAbbr}</span>
+                </span>
+              </div>
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
