@@ -145,6 +145,8 @@ class App extends React.Component {
     ],
     editCheck: null,
     editPlan: null,
+    // รายการเช็กลิสต์แยกตามรอบ (สัปดาห์/เดือนนั้นๆ) — ถ้ารอบไหนยังไม่เคยปรับ จะใช้ template ด้านบนเป็นค่าเริ่มต้น
+    periodItems: { weekly: {}, monthly: {} },
     checks: {
       weekly: {
         '2026-W26': { w1: true, w2: true, w3: false, w4: false, w5: false },
@@ -203,6 +205,7 @@ class App extends React.Component {
     showSetup: false, sDraft: null, setupIsNew: false,
     showReset: false,
     exporting: false,
+    exportRange: 'all', // ช่วงข้อมูลที่จะส่งออก: all | week | month
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -212,6 +215,7 @@ class App extends React.Component {
     return {
       accountName: s.accountName, affirmation: s.affirmation, affirmDetails: clone(s.affirmDetails),
       weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), preItems: clone(s.preItems),
+      periodItems: { weekly: {}, monthly: {} },
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
       goal: s.goal, tags: clone(s.tags), trades: [], images: {},
@@ -288,6 +292,7 @@ class App extends React.Component {
     return {
       accountName: s.accountName, affirmation: s.affirmation, affirmDetails: s.affirmDetails,
       weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, preItems: s.preItems,
+      periodItems: s.periodItems,
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags,
@@ -349,11 +354,32 @@ class App extends React.Component {
   _portfolioName(id) { const p = this.state.portfolios.find(x => x.id === id); return p ? p.name : '—'; }
 
   // ===== Word export =====
+  // predicate กรองเทรดตามช่วงที่เลือกส่งออก (ทั้งหมด / สัปดาห์นี้ / เดือนนี้) อิงวันที่จริง
+  _exportRangePredicate(range) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    if (range === 'week') {
+      const now = new Date();
+      const dow = (now.getDay() + 6) % 7; // จันทร์ = 0
+      const mon = new Date(now); mon.setDate(now.getDate() - dow);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const s = iso(mon), e = iso(sun);
+      return (date) => date >= s && date <= e;
+    }
+    if (range === 'month') {
+      const now = new Date();
+      const ym = now.getFullYear() + '-' + pad(now.getMonth() + 1);
+      return (date) => String(date || '').slice(0, 7) === ym;
+    }
+    return () => true;
+  }
   async exportWord() {
     const cp = this.state.currentPortfolioId;
     const imgs = this.state.images || {};
+    const inRange = this._exportRangePredicate(this.state.exportRange);
     const rows = this.state.trades
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === (this.state.portfolios[0] && this.state.portfolios[0].id)))
+      .filter(t => inRange(t.date))
       .map(t => {
         const urls = [];
         for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
@@ -363,6 +389,7 @@ class App extends React.Component {
           pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: t.rr || 0, status: t.status, notes: t.notes || '', images: urls,
         };
       });
+    if (!rows.length) { window.alert('ไม่มีข้อมูลการเทรดในช่วงที่เลือก'); return; }
     this.setState({ exporting: true });
     try { await exportWeeklyWord(rows, this.state.accountName); }
     catch (e) { window.alert('สร้างไฟล์ Word ไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
@@ -371,7 +398,11 @@ class App extends React.Component {
   exportCSV() {
     const cp = this.state.currentPortfolioId;
     const firstPf = this.state.portfolios[0] && this.state.portfolios[0].id;
-    const rows = this.state.trades.filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf));
+    const inRange = this._exportRangePredicate(this.state.exportRange);
+    const rows = this.state.trades
+      .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
+      .filter(t => inRange(t.date));
+    if (!rows.length) { window.alert('ไม่มีข้อมูลการเทรดในช่วงที่เลือก'); return; }
     const headers = ['date', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'pnl', 'status', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
@@ -451,11 +482,42 @@ class App extends React.Component {
   }
   // แก้ไขข้อความในหน้า planning — ใช้ state แยก (editPlan) ไม่ให้ชนกับเช็กลิสต์ที่อยู่ด้านหลัง modal
   editPlanItem(which, id) { this.setState({ editPlan: which + ':' + id }); }
-  commitPlanItem(which, id, e) {
+
+  // ===== per-period checklist items (แยกตามสัปดาห์/เดือนนั้นๆ) =====
+  // รายการของรอบนั้นๆ — ถ้ายังไม่เคยปรับ ใช้ template เป็นค่าเริ่มต้น
+  _periodItems(scope, periodKey) {
+    const byScope = (this.state.periodItems && this.state.periodItems[scope]) || {};
+    if (byScope[periodKey]) return byScope[periodKey];
+    return scope === 'weekly' ? this.state.weeklyItems : this.state.monthlyItems;
+  }
+  // materialize: ทำสำเนาของรอบนั้นจาก template ครั้งแรกที่มีการแก้ เพื่อให้แก้รอบเดียวไม่กระทบรอบอื่น
+  _materializePeriod(scope, periodKey) {
+    const clone = JSON.parse(JSON.stringify(this.state.periodItems || {}));
+    if (!clone.weekly) clone.weekly = {};
+    if (!clone.monthly) clone.monthly = {};
+    if (!clone[scope]) clone[scope] = {};
+    if (!clone[scope][periodKey]) {
+      const tmpl = scope === 'weekly' ? this.state.weeklyItems : this.state.monthlyItems;
+      clone[scope][periodKey] = JSON.parse(JSON.stringify(tmpl || []));
+    }
+    return clone;
+  }
+  addPeriodItem(scope, periodKey, text) {
+    if (!text || !text.trim()) return;
+    const clone = this._materializePeriod(scope, periodKey);
+    clone[scope][periodKey] = clone[scope][periodKey].concat([{ id: (scope === 'weekly' ? 'w' : 'm') + Date.now(), text: text.trim() }]);
+    this.setState({ periodItems: clone }); this._save();
+  }
+  delPeriodItem(scope, periodKey, id) {
+    const clone = this._materializePeriod(scope, periodKey);
+    clone[scope][periodKey] = clone[scope][periodKey].filter(x => x.id !== id);
+    this.setState({ periodItems: clone }); this._save();
+  }
+  commitPeriodItem(scope, periodKey, id, e) {
     const v = e && e.target ? e.target.value : '';
-    const m = this._listMeta(which);
-    const arr = this.state[m.items].map(x => x.id === id ? { ...x, text: v } : x);
-    this.setState({ [m.items]: arr, editPlan: null }); this._save(m.store, arr);
+    const clone = this._materializePeriod(scope, periodKey);
+    clone[scope][periodKey] = clone[scope][periodKey].map(x => x.id === id ? { ...x, text: v } : x);
+    this.setState({ periodItems: clone, editCheck: null, editPlan: null }); this._save();
   }
   toggleCheck(scope, periodKey, id) {
     const checks = JSON.parse(JSON.stringify(this.state.checks));
@@ -1025,7 +1087,6 @@ class App extends React.Component {
     const tab = st.checkTab;
     const isWeekly = tab === 'weekly';
     const which = isWeekly ? 'weekly' : 'monthly';
-    const items = isWeekly ? st.weeklyItems : st.monthlyItems;
     const scope = isWeekly ? 'weekly' : 'monthly';
     const weekDefs = this._recentWeeks(4, st.periodOffsetW);
     const monthDefs = this._recentMonths(3, st.periodOffsetM);
@@ -1036,7 +1097,9 @@ class App extends React.Component {
     const periodKey = isWeekly
       ? (inList(st.weekKey) ? st.weekKey : curKey)
       : (inList(st.monthKey) ? st.monthKey : curKey);
-    const periodCheck = (pk) => { const c = (st.checks[scope] && st.checks[scope][pk]) || {}; let done = 0; items.forEach(it => { if (c[it.id]) done++; }); return { done, total: items.length }; };
+    const items = this._periodItems(scope, periodKey); // รายการของรอบที่เลือกอยู่ (แยกตามสัปดาห์/เดือน)
+    // นับความคืบหน้าของแต่ละรอบ โดยใช้รายการเฉพาะของรอบนั้นๆ
+    const periodCheck = (pk) => { const its = this._periodItems(scope, pk); const c = (st.checks[scope] && st.checks[scope][pk]) || {}; let done = 0; its.forEach(it => { if (c[it.id]) done++; }); return { done, total: its.length }; };
     const periods = defs.map(([key, label]) => {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
       return {
@@ -1058,8 +1121,8 @@ class App extends React.Component {
         textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
         toggle: () => this.toggleCheck(scope, periodKey, it.id),
         editing, notEditing: !editing,
-        edit: () => this.editItem(which, it.id), commit: (e) => this.commitItem(which, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
-        del: () => this.delItem(which, it.id),
+        edit: () => this.editItem(which, it.id), commit: (e) => this.commitPeriodItem(scope, periodKey, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+        del: () => this.delPeriodItem(scope, periodKey, it.id),
       };
     });
     let cdone = 0; items.forEach(it => { if (curChecks[it.id]) cdone++; });
@@ -1187,7 +1250,7 @@ class App extends React.Component {
     let planVals = {};
     if (st.showPlan) {
       const scope = st.planScope, key = st.planKey;
-      const planItemsSrc = scope === 'weekly' ? st.weeklyItems : st.monthlyItems;
+      const planItemsSrc = this._periodItems(scope, key); // รายการเฉพาะของรอบที่กำลังวางแผน
       const cur = (st.checks[scope] && st.checks[scope][key]) || {};
       let pdone = 0;
       const planItems = planItemsSrc.map((it, i) => {
@@ -1200,8 +1263,8 @@ class App extends React.Component {
           textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
           toggle: () => this.toggleCheck(scope, key, it.id),
           editing, notEditing: !editing,
-          edit: () => this.editPlanItem(scope, it.id), commit: (e) => this.commitPlanItem(scope, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
-          del: () => this.delItem(scope, it.id),
+          edit: () => this.editPlanItem(scope, it.id), commit: (e) => this.commitPeriodItem(scope, key, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+          del: () => this.delPeriodItem(scope, key, it.id),
         };
       });
       planVals = {
@@ -1209,7 +1272,7 @@ class App extends React.Component {
         planTag: scope === 'weekly' ? 'Weekly planning' : 'Monthly planning',
         planLabel: st.planLabel, planItems, planFrac: pdone + ' / ' + planItemsSrc.length,
         planClose: () => this.closePlan(),
-        planAddKey: (e) => { if (e.key === 'Enter') { this.addItem(scope, e.target.value); e.target.value = ''; } },
+        planAddKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, key, e.target.value); e.target.value = ''; } },
       };
     }
 
@@ -1247,6 +1310,7 @@ class App extends React.Component {
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
       showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
       exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
+      exportRange: st.exportRange, setExportRange: (e) => this.setState({ exportRange: e.target.value }),
       stop: (e) => e.stopPropagation(),
       // KPI
       kEquity: S.kEquity, kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
@@ -1276,7 +1340,7 @@ class App extends React.Component {
       periods, checkItems, checkPeriodLabel, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
-      addCheckKey: (e) => { if (e.key === 'Enter') { this.addItem(which, e.target.value); e.target.value = ''; } },
+      addCheckKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, periodKey, e.target.value); e.target.value = ''; } },
       preItems, prePct: prePct + '%', preOffset: 327 - 327 * prePct / 100, preStroke: ringStroke(prePct), preMsg: ringMsg(prePct), preFrac: pdone + ' / ' + st.preItems.length + ' ข้อ',
       addPreKey: (e) => { if (e.key === 'Enter') { this.addItem('pre', e.target.value); e.target.value = ''; } },
       showPlan: st.showPlan, ...planVals, openPlanManual: () => this.openPlanManual(),
@@ -1463,6 +1527,11 @@ class App extends React.Component {
             {V.logFilters.map((f, i) => (
               <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
             ))}
+            <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus" title="เลือกช่วงข้อมูลที่จะส่งออก (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
+              <option value="all">ส่งออก: ทั้งหมด</option>
+              <option value="week">ส่งออก: สัปดาห์นี้</option>
+              <option value="month">ส่งออก: เดือนนี้</option>
+            </select>
             <span onClick={V.exportCSV} className="hv-lift" title="ดาวน์โหลดเป็น CSV (เปิดใน Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
             <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="ดาวน์โหลดประวัติเทรดรายสัปดาห์เป็น Word (มีรูปแนบ)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ เพิ่มออเดอร์</span>
