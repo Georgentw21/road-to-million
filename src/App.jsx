@@ -217,28 +217,6 @@ class App extends React.Component {
   }
   _tick() { const el = document.querySelector('#rtm-clock'); if (el) el.textContent = this._now(); }
   // สถานะ session ของแต่ละตลาด (คำนวณจากเวลาจริง รองรับ DST ผ่าน timeZone)
-  _sessions() {
-    const hourIn = (tz) => {
-      try { return parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false, weekday: 'short' }).formatToParts(new Date()).find(p => p.type === 'hour').value, 10); }
-      catch (e) { return -1; }
-    };
-    const dayIn = (tz) => {
-      try { return new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(new Date()); }
-      catch (e) { return ''; }
-    };
-    const weekday = (tz) => { const d = dayIn(tz); return d !== 'Sat' && d !== 'Sun'; };
-    const mk = (label, tz, open, close) => {
-      const h = hourIn(tz);
-      const active = weekday(tz) && h >= open && h < close;
-      return { label, active };
-    };
-    return [
-      mk('London', 'Europe/London', 8, 16),
-      mk('New York', 'America/New_York', 8, 17),
-      mk('Tokyo', 'Asia/Tokyo', 9, 15),
-    ];
-  }
-
   _blob() {
     const s = this.state;
     return {
@@ -637,6 +615,8 @@ class App extends React.Component {
     const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
+    // กันข้อมูลที่ pnl/rr เป็น string -> บังคับเป็นตัวเลขเสมอ
+    trades = (trades || []).map(t => ({ ...t, pnl: Number(t.pnl) || 0, rr: Number(t.rr) || 0 }));
     const closed = trades.filter(t => t.status !== 'OPEN');
     const wins = closed.filter(t => (t.pnl || 0) > 0);
     const losses = closed.filter(t => (t.pnl || 0) < 0);
@@ -814,7 +794,8 @@ class App extends React.Component {
 
     // ---- trade row mapper ----
     const sessColor = (s) => s === 'Tokyo' ? BLUE : (s === 'London' ? GOLD : PURPLE);
-    const mapTrade = (t) => {
+    const mapTrade = (t0) => {
+      const t = { ...t0, pnl: Number(t0.pnl) || 0, rr: Number(t0.rr) || 0 };
       const su = this._setupById(t.setupId);
       const dd = new Date(t.date + 'T00:00');
       const dShort = dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
@@ -1160,7 +1141,7 @@ class App extends React.Component {
       affirmation: st.affirmation, editAffirm: st.editAffirm, notEditAffirm: !st.editAffirm,
       startAffirm: () => this.startAffirm(), commitAffirm: (e) => this.commitAffirm(e), onAffirmKey: (e) => this.onAffirmKey(e),
       affirmDetails, addAffirmDetail: () => this.addAffirmDetail(),
-      clock: this._now(), tzAbbr: this._tzAbbr(), sessions: this._sessions(),
+      clock: this._now(), tzAbbr: this._tzAbbr(),
       tickerA: this._ticker(), tickerB: this._ticker(),
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'ทุกพอร์ต' : this._portfolioName(cpId),
@@ -1955,11 +1936,6 @@ class App extends React.Component {
               <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#C9A65F')}><span id="rtm-clock">{V.clock}</span> <span style={css('color:#5E5E68')}>{V.tzAbbr}</span></span>
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
-              <div style={css('display:flex;gap:6px')}>
-                {V.sessions.map((s, i) => (
-                  <div key={i} style={{ ...css('display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11px'), border: '1px solid ' + (s.active ? 'rgba(95,192,141,.3)' : 'rgba(255,255,255,.08)'), color: s.active ? '#ECEAE3' : '#5E5E68' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: s.active ? '#5FC08D' : '#5E5E68', animation: s.active ? 'pulse 2.2s infinite' : 'none' }}></span>{s.label}</div>
-                ))}
-              </div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
