@@ -239,7 +239,12 @@ class App extends React.Component {
       const r = await fetch('/api/prices');
       if (!r.ok) return;
       const j = await r.json();
-      if (j && j.data && j.data.length) this.setState({ livePrices: j.data });
+      if (!j || !j.data || !j.data.length) return;
+      // รวมกับราคาเดิม: ตัวไหนรอบนี้ดึงไม่ได้ (ok=false) ให้คงค่าล่าสุดไว้ ไม่ให้กลายเป็น '—'
+      const prev = this.state.livePrices || [];
+      const prevMap = {}; prev.forEach(p => { prevMap[p.label] = p; });
+      const merged = j.data.map(p => (p.ok === false && prevMap[p.label]) ? prevMap[p.label] : p);
+      this.setState({ livePrices: merged });
     } catch (e) { /* fallback ใช้ราคา default */ }
   }
   async _loadFromCloud() {
@@ -559,6 +564,7 @@ class App extends React.Component {
       : [
         ['XAUUSD', '—', '·', true], ['EURUSD', '—', '·', false], ['GBPJPY', '—', '·', true],
         ['US30', '—', '·', true], ['NAS100', '—', '·', false], ['BTCUSD', '—', '·', true], ['USDJPY', '—', '·', true],
+        ['NVDA', '—', '·', true], ['GOOG', '—', '·', true], ['AAPL', '—', '·', true], ['TSLA', '—', '·', true], ['MSFT', '—', '·', true],
       ];
     return (
       <Fragment>
@@ -1216,7 +1222,7 @@ class App extends React.Component {
       clock: this._now(), tzAbbr: this._tzAbbr(), todayLabel: this._todayLabel(),
       tickerA: this._ticker(), tickerB: this._ticker(),
       portfolios: st.portfolios, currentPortfolioId: cpId,
-      currentPortfolioName: cpId === 'all' ? 'ทุกพอร์ต' : this._portfolioName(cpId),
+      currentPortfolioName: cpId === 'all' ? 'All portfolio' : this._portfolioName(cpId),
       showPortMenu: st.showPortMenu, togglePortMenu: () => this.setState({ showPortMenu: !st.showPortMenu, showUserMenu: false }),
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
@@ -2020,7 +2026,7 @@ class App extends React.Component {
                 <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
                   <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
-                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>ทุกพอร์ต</div>
+                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>All portfolio</div>
                     {V.portfolios.map((p) => (
                       <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
                         <span>{p.name}</span>
