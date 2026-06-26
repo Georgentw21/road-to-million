@@ -144,6 +144,7 @@ class App extends React.Component {
       { id: 'p6', text: 'ไม่มีออเดอร์ค้างที่ขัดกับแผน' },
     ],
     editCheck: null,
+    editPlan: null,
     checks: {
       weekly: {
         '2026-W26': { w1: true, w2: true, w3: false, w4: false, w5: false },
@@ -448,6 +449,14 @@ class App extends React.Component {
     const arr = this.state[m.items].map(x => x.id === id ? { ...x, text: v } : x);
     this.setState({ [m.items]: arr, editCheck: null }); this._save(m.store, arr);
   }
+  // แก้ไขข้อความในหน้า planning — ใช้ state แยก (editPlan) ไม่ให้ชนกับเช็กลิสต์ที่อยู่ด้านหลัง modal
+  editPlanItem(which, id) { this.setState({ editPlan: which + ':' + id }); }
+  commitPlanItem(which, id, e) {
+    const v = e && e.target ? e.target.value : '';
+    const m = this._listMeta(which);
+    const arr = this.state[m.items].map(x => x.id === id ? { ...x, text: v } : x);
+    this.setState({ [m.items]: arr, editPlan: null }); this._save(m.store, arr);
+  }
   toggleCheck(scope, periodKey, id) {
     const checks = JSON.parse(JSON.stringify(this.state.checks));
     if (!checks[scope]) checks[scope] = {};
@@ -642,10 +651,10 @@ class App extends React.Component {
     if (first) this.setState({ showPlan: true, planAuto: true, planScope: first.scope, planKey: first.key, planLabel: first.label });
   }
   closePlan() {
-    if (!this.state.planAuto) { this.setState({ showPlan: false }); return; } // เปิดเอง = ไม่ปิดการเตือน
+    if (!this.state.planAuto) { this.setState({ showPlan: false, editPlan: null }); return; } // เปิดเอง = ไม่ปิดการเตือน
     const k = this.state.planScope + ':' + this.state.planKey;
     const dis = { ...(this.state.dismissedReminders || {}), [k]: true };
-    this.setState({ dismissedReminders: dis, showPlan: false }, () => { this._save(); this._checkPlanReminder(); });
+    this.setState({ dismissedReminders: dis, showPlan: false, editPlan: null }, () => { this._save(); this._checkPlanReminder(); });
   }
   togglePlanReminders() { this.setState({ planReminders: !this.state.planReminders, showUserMenu: false }, () => this._save()); }
   // เปิดแผนล่วงหน้าเองจากหน้า Checklist (สัปดาห์/เดือนถัดไปตามแท็บ)
@@ -1043,7 +1052,7 @@ class App extends React.Component {
     const checkItems = items.map((it, i) => {
       const done = !!curChecks[it.id]; const editing = st.editCheck === (which + ':' + it.id);
       return {
-        text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
+        id: which + '-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
         boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
         boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
         textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
@@ -1064,7 +1073,7 @@ class App extends React.Component {
     const preItems = st.preItems.map((it, i) => {
       const done = !!preChecks[it.id]; const editing = st.editCheck === ('pre:' + it.id);
       return {
-        text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
+        id: 'pre-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
         boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
         boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
         textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
@@ -1183,7 +1192,7 @@ class App extends React.Component {
       let pdone = 0;
       const planItems = planItemsSrc.map((it, i) => {
         const done = !!cur[it.id]; if (done) pdone++;
-        const editing = st.editCheck === (scope + ':' + it.id);
+        const editing = st.editPlan === (scope + ':' + it.id);
         return {
           text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
           boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
@@ -1191,7 +1200,7 @@ class App extends React.Component {
           textColor: done ? '#5E5E68' : '#ECEAE3', strike: done ? 'line-through' : 'none',
           toggle: () => this.toggleCheck(scope, key, it.id),
           editing, notEditing: !editing,
-          edit: () => this.editItem(scope, it.id), commit: (e) => this.commitItem(scope, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+          edit: () => this.editPlanItem(scope, it.id), commit: (e) => this.commitPlanItem(scope, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
           del: () => this.delItem(scope, it.id),
         };
       });
@@ -1608,7 +1617,7 @@ class App extends React.Component {
 
   _renderCheckRow(c, i) {
     return (
-      <div key={i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:15px 20px;transition:.14s'), borderTop: c.border }}>
+      <div key={c.id || i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:15px 20px;transition:.14s'), borderTop: c.border }}>
         <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
         {c.editing ? (
           <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
@@ -1668,7 +1677,7 @@ class App extends React.Component {
             {V.checkItems.map((c, i) => this._renderCheckRow(c, i))}
             <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
               <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-              <input placeholder="เพิ่มรายการใหม่ แล้วกด Enter" onKeyDown={V.addCheckKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+              <input key={'addcheck-' + V.checkTab} placeholder="เพิ่มรายการใหม่ แล้วกด Enter" onKeyDown={V.addCheckKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
             </div>
           </div>
           {this._renderReadiness(V.readyStroke, V.readyOffset, V.readyPct, V.readyMsg, V.readyFrac)}
