@@ -233,6 +233,7 @@ class App extends React.Component {
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
       goal: s.goal, tags: clone(s.tags), trades: [], images: {},
       planReminders: s.planReminders, dismissedReminders: {},
+      draft: null, draftIsNew: false, sDraft: null, setupIsNew: false, // ล้าง draft ที่ค้างด้วย
     };
   })();
 
@@ -649,6 +650,8 @@ class App extends React.Component {
       const e = parseFloat(d.entry), s = parseFloat(d.stop), t = parseFloat(d.target);
       if (!isNaN(e) && !isNaN(s) && !isNaN(t) && Math.abs(e - s) > 0) d.rr = (Math.abs(t - e) / Math.abs(e - s)).toFixed(2);
     }
+    // ให้วันที่ของออเดอร์ (ใช้จัดกลุ่มในปฏิทิน/สถิติ) ตามวันเปิดออเดอร์เสมอ
+    if (field === 'entryTime' && typeof v === 'string' && v.length >= 10) d.date = v.slice(0, 10);
     this._patchDraft(d);
   }
   addImg() { const d = this.state.draft; if (d.imgCount < 6) this._patchDraft({ ...d, imgCount: d.imgCount + 1 }); }
