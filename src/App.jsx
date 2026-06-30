@@ -79,7 +79,7 @@ function EquityCurve({ line, area, points, lastY }) {
     <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={leave}
       style={css('position:relative;width:100%;height:210px')}>
       <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
-        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C9A65F" stopOpacity=".32"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
+        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E2C588" stopOpacity=".42"/><stop offset="55%" stopColor="#C9A65F" stopOpacity=".12"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
         <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
         <path d={area} fill="url(#cv)"/>
         <path className="eq-line" d={line} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -277,7 +277,10 @@ class App extends React.Component {
     const DATA_LIMIT = 500 * 1024 * 1024;   // 500 MB
     const fmt = (b) => b >= 1048576 ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB' : (b >= 1024 ? (b / 1024).toFixed(0) + ' KB' : Math.round(b) + ' B');
     let dataBytes = 0;
-    try { const s = JSON.stringify(this._blob()); dataBytes = (typeof TextEncoder !== 'undefined') ? new TextEncoder().encode(s).length : s.length; } catch (e) { /* ignore */ }
+    // คำนวณขนาดข้อมูลเฉพาะตอนเมนูเปิด (เลี่ยง stringify ทั้งก้อนทุกครั้งที่ render เมื่อ data ใหญ่)
+    if (st.showUserMenu) {
+      try { const s = JSON.stringify(this._blob()); dataBytes = (typeof TextEncoder !== 'undefined') ? new TextEncoder().encode(s).length : s.length; } catch (e) { /* ignore */ }
+    }
     const imgReady = !!st.storage;
     const imgBytes = imgReady ? st.storage.bytes : 0;
     const imgCount = imgReady ? st.storage.count : 0;
@@ -1484,12 +1487,12 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
-          <div className="hv-k-green" style={{ ...css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
-          <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
-          <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
-          <div className="hv-k-red" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
+          <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
+          <div className="hv-k-green" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
+          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
+          <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
+          <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(155,140,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
+          <div className="hv-k-red" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(220,106,99,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:19px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
@@ -1652,7 +1655,7 @@ class App extends React.Component {
             { l: 'วันเขียว', v: V.consistencyStr, c: '#5FC08D' },
             { l: 'สตรีคปัจจุบัน', v: V.curStreakStr, c: V.curStreakColor },
           ].map((m, i) => (
-            <div key={i} className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600'), color: m.c }}>{m.v}</div></div>
+            <div key={i} className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:7px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600'), color: m.c }}>{m.v}</div></div>
           ))}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
@@ -1818,6 +1821,13 @@ class App extends React.Component {
             </div>
           </div>
           {this._renderReadiness(V.readyStroke, V.readyOffset, V.readyPct, V.readyMsg, V.readyFrac)}
+        </div>
+
+        <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .16s both')}>
+          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
+          <span style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
+          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
+          <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
       </div>
     );
