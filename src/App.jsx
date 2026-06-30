@@ -121,6 +121,7 @@ class App extends React.Component {
     checkTab: 'weekly',
     weekKey: '2026-W26',
     monthKey: '2026-06',
+    yearKey: '2026',
     weeklyItems: [
       { id: 'w1', text: 'รีวิวผลการเทรดสัปดาห์ที่แล้ว + จุดผิดพลาด' },
       { id: 'w2', text: 'อัปเดต watchlist และ bias รายสัปดาห์' },
@@ -135,6 +136,13 @@ class App extends React.Component {
       { id: 'm4', text: 'ปรับ position sizing ตาม equity ใหม่' },
       { id: 'm5', text: 'ตั้งเป้าหมายเดือนถัดไป' },
     ],
+    yearlyItems: [
+      { id: 'y1', text: 'สรุปผลงานทั้งปี: กำไร/ขาดทุนสุทธิ + growth %' },
+      { id: 'y2', text: 'รีวิวระบบเทรด — setup ไหนเวิร์ค/ควรเลิก' },
+      { id: 'y3', text: 'ทบทวนวินัย & จุดอ่อนทางจิตวิทยาตลอดปี' },
+      { id: 'y4', text: 'วางแผนภาษี / ถอนกำไรประจำปี' },
+      { id: 'y5', text: 'ตั้งเป้าหมายและแผนเติบโตของปีหน้า' },
+    ],
     preItems: [
       { id: 'p1', text: 'เช็กข่าว high-impact ของวันนี้' },
       { id: 'p2', text: 'มาร์ก key levels บน H4 และ Daily' },
@@ -146,7 +154,7 @@ class App extends React.Component {
     editCheck: null,
     editPlan: null,
     // รายการเช็กลิสต์แยกตามรอบ (สัปดาห์/เดือนนั้นๆ) — ถ้ารอบไหนยังไม่เคยปรับ จะใช้ template ด้านบนเป็นค่าเริ่มต้น
-    periodItems: { weekly: {}, monthly: {} },
+    periodItems: { weekly: {}, monthly: {}, yearly: {} },
     checks: {
       weekly: {
         '2026-W26': { w1: true, w2: true, w3: false, w4: false, w5: false },
@@ -158,6 +166,9 @@ class App extends React.Component {
         '2026-06': { m1: true, m2: true, m3: false, m4: false, m5: false },
         '2026-05': { m1: true, m2: true, m3: true, m4: true, m5: true },
         '2026-04': { m1: true, m2: true, m3: true, m4: true, m5: false },
+      },
+      yearly: {
+        '2026': { y1: false, y2: true, y3: false, y4: false, y5: true },
       },
       pre: { today: { p1: true, p2: true, p3: false, p4: false, p5: false, p6: false } },
     },
@@ -196,7 +207,7 @@ class App extends React.Component {
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
     // เลื่อนดู period ย้อนหลัง/อนาคตใน checklist
-    periodOffsetW: 0, periodOffsetM: 0,
+    periodOffsetW: 0, periodOffsetM: 0, periodOffsetY: 0,
     // เตือนวางแผนล่วงหน้า (ก่อนขึ้นสัปดาห์/เดือนใหม่)
     planReminders: true,
     dismissedReminders: {},
@@ -215,8 +226,8 @@ class App extends React.Component {
     const clone = (x) => JSON.parse(JSON.stringify(x));
     return {
       accountName: s.accountName, affirmation: s.affirmation, affirmDetails: clone(s.affirmDetails),
-      weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), preItems: clone(s.preItems),
-      periodItems: { weekly: {}, monthly: {} },
+      weeklyItems: clone(s.weeklyItems), monthlyItems: clone(s.monthlyItems), yearlyItems: clone(s.yearlyItems), preItems: clone(s.preItems),
+      periodItems: { weekly: {}, monthly: {}, yearly: {} },
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
       goal: s.goal, tags: clone(s.tags), trades: [], images: {},
@@ -320,7 +331,7 @@ class App extends React.Component {
     const s = this.state;
     return {
       accountName: s.accountName, affirmation: s.affirmation, affirmDetails: s.affirmDetails,
-      weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, preItems: s.preItems,
+      weeklyItems: s.weeklyItems, monthlyItems: s.monthlyItems, yearlyItems: s.yearlyItems, preItems: s.preItems,
       periodItems: s.periodItems,
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
@@ -489,6 +500,7 @@ class App extends React.Component {
   _listMeta(which) {
     if (which === 'weekly') return { items: 'weeklyItems', store: 'rtm_weekly', idp: 'w' };
     if (which === 'monthly') return { items: 'monthlyItems', store: 'rtm_monthly', idp: 'm' };
+    if (which === 'yearly') return { items: 'yearlyItems', store: 'rtm_yearly', idp: 'y' };
     return { items: 'preItems', store: 'rtm_pre', idp: 'p' };
   }
   addItem(which, text) {
@@ -514,20 +526,21 @@ class App extends React.Component {
 
   // ===== per-period checklist items (แยกตามสัปดาห์/เดือนนั้นๆ) =====
   // รายการของรอบนั้นๆ — ถ้ายังไม่เคยปรับ ใช้ template เป็นค่าเริ่มต้น
+  _template(scope) { return this.state[this._listMeta(scope).items] || []; }
   _periodItems(scope, periodKey) {
     const byScope = (this.state.periodItems && this.state.periodItems[scope]) || {};
     if (byScope[periodKey]) return byScope[periodKey];
-    return scope === 'weekly' ? this.state.weeklyItems : this.state.monthlyItems;
+    return this._template(scope);
   }
   // materialize: ทำสำเนาของรอบนั้นจาก template ครั้งแรกที่มีการแก้ เพื่อให้แก้รอบเดียวไม่กระทบรอบอื่น
   _materializePeriod(scope, periodKey) {
     const clone = JSON.parse(JSON.stringify(this.state.periodItems || {}));
     if (!clone.weekly) clone.weekly = {};
     if (!clone.monthly) clone.monthly = {};
+    if (!clone.yearly) clone.yearly = {};
     if (!clone[scope]) clone[scope] = {};
     if (!clone[scope][periodKey]) {
-      const tmpl = scope === 'weekly' ? this.state.weeklyItems : this.state.monthlyItems;
-      clone[scope][periodKey] = JSON.parse(JSON.stringify(tmpl || []));
+      clone[scope][periodKey] = JSON.parse(JSON.stringify(this._template(scope)));
     }
     return clone;
   }
@@ -711,6 +724,16 @@ class App extends React.Component {
     }
     return out;
   }
+  _recentYears(n, offset = 0) {
+    const out = []; const ny = new Date().getFullYear();
+    for (let i = 0; i < n; i++) {
+      const k = i + offset;
+      const y = ny - k;
+      const label = (k === 0 ? 'ปีนี้ · ' : (k < 0 ? 'อนาคต · ' : '')) + 'ปี ' + (y + 543) + ' (' + y + ')';
+      out.push([String(y), label]);
+    }
+    return out;
+  }
 
   // ===== เตือนวางแผนล่วงหน้า =====
   // คืน reminder ที่ครบกำหนด (ก่อนขึ้นสัปดาห์/เดือนใหม่ ≤2 วัน)
@@ -733,6 +756,11 @@ class App extends React.Component {
       const mname = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(sun);
       due.push({ scope: 'weekly', key: this._isoWeekKey(mon), label: mon.getDate() + '–' + sun.getDate() + ' ' + mname });
     }
+    // yearly: 2 วันสุดท้ายของปี (ธ.ค. 30–31)
+    if (now.getMonth() === 11 && dim - now.getDate() <= 1) {
+      const ny = now.getFullYear() + 1;
+      due.push({ scope: 'yearly', key: String(ny), label: 'ปี ' + (ny + 543) + ' (' + ny + ')' });
+    }
     return due;
   }
   _checkPlanReminder() {
@@ -751,7 +779,10 @@ class App extends React.Component {
   // เปิดแผนล่วงหน้าเองจากหน้า Checklist (สัปดาห์/เดือนถัดไปตามแท็บ)
   openPlanManual() {
     const now = new Date();
-    if (this.state.checkTab === 'monthly') {
+    if (this.state.checkTab === 'yearly') {
+      const ny = now.getFullYear() + 1;
+      this.setState({ showPlan: true, planAuto: false, planScope: 'yearly', planKey: String(ny), planLabel: 'ปี ' + (ny + 543) + ' (' + ny + ')' });
+    } else if (this.state.checkTab === 'monthly') {
       const nf = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const key = nf.getFullYear() + '-' + String(nf.getMonth() + 1).padStart(2, '0');
       this.setState({ showPlan: true, planAuto: false, planScope: 'monthly', planKey: key, planLabel: new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(nf) });
@@ -766,10 +797,15 @@ class App extends React.Component {
   }
   // เลื่อนหน้าต่าง period ใน checklist (dir: +1 ย้อนหลัง, -1 ใหม่/อนาคต)
   pagePeriod(dir) {
-    if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: this.state.periodOffsetM + dir * 3 });
+    if (this.state.checkTab === 'yearly') this.setState({ periodOffsetY: this.state.periodOffsetY + dir * 3 });
+    else if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: this.state.periodOffsetM + dir * 3 });
     else this.setState({ periodOffsetW: this.state.periodOffsetW + dir * 4 });
   }
-  pageReset() { if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: 0 }); else this.setState({ periodOffsetW: 0 }); }
+  pageReset() {
+    if (this.state.checkTab === 'yearly') this.setState({ periodOffsetY: 0 });
+    else if (this.state.checkTab === 'monthly') this.setState({ periodOffsetM: 0 });
+    else this.setState({ periodOffsetW: 0 });
+  }
   setPortfolioBalance(id, v) {
     const num = parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
     const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, startBalance: num } : p);
@@ -1113,26 +1149,27 @@ class App extends React.Component {
     });
 
     // ---- checklist ----
-    const tab = st.checkTab;
+    const tab = st.checkTab; // 'weekly' | 'monthly' | 'yearly'
     const isWeekly = tab === 'weekly';
-    const which = isWeekly ? 'weekly' : 'monthly';
-    const scope = isWeekly ? 'weekly' : 'monthly';
+    const isYearly = tab === 'yearly';
+    const which = tab;
+    const scope = tab;
     const weekDefs = this._recentWeeks(4, st.periodOffsetW);
     const monthDefs = this._recentMonths(3, st.periodOffsetM);
-    const periodOffset = isWeekly ? st.periodOffsetW : st.periodOffsetM;
-    const defs = isWeekly ? weekDefs : monthDefs;
+    const yearDefs = this._recentYears(3, st.periodOffsetY);
+    const periodOffset = isYearly ? st.periodOffsetY : (isWeekly ? st.periodOffsetW : st.periodOffsetM);
+    const defs = isYearly ? yearDefs : (isWeekly ? weekDefs : monthDefs);
     const curKey = defs[0][0];
     const inList = (k) => defs.some(d => d[0] === k);
-    const periodKey = isWeekly
-      ? (inList(st.weekKey) ? st.weekKey : curKey)
-      : (inList(st.monthKey) ? st.monthKey : curKey);
-    const items = this._periodItems(scope, periodKey); // รายการของรอบที่เลือกอยู่ (แยกตามสัปดาห์/เดือน)
+    const selKey = isYearly ? st.yearKey : (isWeekly ? st.weekKey : st.monthKey);
+    const periodKey = inList(selKey) ? selKey : curKey;
+    const items = this._periodItems(scope, periodKey); // รายการของรอบที่เลือกอยู่ (แยกตามสัปดาห์/เดือน/ปี)
     // นับความคืบหน้าของแต่ละรอบ โดยใช้รายการเฉพาะของรอบนั้นๆ
     const periodCheck = (pk) => { const its = this._periodItems(scope, pk); const c = (st.checks[scope] && st.checks[scope][pk]) || {}; let done = 0; its.forEach(it => { if (c[it.id]) done++; }); return { done, total: its.length }; };
     const periods = defs.map(([key, label]) => {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
       return {
-        label, click: () => this.setState(isWeekly ? { weekKey: key } : { monthKey: key }),
+        label, click: () => this.setState(isYearly ? { yearKey: key } : (isWeekly ? { weekKey: key } : { monthKey: key })),
         bg: sel ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.03)',
         border: sel ? '1px solid rgba(201,166,95,.45)' : '1px solid rgba(255,255,255,.07)',
         labelColor: sel ? '#E2C588' : '#ECEAE3',
@@ -1297,8 +1334,8 @@ class App extends React.Component {
         };
       });
       planVals = {
-        planTitle: scope === 'weekly' ? 'วางแผนสัปดาห์หน้า' : 'วางแผนเดือนหน้า',
-        planTag: scope === 'weekly' ? 'Weekly planning' : 'Monthly planning',
+        planTitle: scope === 'weekly' ? 'วางแผนสัปดาห์หน้า' : (scope === 'yearly' ? 'วางแผนปีหน้า' : 'วางแผนเดือนหน้า'),
+        planTag: scope === 'weekly' ? 'Weekly planning' : (scope === 'yearly' ? 'Yearly planning' : 'Monthly planning'),
         planLabel: st.planLabel, planItems, planFrac: pdone + ' / ' + planItemsSrc.length,
         planClose: () => this.closePlan(),
         planAddKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, key, e.target.value); e.target.value = ''; } },
@@ -1365,8 +1402,8 @@ class App extends React.Component {
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
-      checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }),
-      wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(!isWeekly),
+      checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
+      wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(tab === 'monthly'), yrTabStyle: this._segStyle(isYearly),
       periods, checkItems, checkPeriodLabel, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
@@ -1746,12 +1783,13 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:fade .4s both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Routine checklist</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>เช็กลิสต์ <span style={css('font-style:italic;color:#E2C588')}>รายสัปดาห์ &amp; รายเดือน</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Routine checklist</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>เช็กลิสต์ <span style={css('font-style:italic;color:#E2C588')}>รายสัปดาห์ · เดือน · ปี</span></div></div>
           <div style={css('display:flex;align-items:center;gap:12px')}>
-            <span onClick={V.openPlanManual} className="hv-lift" title="เปิดวางแผนสัปดาห์/เดือนถัดไป" style={css('font-size:12px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>วางแผนล่วงหน้า</span>
+            <span onClick={V.openPlanManual} className="hv-lift" title="เปิดวางแผนรอบถัดไป" style={css('font-size:12px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>วางแผนล่วงหน้า</span>
             <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
               <span onClick={V.tabWeekly} style={css(V.wkTabStyle)}>Weekly</span>
               <span onClick={V.tabMonthly} style={css(V.moTabStyle)}>Monthly</span>
+              <span onClick={V.tabYearly} style={css(V.yrTabStyle)}>Yearly</span>
             </div>
           </div>
         </div>
