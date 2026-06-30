@@ -153,6 +153,7 @@ class App extends React.Component {
     ],
     editCheck: null,
     editPlan: null,
+    dragId: null, // รายการเช็กลิสต์ที่กำลังลาก
     // รายการเช็กลิสต์แยกตามรอบ (สัปดาห์/เดือนนั้นๆ) — ถ้ารอบไหนยังไม่เคยปรับ จะใช้ template ด้านบนเป็นค่าเริ่มต้น
     periodItems: { weekly: {}, monthly: {}, yearly: {} },
     checks: {
@@ -340,6 +341,8 @@ class App extends React.Component {
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
+      // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
+      draft: s.draft, draftIsNew: s.draftIsNew, sDraft: s.sDraft, setupIsNew: s.setupIsNew,
     };
   }
   _persist() {
@@ -564,6 +567,25 @@ class App extends React.Component {
     clone[scope][periodKey] = clone[scope][periodKey].map(x => x.id === id ? { ...x, text: v } : x);
     this.setState({ periodItems: clone, editCheck: null, editPlan: null }); this._save();
   }
+  // ===== ลาก/สลับลำดับรายการเช็กลิสต์ =====
+  reorderPeriodItem(scope, periodKey, fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return;
+    const clone = this._materializePeriod(scope, periodKey);
+    const arr = clone[scope][periodKey];
+    const from = arr.findIndex(x => x.id === fromId), to = arr.findIndex(x => x.id === toId);
+    if (from < 0 || to < 0) return;
+    const [m] = arr.splice(from, 1); arr.splice(to, 0, m);
+    this.setState({ periodItems: clone }); this._save();
+  }
+  reorderListItem(which, fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return;
+    const meta = this._listMeta(which);
+    const arr = this.state[meta.items].slice();
+    const from = arr.findIndex(x => x.id === fromId), to = arr.findIndex(x => x.id === toId);
+    if (from < 0 || to < 0) return;
+    const [m] = arr.splice(from, 1); arr.splice(to, 0, m);
+    this.setState({ [meta.items]: arr }); this._save();
+  }
   toggleCheck(scope, periodKey, id) {
     const checks = JSON.parse(JSON.stringify(this.state.checks));
     if (!checks[scope]) checks[scope] = {};
@@ -578,8 +600,8 @@ class App extends React.Component {
   editVision(id) { this.setState({ editVisionId: id }); }
   commitVision(id, e) { const t = e && e.target ? e.target.value : ''; const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
   // ===== tags =====
-  toggleDraftTag(tag) { const d = this.state.draft; if (!d) return; const has = (d.tags || []).includes(tag); const tags = has ? d.tags.filter(x => x !== tag) : [...(d.tags || []), tag]; this.setState({ draft: { ...d, tags } }); }
-  addTag(name) { name = (name || '').trim(); if (!name) return; let tags = this.state.tags; if (!tags.includes(name)) tags = tags.concat([name]); const d = this.state.draft; const dtags = d ? ((d.tags || []).includes(name) ? d.tags : [...(d.tags || []), name]) : []; this.setState({ tags, draft: d ? { ...d, tags: dtags } : d }); this._save(); }
+  toggleDraftTag(tag) { const d = this.state.draft; if (!d) return; const has = (d.tags || []).includes(tag); const tags = has ? d.tags.filter(x => x !== tag) : [...(d.tags || []), tag]; this._patchDraft({ ...d, tags }); }
+  addTag(name) { name = (name || '').trim(); if (!name) return; let tags = this.state.tags; if (!tags.includes(name)) tags = tags.concat([name]); const d = this.state.draft; const dtags = d ? ((d.tags || []).includes(name) ? d.tags : [...(d.tags || []), name]) : []; this.setState({ tags }); if (d) this._patchDraft({ ...d, tags: dtags }); else this._save(); }
   delTagGlobal(name, e) { if (e) e.stopPropagation(); if (!window.confirm('ลบแท็ก "' + name + '" ออกจากรายการ?')) return; const tags = this.state.tags.filter(x => x !== name); this.setState({ tags }); this._save(); }
   startGoal() { this.setState({ editGoal: true }); }
   commitGoal(e) { const n = parseFloat(String(e && e.target ? e.target.value : '').replace(/[^0-9.]/g, '')) || 0; this.setState({ editGoal: false, goal: n > 0 ? n : 1000000 }); this._save(); }
@@ -588,7 +610,16 @@ class App extends React.Component {
   // ===== trades =====
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
+  _hasDraftContent(d) {
+    if (!d) return false;
+    const has = (x) => x != null && String(x).trim() !== '';
+    return has(d.sym) || has(d.notes) || has(d.entry) || has(d.stop) || has(d.target) || has(d.pnl) || has(d.lot) || (d.tags && d.tags.length > 0);
+  }
   openNew(dateISO) {
+    // ถ้ามี draft ใหม่ที่ยังพิมค้างไว้ (ยังไม่บันทึก) ให้กลับไปเขียนต่อ ไม่เริ่มใหม่ทับของเดิม
+    if (this.state.draft && this.state.draftIsNew && this._hasDraftContent(this.state.draft)) {
+      this.setState({ showTrade: true, showDay: false }); return;
+    }
     const n = new Date();
     const today = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
     const d = (typeof dateISO === 'string') ? dateISO : today;
@@ -598,18 +629,29 @@ class App extends React.Component {
     this.setState({
       draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [] },
       draftIsNew: true, showTrade: true, showDay: false,
-    });
+    }, () => this._save());
   }
-  closeTrade() { this.setState({ showTrade: false }); }
+  closeTrade() { this.setState({ showTrade: false }); this._save(); } // ปิดแต่เก็บ draft ไว้ (ปิดพลาดก็ไม่หาย)
+  cancelTrade() { // ยกเลิก: ถ้าเป็นรายการใหม่ให้ทิ้ง draft, ถ้าแก้ของเดิมก็แค่ปิด (แก้ไว้ถูกเซฟอัตโนมัติแล้ว)
+    if (this.state.draftIsNew) this.setState({ showTrade: false, draft: null, draftIsNew: false }, () => this._save());
+    else this.setState({ showTrade: false }, () => this._save());
+  }
+  _liveTrade(d) { return { ...d, pnl: d.status === 'OPEN' ? 0 : (parseFloat(String(d.pnl).replace(/[^0-9.\-]/g, '')) || 0), rr: parseFloat(String(d.rr).replace(/[^0-9.\-]/g, '')) || 0 }; }
+  // อัปเดต draft + ออโต้เซฟ: ถ้าแก้ของเดิมจะ commit เข้า list ทันที (ไม่ต้องกดบันทึก)
+  _patchDraft(d) {
+    const patch = { draft: d };
+    if (!this.state.draftIsNew && d && d.id) patch.trades = this.state.trades.map(t => t.id === d.id ? this._liveTrade(d) : t);
+    this.setState(patch); this._save();
+  }
   setD(field, v) {
     const d = { ...this.state.draft, [field]: v };
     if (field === 'entry' || field === 'stop' || field === 'target') {
       const e = parseFloat(d.entry), s = parseFloat(d.stop), t = parseFloat(d.target);
       if (!isNaN(e) && !isNaN(s) && !isNaN(t) && Math.abs(e - s) > 0) d.rr = (Math.abs(t - e) / Math.abs(e - s)).toFixed(2);
     }
-    this.setState({ draft: d });
+    this._patchDraft(d);
   }
-  addImg() { const d = this.state.draft; if (d.imgCount < 6) this.setState({ draft: { ...d, imgCount: d.imgCount + 1 } }); }
+  addImg() { const d = this.state.draft; if (d.imgCount < 6) this._patchDraft({ ...d, imgCount: d.imgCount + 1 }); }
   saveTrade() {
     const d = this.state.draft;
     if (!d.sym || !d.sym.trim()) { window.alert('กรุณาใส่ Symbol ก่อนบันทึก'); return; }
@@ -620,7 +662,7 @@ class App extends React.Component {
     if (this.state.draftIsNew) arr = [clean].concat(this.state.trades);
     else arr = this.state.trades.map(t => t.id === d.id ? clean : t);
     arr.sort((a, b) => b.date.localeCompare(a.date));
-    this.setState({ trades: arr, showTrade: false }); this._save('rtm_trades', arr);
+    this.setState({ trades: arr, showTrade: false, draft: null, draftIsNew: false }); this._save('rtm_trades', arr);
   }
   deleteTrade() {
     if (!window.confirm('ลบออเดอร์นี้?')) return;
@@ -638,18 +680,33 @@ class App extends React.Component {
   // ===== setups =====
   openSetup(id) { const s = this.state.setups.find(x => x.id === id); if (s) this.setState({ sDraft: { imgCount: 1, ...s }, setupIsNew: false, showSetup: true }); }
   openNewSetup() {
-    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true });
+    const s = this.state.sDraft;
+    // มี setup ใหม่ที่พิมค้างไว้ -> เขียนต่อ
+    if (s && this.state.setupIsNew && ((s.name && s.name.trim()) || (s.desc && s.desc.trim()) || (s.usage && s.usage.trim()))) {
+      this.setState({ showSetup: true }); return;
+    }
+    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true }, () => this._save());
   }
-  closeSetup() { this.setState({ showSetup: false }); }
-  setS(field, v) { this.setState({ sDraft: { ...this.state.sDraft, [field]: v } }); }
-  addSetupImg() { const s = this.state.sDraft; const c = s.imgCount || 1; if (c < 6) this.setState({ sDraft: { ...s, imgCount: c + 1 } }); }
+  closeSetup() { this.setState({ showSetup: false }); this._save(); } // ปิดแต่เก็บ draft ไว้
+  cancelSetup() {
+    if (this.state.setupIsNew) this.setState({ showSetup: false, sDraft: null, setupIsNew: false }, () => this._save());
+    else this.setState({ showSetup: false }, () => this._save());
+  }
+  _liveSetup(s) { return { ...s, glyph: (s.name || '?').trim().charAt(0).toUpperCase() || '★' }; }
+  _patchSDraft(s) {
+    const patch = { sDraft: s };
+    if (!this.state.setupIsNew && s && s.id) patch.setups = this.state.setups.map(x => x.id === s.id ? this._liveSetup(s) : x);
+    this.setState(patch); this._save();
+  }
+  setS(field, v) { this._patchSDraft({ ...this.state.sDraft, [field]: v }); }
+  addSetupImg() { const s = this.state.sDraft; const c = s.imgCount || 1; if (c < 6) this._patchSDraft({ ...s, imgCount: c + 1 }); }
   saveSetup() {
     const s = this.state.sDraft;
     const clean = { ...s, glyph: (s.name || '?').trim().charAt(0).toUpperCase() || '★' };
     let arr;
     if (this.state.setupIsNew) arr = this.state.setups.concat([clean]);
     else arr = this.state.setups.map(x => x.id === s.id ? clean : x);
-    this.setState({ setups: arr, showSetup: false }); this._save('rtm_setups', arr);
+    this.setState({ setups: arr, showSetup: false, sDraft: null, setupIsNew: false }); this._save('rtm_setups', arr);
   }
   deleteSetup() { if (!window.confirm('ลบ setup นี้?')) return; const id = this.state.sDraft.id; const arr = this.state.setups.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k.startsWith('setup-' + id + '-chart')); this.setState({ setups: arr, images, showSetup: false }); this._save(); deleteImages(paths); }
   deleteSetup2(id) { if (!window.confirm('ลบ setup นี้?')) return; const arr = this.state.setups.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k.startsWith('setup-' + id + '-chart')); this.setState({ setups: arr, images }); this._save(); deleteImages(paths); }
@@ -1192,6 +1249,10 @@ class App extends React.Component {
         editing, notEditing: !editing,
         edit: () => this.editItem(which, it.id), commit: (e) => this.commitPeriodItem(scope, periodKey, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
         del: () => this.delPeriodItem(scope, periodKey, it.id),
+        draggable: true, dragging: st.dragId === ('c:' + it.id),
+        onDragStart: (e) => { this.setState({ dragId: 'c:' + it.id }); if (e && e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', it.id); } catch (_) {} } },
+        onDragEnter: () => { const dz = this.state.dragId; if (dz && dz.startsWith('c:') && dz !== ('c:' + it.id)) this.reorderPeriodItem(scope, periodKey, dz.slice(2), it.id); },
+        onDragEnd: () => this.setState({ dragId: null }),
       };
     });
     let cdone = 0; items.forEach(it => { if (curChecks[it.id]) cdone++; });
@@ -1213,6 +1274,10 @@ class App extends React.Component {
         editing, notEditing: !editing,
         edit: () => this.editItem('pre', it.id), commit: (e) => this.commitItem('pre', it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
         del: () => this.delItem('pre', it.id),
+        draggable: true, dragging: st.dragId === ('p:' + it.id),
+        onDragStart: (e) => { this.setState({ dragId: 'p:' + it.id }); if (e && e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', it.id); } catch (_) {} } },
+        onDragEnter: () => { const dz = this.state.dragId; if (dz && dz.startsWith('p:') && dz !== ('p:' + it.id)) this.reorderListItem('pre', dz.slice(2), it.id); },
+        onDragEnd: () => this.setState({ dragId: null }),
       };
     });
     let pdone = 0; st.preItems.forEach(it => { if (preChecks[it.id]) pdone++; });
@@ -1252,7 +1317,7 @@ class App extends React.Component {
     if (d) {
       const imgs = []; for (let i = 0; i < (d.imgCount || 2); i++) imgs.push({ tid: d.id, n: i });
       tradeVals = {
-        tradeModalTag: st.draftIsNew ? 'New entry' : 'Edit · แก้ไขออเดอร์',
+        tradeModalTag: st.draftIsNew ? 'New entry · พิมแล้วไม่หาย' : 'แก้ไข · บันทึกอัตโนมัติ',
         tradeModalTitle: st.draftIsNew ? 'บันทึกการเทรด' : ((d.sym || 'ออเดอร์') + ' · ' + d.date),
         dSym: d.sym, dSetup: d.setupId, dSession: d.session, dEntry: d.entry, dStop: d.stop, dTarget: d.target,
         dRR: String(d.rr), dPnl: String(d.pnl), dLot: d.lot != null ? String(d.lot) : '', dStatus: d.status, dEntryTime: d.entryTime, dExitTime: d.exitTime, dNotes: d.notes,
@@ -1290,7 +1355,7 @@ class App extends React.Component {
     if (sd) {
       const choices = [GREEN, GOLD, BLUE, PURPLE, RED];
       setupVals = {
-        setupModalTag: st.setupIsNew ? 'New setup' : 'Setup detail',
+        setupModalTag: st.setupIsNew ? 'New setup · พิมแล้วไม่หาย' : 'Setup · บันทึกอัตโนมัติ',
         setupModalTitle: st.setupIsNew ? 'สร้าง Setup ใหม่' : (sd.name || 'Setup'),
         sId: sd.id, sName: sd.name, sDesc: sd.desc, sUsage: sd.usage,
         setSName: (e) => this.setS('name', e.target.value), setSDesc: (e) => this.setS('desc', e.target.value), setSUsage: (e) => this.setS('usage', e.target.value),
@@ -1420,9 +1485,9 @@ class App extends React.Component {
       // day modal
       showDay: st.showDay, closeDay: () => this.closeDay(), ...dayObj,
       // trade modal
-      showTrade: st.showTrade, closeTrade: () => this.closeTrade(), addImg: () => this.addImg(), ...tradeVals,
+      showTrade: st.showTrade, draftIsNew: st.draftIsNew, closeTrade: () => this.closeTrade(), cancelTrade: () => this.cancelTrade(), addImg: () => this.addImg(), ...tradeVals,
       // setup modal
-      showSetup: st.showSetup, closeSetup: () => this.closeSetup(), ...setupVals,
+      showSetup: st.showSetup, setupIsNew: st.setupIsNew, closeSetup: () => this.closeSetup(), cancelSetup: () => this.cancelSetup(), ...setupVals,
     };
   }
 
@@ -1755,8 +1820,22 @@ class App extends React.Component {
   }
 
   _renderCheckRow(c, i) {
+    const canDrag = c.draggable && !c.editing;
     return (
-      <div key={c.id || i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:15px 20px;transition:.14s'), borderTop: c.border }}>
+      <div key={c.id || i} className="hv-chk"
+        draggable={canDrag}
+        onDragStart={canDrag ? c.onDragStart : undefined}
+        onDragEnter={canDrag ? c.onDragEnter : undefined}
+        onDragOver={canDrag ? (e) => e.preventDefault() : undefined}
+        onDragEnd={canDrag ? c.onDragEnd : undefined}
+        style={{ ...css('display:flex;align-items:center;gap:12px;padding:15px 20px;transition:.14s'), borderTop: c.border, opacity: c.dragging ? 0.4 : 1 }}>
+        {c.draggable && !c.editing && (
+          <div title="ลากเพื่อจัดลำดับ" style={css('flex:none;display:flex;flex-direction:column;gap:2.5px;cursor:grab;color:#4A4A52;padding:2px')}>
+            <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
+            <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
+            <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
+          </div>
+        )}
         <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
         {c.editing ? (
           <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
@@ -2014,8 +2093,8 @@ class App extends React.Component {
               {V.canDuplicate && (
                 <div onClick={V.duplicateTrade} className="hv-lift" title="คัดลอกเป็นออเดอร์ใหม่" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(201,166,95,.35);color:#E2C588;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>คัดลอก</div>
               )}
-              <div onClick={V.closeTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>ยกเลิก</div>
-              <div onClick={V.saveTrade} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>บันทึก</div>
+              <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'ยกเลิก' : 'ปิด'}</div>
+              <div onClick={V.saveTrade} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'บันทึก' : 'บันทึก & ปิด'}</div>
             </div>
           </div>
         </div>
@@ -2120,8 +2199,8 @@ class App extends React.Component {
               {V.canDeleteSetup && (
                 <div onClick={V.deleteSetup} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>ลบ</div>
               )}
-              <div onClick={V.closeSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>ยกเลิก</div>
-              <div onClick={V.saveSetup} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>บันทึก</div>
+              <div onClick={V.cancelSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.setupIsNew ? 'ยกเลิก' : 'ปิด'}</div>
+              <div onClick={V.saveSetup} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'บันทึก' : 'บันทึก & ปิด'}</div>
             </div>
           </div>
         </div>
