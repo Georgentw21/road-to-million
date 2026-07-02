@@ -609,8 +609,9 @@ class App extends React.Component {
   onGoalKey(e) { if (e.key === 'Enter') e.target.blur(); }
 
   // ===== trades =====
-  // ผลลัพธ์เป็น R (ติดเครื่องหมายตามกำไร/ขาดทุน): ชนะ = +|rr|, แพ้ = −|rr|, เสมอ/ยังไม่ปิด = 0
-  _rMult(t) { const rr = Math.abs(Number(t.rr) || 0); const p = Number(t.pnl) || 0; return (t.status === 'OPEN') ? 0 : (p < 0 ? -rr : (p > 0 ? rr : 0)); }
+  // ผลลัพธ์เป็น R: ชนะ = +|rr| (กำไรตามอัตรา R:R ที่วางไว้), แพ้ = −1R (โดนความเสี่ยง 1R เต็ม), เสมอ/ยังไม่ปิด = 0
+  _rMult(t) { const p = Number(t.pnl) || 0; if (t.status === 'OPEN') return 0; if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0; }
+  _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
   _hasDraftContent(d) {
@@ -876,6 +877,17 @@ class App extends React.Component {
     const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, startBalance: num } : p);
     this.setState({ portfolios }); this._save();
   }
+  // เติมเงินเข้าพอร์ต (ค่าบวก) หรือถอน (ค่าลบ) — บันทึกเป็นรายการพร้อมวันที่ แล้วรวมเข้ากับ equity
+  depositPortfolio(id) {
+    const raw = window.prompt('เติมเงินเข้าพอร์ต ใส่จำนวน (บวก = เติม, ลบ = ถอน)\nเช่น 100 หรือ -50');
+    if (raw == null) return;
+    const amt = parseFloat(String(raw).replace(/[^0-9.\-]/g, ''));
+    if (!amt || isNaN(amt)) return;
+    const n = new Date();
+    const date = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, deposits: [...(p.deposits || []), { id: 'dep' + Date.now(), amount: amt, date }] } : p);
+    this.setState({ portfolios }); this._save();
+  }
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
   _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange) {
@@ -895,11 +907,17 @@ class App extends React.Component {
     const avgR = closed.length ? closed.reduce((s, t) => s + this._rMult(t), 0) / closed.length : 0;
     const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
     const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
-    const equity = startBal + net;
+    const depTotal = relevant.reduce((s, p) => s + this._portDeposits(p), 0); // เงินที่เติม/ถอนเพิ่มภายหลัง
+    const equity = startBal + depTotal + net;
 
     const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
+    // ไทม์ไลน์รวม (ไม้เทรด + การเติม/ถอนเงิน) เรียงตามเวลา เพื่อให้กราฟ/equity ตรงกัน
+    const events = [];
+    chrono.forEach(t => events.push({ date: t.date, et: t.entryTime || '', amt: t.pnl || 0, kind: 'trade', sym: t.sym }));
+    relevant.forEach(p => (p.deposits || []).forEach(d => events.push({ date: d.date || '', et: '', amt: Number(d.amount) || 0, kind: 'deposit' })));
+    events.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.et).localeCompare(String(b.et)));
     const curve = [startBal]; let cum = startBal;
-    chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
+    events.forEach(e => { cum += e.amt; curve.push(cum); });
     let peak = curve[0], maxDD = 0;
     curve.forEach(v => { if (v > peak) peak = v; const dd = peak > 0 ? (peak - v) / peak * 100 : 0; if (dd > maxDD) maxDD = dd; });
 
@@ -907,9 +925,9 @@ class App extends React.Component {
     let cutoff = null;
     if (eqRange === '1M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 1); cutoff = dt.toISOString().slice(0, 10); }
     else if (eqRange === '3M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 3); cutoff = dt.toISOString().slice(0, 10); }
-    let dispBase = startBal; const dispTrades = [];
-    chrono.forEach(t => { if (cutoff && t.date < cutoff) dispBase += (t.pnl || 0); else dispTrades.push(t); });
-    const dcurve = [dispBase]; let dc = dispBase; dispTrades.forEach(t => { dc += t.pnl || 0; dcurve.push(dc); });
+    let dispBase = startBal; const dispEvents = [];
+    events.forEach(e => { if (cutoff && e.date && e.date < cutoff) dispBase += e.amt; else dispEvents.push(e); });
+    const dcurve = [dispBase]; let dc = dispBase; dispEvents.forEach(e => { dc += e.amt; dcurve.push(dc); });
 
     const W = 640, H = 230, pad = 16;
     let minV = Math.min(...dcurve), maxV = Math.max(...dcurve);
@@ -928,7 +946,11 @@ class App extends React.Component {
       const y0 = +yAt(dcurve[0]).toFixed(1);
       equityPoints = [{ x: 0, y: y0, valueStr: vstr(dcurve[0]), label: 'เริ่มต้น' }, { x: W, y: y0, valueStr: vstr(dcurve[0]), label: 'ปัจจุบัน' }];
     } else {
-      equityPoints = dcurve.map((v, i) => ({ x: +xAt(i).toFixed(1), y: +yAt(v).toFixed(1), valueStr: vstr(v), label: i === 0 ? 'เริ่มต้น' : ((dispTrades[i - 1] && dispTrades[i - 1].date ? dispTrades[i - 1].date : '') + (dispTrades[i - 1] && dispTrades[i - 1].sym ? ' · ' + dispTrades[i - 1].sym : '')) }));
+      equityPoints = dcurve.map((v, i) => {
+        let label = 'เริ่มต้น';
+        if (i > 0) { const e = dispEvents[i - 1]; label = e ? (e.kind === 'deposit' ? ('เติม/ถอนเงิน ' + (e.amt >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(e.amt)).toLocaleString('en-US')) : ((e.date || '') + (e.sym ? ' · ' + e.sym : ''))) : ''; }
+        return { x: +xAt(i).toFixed(1), y: +yAt(v).toFixed(1), valueStr: vstr(v), label };
+      });
     }
 
     const bySetup = setups.map(s => {
@@ -1025,7 +1047,7 @@ class App extends React.Component {
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
       setupBars, equityLine: line, equityArea: area, equityLastY: yAt(dcurve[np - 1]).toFixed(1), equityPoints,
       equityPeakStr: '$' + Math.round(peak).toLocaleString('en-US'),
-      equityGrowthStr: (startBal > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / startBal * 100).toFixed(1) + '%') : '—'),
+      equityGrowthStr: ((startBal + depTotal) > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / (startBal + depTotal) * 100).toFixed(1) + '%') : '—'),
       equityGrowthColor: pc(net),
       dowBars, sessionBars, rDist, anaStats,
       milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
@@ -1058,8 +1080,10 @@ class App extends React.Component {
         avgRStr: ((rrN ? rrSum / rrN : 0) >= 0 ? '+' : '−') + Math.abs(rrN ? rrSum / rrN : 0).toFixed(2) + 'R',
         avgRColor: (rrN ? rrSum / rrN : 0) >= 0 ? GREEN : RED,
         startBalance: Number(p.startBalance) || 0,
-        equityStr: '$' + Math.round((Number(p.startBalance) || 0) + net).toLocaleString('en-US'),
+        depositStr: this._portDeposits(p) ? ((this._portDeposits(p) >= 0 ? '+$' : '−$') + Math.abs(Math.round(this._portDeposits(p))).toLocaleString('en-US')) : '',
+        equityStr: '$' + Math.round((Number(p.startBalance) || 0) + this._portDeposits(p) + net).toLocaleString('en-US'),
         setBalance: (e) => this.setPortfolioBalance(p.id, e.target.value),
+        addFunds: () => this.depositPortfolio(p.id),
         isCurrent: cpId === p.id,
         select: () => this.selectPortfolio(p.id),
         del: (e) => this.delPortfolio(p.id, e),
@@ -1439,7 +1463,7 @@ class App extends React.Component {
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
       portfolioStats, newPortName: st.newPortName, setNewPortName: (e) => this.setNewPortName(e.target.value),
-      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0), 0) + st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
+      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
       acctTotalNet: this._fmtMoney(st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
       acctTotalNetColor: pc(st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
       calToday: () => { const n = new Date(); this.setState({ calYear: n.getFullYear(), calMonth: n.getMonth() }); },
@@ -1533,7 +1557,14 @@ class App extends React.Component {
               </div>
               <div style={css('display:flex;gap:12px;margin-bottom:14px')}>
                 <div style={{ flex: 1 }}><div style={LBL}>ทุนเริ่มต้น ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:100%;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;outline:none')} /></div>
-                <div style={{ flex: 1 }}><div style={LBL}>Equity ปัจจุบัน</div><div style={{ ...VAL, color: '#E2C588', paddingTop: 6 }}>{p.equityStr}</div></div>
+                <div style={{ flex: 1 }}>
+                  <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:5px')}>
+                    <span style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68')}>Equity ปัจจุบัน</span>
+                    <span onClick={(e) => { e.stopPropagation(); p.addFunds(); }} title="เติม/ถอนเงินเข้าพอร์ต" style={css('font-size:10.5px;font-weight:700;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:3px;flex:none')}>+ เติมเงิน</span>
+                  </div>
+                  <div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div>
+                  {p.depositStr ? <div style={css('font-size:10.5px;color:#7BA7D9;margin-top:3px;font-family:JetBrains Mono')}>รวมเติม/ถอน {p.depositStr}</div> : null}
+                </div>
               </div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
                 <div><div style={LBL}>Net P&amp;L</div><div style={{ ...VAL, color: p.netColor }}>{p.netStr}</div></div>
