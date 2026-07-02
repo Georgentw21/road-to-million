@@ -433,7 +433,7 @@ class App extends React.Component {
         return {
           date: t.date, sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
           session: t.session, lot: (t.lot != null && t.lot !== '') ? String(t.lot) : '', portfolioName: this._portfolioName(t.portfolioId),
-          pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: t.rr || 0, status: t.status, notes: t.notes || '', images: urls,
+          pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
         };
       });
     if (!rows.length) { window.alert('ไม่มีข้อมูลการเทรดในช่วงที่เลือก'); return; }
@@ -609,6 +609,8 @@ class App extends React.Component {
   onGoalKey(e) { if (e.key === 'Enter') e.target.blur(); }
 
   // ===== trades =====
+  // ผลลัพธ์เป็น R (ติดเครื่องหมายตามกำไร/ขาดทุน): ชนะ = +|rr|, แพ้ = −|rr|, เสมอ/ยังไม่ปิด = 0
+  _rMult(t) { const rr = Math.abs(Number(t.rr) || 0); const p = Number(t.pnl) || 0; return (t.status === 'OPEN') ? 0 : (p < 0 ? -rr : (p > 0 ? rr : 0)); }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
   _hasDraftContent(d) {
@@ -890,7 +892,7 @@ class App extends React.Component {
     const grossL = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
     const winRate = closed.length ? (wins.length / closed.length * 100) : 0;
     const pf = grossL ? (grossP / grossL) : (grossP > 0 ? 99 : 0);
-    const avgR = closed.length ? closed.reduce((s, t) => s + (t.rr || 0), 0) / closed.length : 0;
+    const avgR = closed.length ? closed.reduce((s, t) => s + this._rMult(t), 0) / closed.length : 0;
     const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
     const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
     const equity = startBal + net;
@@ -953,7 +955,7 @@ class App extends React.Component {
     const sessionBars = sesDefs.map(([l, c, rgb]) => { const v = sesSum[l] || 0; return { label: l, val: (v >= 0 ? '+$' : '−$') + (Math.abs(v) / 1000).toFixed(1) + 'k', color: c, labelColor: c, bg: `linear-gradient(180deg,${c},rgba(${rgb},.2))`, glow: `0 6px 22px -8px rgba(${rgb},.6)`, h: (Math.abs(v) / sesMax * 100) + '%' }; });
 
     const buckets = [['<-2R', v => v < -2], ['-2R', v => v >= -2 && v < -1.5], ['-1R', v => v >= -1.5 && v < -0.5], ['0R', v => v >= -0.5 && v < 0.5], ['+1R', v => v >= 0.5 && v < 1.5], ['+2R', v => v >= 1.5 && v < 2.5], ['+3R', v => v >= 2.5 && v < 3.5], ['>3R', v => v >= 3.5]];
-    const rCounts = buckets.map(([l, f]) => ({ l, n: closed.filter(t => f(t.rr || 0)).length }));
+    const rCounts = buckets.map(([l, f]) => ({ l, n: closed.filter(t => f(this._rMult(t))).length }));
     const rMax = Math.max(1, ...rCounts.map(b => b.n));
     const rDist = rCounts.map(b => ({ label: b.l, bg: (b.l.startsWith('-') || b.l.startsWith('<')) ? 'rgba(220,106,99,.55)' : (b.l === '0R' ? 'rgba(255,255,255,.18)' : 'rgba(95,192,141,.6)'), h: (b.n / rMax * 100) + '%' }));
 
@@ -1048,7 +1050,7 @@ class App extends React.Component {
     const portfolioStats = st.portfolios.map(p => {
       const ts = st.trades.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
-      ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += (t.rr || 0); rrN++; } });
+      ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += this._rMult(t); rrN++; } });
       return {
         id: p.id, name: p.name, trades: ts.length,
         netStr: this._fmtMoney(net), netColor: pc(net),
@@ -1083,7 +1085,8 @@ class App extends React.Component {
         sessionColor: sessColor(t.session),
         pnlStr: t.status === 'OPEN' ? '—' : this._fmtMoney(t.pnl),
         pnlColor: t.status === 'OPEN' ? '#9A9AA4' : pc(t.pnl),
-        rStr: t.status === 'OPEN' ? '—' : ((t.rr >= 0 ? '+' : '−') + Math.abs(t.rr).toFixed(1) + 'R'),
+        rStr: t.status === 'OPEN' ? '—' : ((this._rMult(t) >= 0 ? '+' : '−') + Math.abs(this._rMult(t)).toFixed(1) + 'R'),
+        rColor: t.status === 'OPEN' ? '#9A9AA4' : (this._rMult(t) > 0 ? GREEN : (this._rMult(t) < 0 ? RED : '#9A9AA4')),
         status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#5E5E68',
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime),
@@ -1202,7 +1205,7 @@ class App extends React.Component {
       const p = ts.reduce((a, t) => a + (t.pnl || 0), 0);
       const w = ts.filter(t => t.pnl > 0).length;
       const wr = ts.length ? Math.round(w / ts.length * 100) : 0;
-      const avgR = ts.length ? ts.reduce((a, t) => a + (t.rr || 0), 0) / ts.length : 0;
+      const avgR = ts.length ? ts.reduce((a, t) => a + this._rMult(t), 0) / ts.length : 0;
       return {
         id: s.id, name: s.name || '(ไม่มีชื่อ)', glyph: s.glyph, accent: s.accent, iconBg: this._tint(s.accent), desc: s.desc || '—',
         wrStr: wr + '%', tradesStr: String(ts.length), avgRStr: (avgR >= 0 ? '+' : '−') + Math.abs(avgR).toFixed(1) + 'R', rColor: avgR >= 0 ? GREEN : RED,
@@ -1599,7 +1602,7 @@ class App extends React.Component {
             <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ดูทั้งหมด →</span></div>
             <div style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:10px 20px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Symbol</span><span>Side</span><span>Setup</span><span>P&amp;L</span><span>R</span></div>
             {V.recent.map((t) => (
-              <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={css('color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</span></div>
+              <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
             ))}
             {V.recent.length === 0 && (
               <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#5E5E68')}>ยังไม่มีออเดอร์ — กด N เพื่อเริ่มบันทึก</div>
@@ -1695,7 +1698,7 @@ class App extends React.Component {
               <span style={{ ...css('font-size:11.5px'), color: t.sessionColor }}>{t.session}</span>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
               <span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span>
-              <span style={css('color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</span>
+              <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
               <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
             </div>
           ))}
@@ -2019,7 +2022,7 @@ class App extends React.Component {
             {V.dayTrades.map((t) => (
               <div key={t.id} onClick={t.open} className="hv-slide" style={{ ...css('display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:.14s'), borderLeft: '3px solid ' + t.accent }}>
                 <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#C9A65F;background:rgba(201,166,95,.12);border:1px solid rgba(201,166,95,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
-                <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</div><div style={css('font-size:11px;color:#9A9AA4;font-family:JetBrains Mono')}>{t.rStr}</div></div>
+                <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</div><div style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</div></div>
               </div>
             ))}
             <div onClick={V.openNewForDay} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:13px;border:1px dashed rgba(201,166,95,.35);color:#C9A65F;font-size:13px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มออเดอร์ในวันนี้</div>
