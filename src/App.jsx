@@ -221,6 +221,7 @@ class App extends React.Component {
     showReset: false,
     exporting: false,
     exportRange: 'all', // ช่วงข้อมูลที่จะส่งออก: all | week | month
+    txnPort: null, // พอร์ตที่กำลังเปิดดูประวัติฝาก/ถอนเต็ม
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -246,7 +247,7 @@ class App extends React.Component {
     this._fetchPrices();
     this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
     this._onKey = (e) => {
-      if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPlan: false, showPortMenu: false, showUserMenu: false }); return; }
+      if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPlan: false, showPortMenu: false, showUserMenu: false, txnPort: null }); return; }
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
       if ((e.key === 'n' || e.key === 'N') && !this.state.showTrade && !this.state.showSetup && !this.state.showDay && !this.state.showReset) { e.preventDefault(); this.openNew(); }
@@ -897,6 +898,8 @@ class App extends React.Component {
     const portfolios = this.state.portfolios.map(p => p.id === portId ? { ...p, deposits: (p.deposits || []).filter(d => d.id !== movId) } : p);
     this.setState({ portfolios }); this._save();
   }
+  openTxns(id) { this.setState({ txnPort: id }); }
+  closeTxns() { this.setState({ txnPort: null }); }
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
   _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange) {
@@ -1119,11 +1122,15 @@ class App extends React.Component {
       const netCap = grossDep - wOut;          // ทุนสุทธิ
       const bal = netCap + net;                // พอร์ตจริง
       const money = (v) => '$' + Math.round(v).toLocaleString('en-US');
-      // ledger: ทุนเริ่มต้น + รายการฝาก/ถอน เรียงใหม่ล่าสุดก่อน
-      const movements = (p.deposits || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(d => {
-        const a = Number(d.amount) || 0;
-        return { id: d.id, date: d.date, isW: a < 0, amtStr: (a >= 0 ? '+$' : '−$') + Math.abs(Math.round(a)).toLocaleString('en-US'), del: (e) => { if (e) e.stopPropagation(); this.delMovement(p.id, d.id); } };
-      });
+      // ledger: เรียงเก่า→ใหม่ เพื่อคิดยอดสะสม แล้วค่อยกลับด้านให้ล่าสุดอยู่บน
+      const raw = (p.deposits || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id)));
+      let run = start; const withRun = raw.map(d => { const a = Number(d.amount) || 0; run += a; return { d, a, run }; });
+      const movements = withRun.reverse().map(({ d, a, run }) => ({
+        id: d.id, date: d.date, isW: a < 0,
+        amtStr: (a >= 0 ? '+$' : '−$') + Math.abs(Math.round(a)).toLocaleString('en-US'),
+        runStr: money(run), // ยอดทุน (ฝาก−ถอน) สะสมหลังรายการนี้
+        del: (e) => { if (e) e.stopPropagation(); this.delMovement(p.id, d.id); },
+      }));
       return {
         id: p.id, name: p.name, trades: ts.length,
         netStr: this._fmtMoney(net), netColor: pc(net),
@@ -1135,13 +1142,15 @@ class App extends React.Component {
         equityStr: money(bal),
         setBalance: (e) => this.setPortfolioBalance(p.id, e.target.value),
         deposit: () => this.addFunds(p.id, false), withdraw: () => this.addFunds(p.id, true),
-        movements,
+        movements, txnCount: movements.length, openTxns: (e) => { if (e) e.stopPropagation(); this.openTxns(p.id); },
         isCurrent: cpId === p.id,
         select: () => this.selectPortfolio(p.id),
         del: (e) => this.delPortfolio(p.id, e),
         rename: (e) => this.renamePortfolio(p.id, e.target.value),
       };
     });
+    // ---- transaction history modal (ฝาก/ถอนเต็ม) ----
+    const txnModal = st.txnPort ? portfolioStats.find(p => p.id === st.txnPort) : null;
 
     // ---- stats computed from real trades ----
     const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange);
@@ -1587,6 +1596,8 @@ class App extends React.Component {
       showTrade: st.showTrade, draftIsNew: st.draftIsNew, closeTrade: () => this.closeTrade(), cancelTrade: () => this.cancelTrade(), addImg: () => this.addImg(), ...tradeVals,
       // setup modal
       showSetup: st.showSetup, setupIsNew: st.setupIsNew, closeSetup: () => this.closeSetup(), cancelSetup: () => this.cancelSetup(), ...setupVals,
+      // transaction history modal
+      txnModal, closeTxns: () => this.closeTxns(),
     };
   }
 
@@ -1641,13 +1652,14 @@ class App extends React.Component {
                   <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>－ ถอนเงิน</span>
                 </div>
                 {p.movements.length > 0 && (
-                  <div style={css('margin-top:11px;border-top:1px solid rgba(255,255,255,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px;max-height:120px;overflow-y:auto')} className="rtm-scroll">
-                    {p.movements.map((m) => (
+                  <div style={css('margin-top:11px;border-top:1px solid rgba(255,255,255,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px')}>
+                    {p.movements.slice(0, 3).map((m) => (
                       <div key={m.id} style={css('display:flex;align-items:center;justify-content:space-between;font-size:11.5px')}>
                         <span style={css('color:#5E5E68;font-family:JetBrains Mono')}>{m.isW ? 'ถอน' : 'ฝาก'} · {m.date}</span>
                         <span style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span><span onClick={m.del} title="ลบรายการนี้" className="hv-deltext" style={css('color:#5E5E68;cursor:pointer')}>✕</span></span>
                       </div>
                     ))}
+                    <span onClick={p.openTxns} className="hv-op" style={css('margin-top:3px;font-size:11.5px;color:#C9A65F;cursor:pointer;text-align:center')}>{p.txnCount > 3 ? ('ดูทั้งหมด ' + p.txnCount + ' รายการ →') : 'ดูประวัติเต็ม →'}</span>
                   </div>
                 )}
               </div>
@@ -2275,6 +2287,47 @@ class App extends React.Component {
     );
   }
 
+  renderTxnModal(V) {
+    const p = V.txnModal;
+    return (
+      <div onClick={V.closeTxns} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('position:sticky;top:0;z-index:2;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(18,18,24,.92);backdrop-filter:blur(8px)')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
+              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>ประวัติฝาก / ถอน</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
+              <div onClick={V.closeTxns} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+            </div>
+            <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px')}>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ฝากเข้ารวม</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#5FC08D')}>{p.depositedStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ถอนออก</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.withdrawnStr !== '$0' ? '#DC6A63' : '#9A9AA4' }}>{p.withdrawnStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ทุนสุทธิ</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>พอร์ตจริง</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#E2C588')}>{p.equityStr}</div></div>
+            </div>
+            <div style={css('display:flex;gap:8px;margin-top:14px')}>
+              <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>＋ ฝากเงิน</span>
+              <span onClick={p.withdraw} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>－ ถอนเงิน</span>
+            </div>
+          </div>
+          <div style={css('padding:8px 12px 16px')}>
+            {p.movements.length === 0 && <div style={css('padding:36px 20px;text-align:center;font-size:13px;color:#5E5E68')}>ยังไม่มีรายการฝาก/ถอน</div>}
+            {p.movements.map((m) => (
+              <div key={m.id} className="hv-chk" style={css('display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;transition:.14s')}>
+                <div style={css('display:flex;align-items:center;gap:11px')}>
+                  <span style={{ ...css('width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none'), color: m.isW ? '#DC6A63' : '#5FC08D', background: m.isW ? 'rgba(220,106,99,.12)' : 'rgba(95,192,141,.12)' }}>{m.isW ? '−' : '+'}</span>
+                  <div><div style={css('font-size:13px;color:#ECEAE3;font-weight:600')}>{m.isW ? 'ถอนเงิน' : 'ฝากเงิน'}</div><div style={css('font-size:11px;color:#5E5E68;font-family:JetBrains Mono')}>{m.date} · คงเหลือ {m.runStr}</div></div>
+                </div>
+                <div style={css('display:flex;align-items:center;gap:12px')}>
+                  <span style={{ ...css('font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span>
+                  <span onClick={m.del} title="ลบรายการนี้" className="hv-visdel" style={css('width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#5E5E68;cursor:pointer;transition:.14s;flex:none')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   renderResetModal(V) {
     return (
       <div onClick={V.closeReset} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
@@ -2451,6 +2504,7 @@ class App extends React.Component {
         {V.showSetup && this.renderSetupModal(V)}
         {V.showReset && this.renderResetModal(V)}
         {V.showPlan && this.renderPlanModal(V)}
+        {V.txnModal && this.renderTxnModal(V)}
       </div>
     );
   }
