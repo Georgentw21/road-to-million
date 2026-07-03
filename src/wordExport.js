@@ -24,12 +24,21 @@ async function toDataURL(url) {
 }
 
 // rows: [{date, sym, side, setupName, session, portfolioName, pnlNum, lot, status, rr, notes, images:[url...]}]
+// จำกัดจำนวนรูปที่ฝัง กันไฟล์ใหญ่/ค้างเวลามีออเดอร์เป็นพันๆ (โหลดทีละ batch)
+const IMG_EMBED_CAP = 300;
+
 export async function exportWeeklyWord(rows, accountName) {
-  // ฝังรูปทั้งหมดเป็น base64 ก่อน
-  const allUrls = [];
-  rows.forEach((r) => (r.images || []).forEach((u) => { if (u && !allUrls.includes(u)) allUrls.push(u); }));
+  // เก็บ URL รูปแบบไม่ซ้ำ (ใช้ Set เร็วกว่า includes เมื่อ rows เยอะ)
+  const seen = new Set(); const allUrls = [];
+  rows.forEach((r) => (r.images || []).forEach((u) => { if (u && !seen.has(u)) { seen.add(u); allUrls.push(u); } }));
+  const imgCapped = allUrls.length > IMG_EMBED_CAP;
+  const embedUrls = allUrls.slice(0, IMG_EMBED_CAP);
   const dataMap = {};
-  await Promise.all(allUrls.map(async (u) => { dataMap[u] = await toDataURL(u); }));
+  // โหลดทีละ 12 รูป กันเปิด network พร้อมกันเยอะเกินจนค้าง
+  for (let i = 0; i < embedUrls.length; i += 12) {
+    const batch = embedUrls.slice(i, i + 12);
+    await Promise.all(batch.map(async (u) => { dataMap[u] = await toDataURL(u); }));
+  }
   const groups = {};
   rows.forEach((r) => {
     const wk = isoWeek(r.date);
@@ -74,9 +83,11 @@ export async function exportWeeklyWord(rows, accountName) {
     }
   });
 
+  const capNote = imgCapped ? `<p style="font-family:Arial;font-size:11px;color:#b06a00">* ข้อมูลเยอะ — ฝังรูปเฉพาะ ${IMG_EMBED_CAP} รูปแรก (ตารางข้อมูลครบทุกออเดอร์) เลือกช่วง “สัปดาห์นี้/เดือนนี้” เพื่อได้รูปครบ</p>` : '';
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:20px">
     <h1 style="font-family:Georgia;color:#1a1408">Road To Million — ประวัติการเทรด</h1>
-    <p style="font-family:Arial;font-size:12px;color:#666">${esc(accountName || '')} · ออกรายงานเมื่อ ${new Date().toLocaleString('th-TH')}</p>
+    <p style="font-family:Arial;font-size:12px;color:#666">${esc(accountName || '')} · ออกรายงานเมื่อ ${new Date().toLocaleString('th-TH')} · ${rows.length} ออเดอร์</p>
+    ${capNote}
     ${body || '<p style="font-family:Arial">ไม่มีข้อมูลการเทรด</p>'}
   </body></html>`;
 

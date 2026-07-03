@@ -735,6 +735,18 @@ class App extends React.Component {
     if (mins) parts.push(mins + ' นาที');
     return parts.length ? parts.join(' ') : '0 นาที';
   }
+  // ระยะเวลาถือแบบสั้น สำหรับคอลัมน์ในตาราง เช่น "3ชม 15น", "2ว 4ชม", "45น"
+  _fmtDurShort(et, xt) {
+    if (!et || !xt) return '—';
+    const a = new Date(et).getTime(), b = new Date(xt).getTime();
+    if (isNaN(a) || isNaN(b) || b < a) return '—';
+    let mins = Math.round((b - a) / 60000);
+    const d = Math.floor(mins / 1440); mins -= d * 1440;
+    const h = Math.floor(mins / 60); mins -= h * 60;
+    if (d) return d + 'ว ' + h + 'ชม';
+    if (h) return h + 'ชม ' + mins + 'น';
+    return mins + 'น';
+  }
   _segStyle(active) { return 'font-size:12.5px;font-weight:600;padding:7px 18px;border-radius:8px;cursor:pointer;transition:.14s;' + (active ? 'background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : 'color:#9A9AA4'); }
   _tint(c) {
     const m = { '#5FC08D': 'rgba(95,192,141,.14)', '#7BA7D9': 'rgba(123,167,217,.14)', '#9B8CFF': 'rgba(155,140,255,.14)', '#DC6A63': 'rgba(220,106,99,.14)', '#E2C588': 'rgba(226,197,136,.14)' };
@@ -1181,7 +1193,7 @@ class App extends React.Component {
         rColor: t.status === 'OPEN' ? '#9A9AA4' : (this._rMult(t) > 0 ? GREEN : (this._rMult(t) < 0 ? RED : '#9A9AA4')),
         status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#5E5E68',
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
-        holding: this._fmtDur(t.entryTime, t.exitTime),
+        holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
@@ -1821,15 +1833,16 @@ class App extends React.Component {
           </select>
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
-          <div style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
+          <div style={css('display:grid;grid-template-columns:.65fr 1fr .5fr .8fr .7fr .42fr .72fr .85fr .5fr .72fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>ถือ</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
           {V.filteredTrades.map((t, i) => (
-            <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
+            <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:.65fr 1fr .5fr .8fr .7fr .42fr .72fr .85fr .5fr .72fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.dateShort}</span>
               <span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span>
               <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
               <span style={css('color:#9A9AA4')}>{t.setupName}</span>
               <span style={{ ...css('font-size:11.5px'), color: t.sessionColor }}>{t.session}</span>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
+              <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11px')} title={t.holding}>{t.holdShort}</span>
               <span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span>
               <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
               <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
