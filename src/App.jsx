@@ -909,17 +909,17 @@ class App extends React.Component {
     const avgR = closed.length ? closed.reduce((s, t) => s + this._rMult(t), 0) / closed.length : 0;
     const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
     const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
-    const depTotal = relevant.reduce((s, p) => s + this._portDeposits(p), 0); // เงินที่เติม/ถอนเพิ่มภายหลัง
-    const equity = startBal + depTotal + net;
+    // แยกเงินเติม (บวก) กับถอน/cash out (ลบ) ออกจากกัน เพื่อโชว์ต้นทุน/กำไรให้ชัด
+    let depIn = 0, cashOut = 0;
+    relevant.forEach(p => (p.deposits || []).forEach(d => { const a = Number(d.amount) || 0; if (a >= 0) depIn += a; else cashOut += -a; }));
+    const capitalIn = startBal + depIn;        // ต้นทุนรวมที่ใส่เข้าไป
+    const equity = capitalIn - cashOut + net;  // มูลค่าพอร์ตจริง (เงินสดในบัญชี)
+    const tradeEquity = startBal + net;        // equity จากผลเทรดล้วนๆ — ใช้กับ curve/milestone (cash flow ไม่กวน)
 
+    // equity curve = ทุนเริ่มต้น + กำไรสะสมจากการเทรด (ไม่รวมเติม/ถอนเงิน) → เห็นผลงานเทรดจริง แม้ cash out
     const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
-    // ไทม์ไลน์รวม (ไม้เทรด + การเติม/ถอนเงิน) เรียงตามเวลา เพื่อให้กราฟ/equity ตรงกัน
-    const events = [];
-    chrono.forEach(t => events.push({ date: t.date, et: t.entryTime || '', amt: t.pnl || 0, kind: 'trade', sym: t.sym }));
-    relevant.forEach(p => (p.deposits || []).forEach(d => events.push({ date: d.date || '', et: '', amt: Number(d.amount) || 0, kind: 'deposit' })));
-    events.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.et).localeCompare(String(b.et)));
     const curve = [startBal]; let cum = startBal;
-    events.forEach(e => { cum += e.amt; curve.push(cum); });
+    chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
     let peak = curve[0], maxDD = 0;
     curve.forEach(v => { if (v > peak) peak = v; const dd = peak > 0 ? (peak - v) / peak * 100 : 0; if (dd > maxDD) maxDD = dd; });
 
@@ -928,7 +928,7 @@ class App extends React.Component {
     if (eqRange === '1M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 1); cutoff = dt.toISOString().slice(0, 10); }
     else if (eqRange === '3M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 3); cutoff = dt.toISOString().slice(0, 10); }
     let dispBase = startBal; const dispEvents = [];
-    events.forEach(e => { if (cutoff && e.date && e.date < cutoff) dispBase += e.amt; else dispEvents.push(e); });
+    chrono.forEach(t => { const e = { date: t.date, amt: t.pnl || 0, kind: 'trade', sym: t.sym }; if (cutoff && t.date && t.date < cutoff) dispBase += e.amt; else dispEvents.push(e); });
     const dcurve = [dispBase]; let dc = dispBase; dispEvents.forEach(e => { dc += e.amt; dcurve.push(dc); });
 
     const W = 640, H = 230, pad = 16;
@@ -959,7 +959,7 @@ class App extends React.Component {
     } else {
       equityPoints = plot.map((p, i) => {
         let label = 'เริ่มต้น';
-        if (i > 0) { const e = p.ev; label = e ? (e.kind === 'deposit' ? ('เติม/ถอนเงิน ' + (e.amt >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(e.amt)).toLocaleString('en-US')) : ((e.date || '') + (e.sym ? ' · ' + e.sym : ''))) : ''; }
+        if (i > 0) { const e = p.ev; label = e ? ((e.date || '') + (e.sym ? ' · ' + e.sym : '')) : ''; }
         return { x: +xAt(i).toFixed(1), y: +yAt(p.v).toFixed(1), valueStr: vstr(p.v), label };
       });
     }
@@ -1049,7 +1049,8 @@ class App extends React.Component {
     const tagStats = tagArr.sort((a, b) => a.net - b.net).map(s => ({ name: s.name, meta: s.n + ' ไม้ · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
 
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
-    const progPct = Math.max(0, Math.min(100, equity / g * 100));
+    // milestone อิงผลเทรด (ทุนเริ่มต้น + กำไร) ไม่รวมเติม/ถอน → เติมเงินไม่ทำให้ดูใกล้ล้านขึ้นเอง, cash out ก็ไม่ถอยหลัง
+    const progPct = Math.max(0, Math.min(100, tradeEquity / g * 100));
     return {
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
       consistencyStr, tradeDaysN, greenDaysN,
@@ -1065,10 +1066,16 @@ class App extends React.Component {
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
       setupBars, equityLine: line, equityArea: area, equityLastY: yAt(plot[np - 1].v).toFixed(1), equityPoints,
       equityPeakStr: '$' + Math.round(peak).toLocaleString('en-US'),
-      equityGrowthStr: ((startBal + depTotal) > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / (startBal + depTotal) * 100).toFixed(1) + '%') : '—'),
+      equityGrowthStr: (capitalIn > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / capitalIn * 100).toFixed(1) + '%') : '—'),
       equityGrowthColor: pc(net),
+      // ต้นทุน / กำไร / ถอนออก / มูลค่าจริง — ตอบคำถาม "กำไรเท่าไร + ทุนใช้ไปเท่าไร" แม้ cash out แล้ว
+      capitalInStr: '$' + Math.round(capitalIn).toLocaleString('en-US'),
+      cashOutStr: cashOut > 0 ? ('−$' + Math.round(cashOut).toLocaleString('en-US')) : '$0',
+      cashOut, hasCashFlow: (depIn > 0 || cashOut > 0),
+      balanceStr: '$' + Math.round(equity).toLocaleString('en-US'),
+      netProfitStr: fm(net), netProfitColor: pc(net),
       dowBars, sessionBars, rDist, anaStats,
-      milestoneEquity: '$' + Math.round(equity).toLocaleString('en-US'),
+      milestoneEquity: '$' + Math.round(tradeEquity).toLocaleString('en-US'),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
       goalStr: '$' + Math.round(g).toLocaleString('en-US'), goalNum: g,
       milestoneMarks: ['$0', '$' + Math.round(g / 3).toLocaleString('en-US'), '$' + Math.round(2 * g / 3).toLocaleString('en-US'), '$' + Math.round(g).toLocaleString('en-US') + ' 🏁'],
@@ -1515,6 +1522,7 @@ class App extends React.Component {
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints,
       equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
+      capitalInStr: S.capitalInStr, cashOutStr: S.cashOutStr, hasCashFlow: S.hasCashFlow, balanceStr: S.balanceStr, netProfitStr: S.netProfitStr, netProfitColor: S.netProfitColor,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
@@ -1640,10 +1648,10 @@ class App extends React.Component {
             </div></div>
             <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} />
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
-              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Start</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.startBalStr}</div></div>
-              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Current</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.kEquity}</div></div>
-              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Peak</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#7BA7D9')}>{V.equityPeakStr}</div></div>
-              <div><div style={css('font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>Growth</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.equityGrowthColor }}>{V.equityGrowthStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>ต้นทุนที่ใช้</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>กำไรสะสม</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>{V.hasCashFlow ? 'ถอนออก (cash out)' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>พอร์ตจริงตอนนี้</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
             </div>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
@@ -2052,7 +2060,7 @@ class App extends React.Component {
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress</div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#5E5E68')}>· จากผลเทรด (ทุน + กำไร)</span></div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
               <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Spectral',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
               <span onClick={V.startGoal} title="คลิกเพื่อแก้เป้าหมาย" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
