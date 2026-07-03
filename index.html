@@ -97,6 +97,31 @@ select option{background:#15151c;color:#ECEAE3}
 .bar-grow-x{transform-origin:left;animation:growBarX .9s cubic-bezier(.2,.85,.3,1) both}
 /* soft pulse for the milestone + KPI accents */
 @keyframes accentPulse{0%,100%{opacity:.85}50%{opacity:1}}
+
+/* ===== animation upgrade ===== */
+/* ticker edges fade out smoothly */
+.rtm-ticker{-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+/* tactile press on gold buttons */
+.hv-save:active,.hv-setbtn:active,.hv-addbtn:active,.hv-lift:active{transform:translateY(1px) scale(.985)!important}
+/* win-rate donut springs in */
+@keyframes donutIn{0%{transform:scale(.6) rotate(-14deg);opacity:0}70%{transform:scale(1.04) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.rtm-donut{animation:donutIn .7s cubic-bezier(.34,1.4,.4,1) .15s both}
+/* milestone bar shimmer sweep */
+.rtm-progress{position:relative;overflow:hidden}
+.rtm-progress::after{content:"";position:absolute;top:0;left:0;width:38%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-160%) skewX(-15deg);animation:sheen2 3.6s ease-in-out 1s infinite;pointer-events:none}
+/* rows cascade in (JS sets animationDelay per row) */
+.rtm-cascade{animation:rise .45s cubic-bezier(.2,.7,.3,1) both}
+/* checkbox tick springs */
+@keyframes tickPop{0%{transform:scale(.5)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.rtm-tick{animation:tickPop .28s cubic-bezier(.34,1.5,.5,1) both}
+/* modal content slides up a touch more elegantly */
+@keyframes modalIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+/* KPI value shine on hover */
+.hv-k-gold:hover,.hv-k-green:hover,.hv-k-blue:hover,.hv-k-purple:hover,.hv-k-red:hover{box-shadow:0 14px 34px -18px rgba(0,0,0,.85)}
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>

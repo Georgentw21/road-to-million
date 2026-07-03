@@ -387,7 +387,8 @@ class App extends React.Component {
     this.setState({ portfolios, newPortName: '', currentPortfolioId: pf.id }); this._save();
   }
   renamePortfolio(id, name) {
-    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, name } : p);
+    const clean = String(name || '').trim();
+    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, name: clean || p.name } : p); // ว่าง = คงชื่อเดิม
     this.setState({ portfolios }); this._save();
   }
   delPortfolio(id, e) {
@@ -491,16 +492,16 @@ class App extends React.Component {
   }
 
   startName() { this.setState({ editName: true }); }
-  commitName(e) { const v = e && e.target ? e.target.value : this.state.accountName; this.setState({ editName: false, accountName: v }); this._save('rtm_name', v); }
+  commitName(e) { const raw = e && e.target ? e.target.value : this.state.accountName; const v = String(raw).trim() || this.state.accountName; this.setState({ editName: false, accountName: v }); this._save('rtm_name', v); } // ว่าง = คงชื่อเดิม
   onNameKey(e) { if (e.key === 'Enter') e.target.blur(); }
   startAffirm() { this.setState({ editAffirm: true }); }
-  commitAffirm(e) { const v = e && e.target ? e.target.value : this.state.affirmation; this.setState({ editAffirm: false, affirmation: v }); this._save('rtm_affirm', v); }
+  commitAffirm(e) { const raw = e && e.target ? e.target.value : this.state.affirmation; const v = String(raw).trim() || this.state.affirmation; this.setState({ editAffirm: false, affirmation: v }); this._save('rtm_affirm', v); }
   onAffirmKey(e) { if (e.key === 'Enter') e.target.blur(); }
 
   // affirmation details
   addAffirmDetail() { const d = this.state.affirmDetails.concat([{ id: 'a' + Date.now(), text: 'ข้อความใหม่' }]); this.setState({ affirmDetails: d, editDetailId: d[d.length - 1].id }); this._save('rtm_affirmDetails', d); }
   editDetail(id) { this.setState({ editDetailId: id }); }
-  commitDetail(id, e) { const v = e && e.target ? e.target.value : ''; const d = this.state.affirmDetails.map(x => x.id === id ? { ...x, text: v } : x); this.setState({ affirmDetails: d, editDetailId: null }); this._save('rtm_affirmDetails', d); }
+  commitDetail(id, e) { const v = String(e && e.target ? e.target.value : '').trim(); const d = this.state.affirmDetails.map(x => x.id === id ? { ...x, text: v || x.text } : x); this.setState({ affirmDetails: d, editDetailId: null }); this._save('rtm_affirmDetails', d); }
   delDetail(id) { const d = this.state.affirmDetails.filter(x => x.id !== id); this.setState({ affirmDetails: d }); this._save('rtm_affirmDetails', d); }
 
   // generic checklist item ops
@@ -523,9 +524,9 @@ class App extends React.Component {
   }
   editItem(which, id) { this.setState({ editCheck: which + ':' + id }); }
   commitItem(which, id, e) {
-    const v = e && e.target ? e.target.value : '';
+    const v = String(e && e.target ? e.target.value : '').trim();
     const m = this._listMeta(which);
-    const arr = this.state[m.items].map(x => x.id === id ? { ...x, text: v } : x);
+    const arr = this.state[m.items].map(x => x.id === id ? { ...x, text: v || x.text } : x); // ว่าง = คงข้อความเดิม
     this.setState({ [m.items]: arr, editCheck: null }); this._save(m.store, arr);
   }
   // แก้ไขข้อความในหน้า planning — ใช้ state แยก (editPlan) ไม่ให้ชนกับเช็กลิสต์ที่อยู่ด้านหลัง modal
@@ -563,9 +564,9 @@ class App extends React.Component {
     this.setState({ periodItems: clone }); this._save();
   }
   commitPeriodItem(scope, periodKey, id, e) {
-    const v = e && e.target ? e.target.value : '';
+    const v = String(e && e.target ? e.target.value : '').trim();
     const clone = this._materializePeriod(scope, periodKey);
-    clone[scope][periodKey] = clone[scope][periodKey].map(x => x.id === id ? { ...x, text: v } : x);
+    clone[scope][periodKey] = clone[scope][periodKey].map(x => x.id === id ? { ...x, text: v || x.text } : x); // ว่าง = คงข้อความเดิม
     this.setState({ periodItems: clone, editCheck: null, editPlan: null }); this._save();
   }
   // ===== ลาก/สลับลำดับรายการเช็กลิสต์ =====
@@ -599,7 +600,7 @@ class App extends React.Component {
   addVision() { const v = this.state.visionItems.concat([{ id: 'v' + Date.now(), title: 'เป้าหมายใหม่' }]); this.setState({ visionItems: v }); this._save('rtm_vision', v); }
   delVision(id) { const v = this.state.visionItems.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k === 'vision-' + id); this.setState({ visionItems: v, images }); this._save(); deleteImages(paths); }
   editVision(id) { this.setState({ editVisionId: id }); }
-  commitVision(id, e) { const t = e && e.target ? e.target.value : ''; const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
+  commitVision(id, e) { const t = String(e && e.target ? e.target.value : '').trim(); const v = this.state.visionItems.map(x => x.id === id ? { ...x, title: t || x.title } : x); this.setState({ visionItems: v, editVisionId: null }); this._save('rtm_vision', v); }
   // ===== tags =====
   toggleDraftTag(tag) { const d = this.state.draft; if (!d) return; const has = (d.tags || []).includes(tag); const tags = has ? d.tags.filter(x => x !== tag) : [...(d.tags || []), tag]; this._patchDraft({ ...d, tags }); }
   addTag(name) { name = (name || '').trim(); if (!name) return; let tags = this.state.tags; if (!tags.includes(name)) tags = tags.concat([name]); const d = this.state.draft; const dtags = d ? ((d.tags || []).includes(name) ? d.tags : [...(d.tags || []), name]) : []; this.setState({ tags }); if (d) this._patchDraft({ ...d, tags: dtags }); else this._save(); }
@@ -1614,14 +1615,14 @@ class App extends React.Component {
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
-              <div style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
+              <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
               <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div></div>
             </div>
             <div className="hv-brd-gold" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#5E5E68')}>net P&amp;L</span></div>
               <div style={css('display:flex;flex-direction:column;gap:11px')}>
                 {V.setupBars.map((s, i) => (
-                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
                 ))}
               </div>
             </div>
@@ -1632,8 +1633,8 @@ class App extends React.Component {
           <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;animation:rise .55s .4s both;background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>ดูทั้งหมด →</span></div>
             <div style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:10px 20px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Symbol</span><span>Side</span><span>Setup</span><span>P&amp;L</span><span>R</span></div>
-            {V.recent.map((t) => (
-              <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
+            {V.recent.map((t, i) => (
+              <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:1.2fr .7fr .9fr 1fr .7fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (0.45 + i * 0.05) + 's' }}><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
             ))}
             {V.recent.length === 0 && (
               <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#5E5E68')}>ยังไม่มีออเดอร์ — กด N เพื่อเริ่มบันทึก</div>
@@ -1720,8 +1721,8 @@ class App extends React.Component {
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
-          {V.filteredTrades.map((t) => (
-            <div key={t.id} onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}>
+          {V.filteredTrades.map((t, i) => (
+            <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:.7fr 1.1fr .6fr .9fr .8fr .5fr 1fr .6fr .8fr;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
               <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.dateShort}</span>
               <span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span>
               <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
@@ -1765,7 +1766,7 @@ class App extends React.Component {
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L ตามวันในสัปดาห์</div>
             <div style={css('display:flex;align-items:flex-end;gap:14px;height:150px')}>
               {V.dowBars.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, animationDelay: (i * 0.07) + 's' }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -1773,7 +1774,7 @@ class App extends React.Component {
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L ตาม session</div><span style={css('font-size:11px;color:#5E5E68')}>แยกสีตามตลาด</span></div>
             <div style={css('display:flex;align-items:flex-end;gap:18px;height:150px')}>
               {V.sessionBars.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow, animationDelay: (i * 0.09) + 's' }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -1783,7 +1784,7 @@ class App extends React.Component {
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>การกระจายตัวของ R-multiple</div>
             <div style={css('display:flex;align-items:flex-end;gap:8px;height:140px')}>
               {V.rDist.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h }}></div><span style={css('font-size:9px;color:#5E5E68;font-family:JetBrains Mono')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h, animationDelay: (i * 0.05) + 's' }}></div><span style={css('font-size:9px;color:#5E5E68;font-family:JetBrains Mono')}>{b.label}</span></div>
               ))}
             </div>
           </div>
@@ -1811,7 +1812,7 @@ class App extends React.Component {
             <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:14px')}>P&amp;L ตาม Symbol</div>
             <div style={css('display:flex;flex-direction:column;gap:11px')}>
               {V.symbolBars.length ? V.symbolBars.map((s, i) => (
-                <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+                <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
               )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีข้อมูล</div>}
             </div>
           </div>
@@ -1821,7 +1822,7 @@ class App extends React.Component {
           <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L ตาม Tag / อารมณ์ <span style={css('font-size:12px;color:#5E5E68;font-family:\'Plus Jakarta Sans\'')}>— แท็กไหนทำให้เสีย</span></div></div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:11px 24px')}>
             {V.tagStats.length ? V.tagStats.map((s, i) => (
-              <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w }}></div></div></div>
+              <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
             )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีแท็กในเทรด — ใส่แท็กตอนบันทึกออเดอร์เพื่อดูว่าอารมณ์ไหนทำให้เสีย</div>}
           </div>
         </div>
@@ -1859,13 +1860,13 @@ class App extends React.Component {
   _renderCheckRow(c, i) {
     const canDrag = c.draggable && !c.editing;
     return (
-      <div key={c.id || i} className="hv-chk"
+      <div key={c.id || i} className="hv-chk rtm-cascade"
         draggable={canDrag}
         onDragStart={canDrag ? c.onDragStart : undefined}
         onDragEnter={canDrag ? c.onDragEnter : undefined}
         onDragOver={canDrag ? (e) => e.preventDefault() : undefined}
         onDragEnd={canDrag ? c.onDragEnd : undefined}
-        style={{ ...css('display:flex;align-items:center;gap:12px;padding:15px 20px;transition:.14s'), borderTop: c.border, opacity: c.dragging ? 0.4 : 1 }}>
+        style={{ ...css('display:flex;align-items:center;gap:12px;padding:15px 20px;transition:.14s'), borderTop: c.border, opacity: c.dragging ? 0.4 : 1, animationDelay: (i * 0.045) + 's' }}>
         {c.draggable && !c.editing && (
           <div title="ลากเพื่อจัดลำดับ" style={css('flex:none;display:flex;flex-direction:column;gap:2.5px;cursor:grab;color:#4A4A52;padding:2px')}>
             <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
@@ -1873,7 +1874,7 @@ class App extends React.Component {
             <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
           </div>
         )}
-        <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+        <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg key={'tick' + c.checkOp} className={c.checkOp ? 'rtm-tick' : undefined} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
         {c.editing ? (
           <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
         ) : (
@@ -2046,7 +2047,7 @@ class App extends React.Component {
   renderDayModal(V) {
     return (
       <div onClick={V.closeDay} style={css('position:fixed;inset:0;z-index:28;background:rgba(4,4,7,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:18px 22px;display:flex;flex-direction:column;gap:10px')}>
             <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#9A9AA4')}><span>รวม {V.dayCount} ออเดอร์</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
@@ -2067,7 +2068,7 @@ class App extends React.Component {
     const fieldInput = (style) => ({ ...css(style), });
     return (
       <div onClick={V.closeTrade} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
@@ -2142,7 +2143,7 @@ class App extends React.Component {
   renderPlanModal(V) {
     return (
       <div onClick={V.planClose} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08))')}>
             <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
@@ -2186,7 +2187,7 @@ class App extends React.Component {
   renderResetModal(V) {
     return (
       <div onClick={V.closeReset} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} style={css('width:440px;max-width:92vw;border-radius:20px;background:linear-gradient(180deg,#1a1014,#0e0e13);border:1px solid rgba(220,106,99,.3);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both;padding:28px 28px 24px;text-align:center')}>
+        <div onClick={V.stop} style={css('width:440px;max-width:92vw;border-radius:20px;background:linear-gradient(180deg,#1a1014,#0e0e13);border:1px solid rgba(220,106,99,.3);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both;padding:28px 28px 24px;text-align:center')}>
           <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
@@ -2204,7 +2205,7 @@ class App extends React.Component {
   renderSetupModal(V) {
     return (
       <div onClick={V.closeSetup} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:pop .3s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
@@ -2333,7 +2334,7 @@ class App extends React.Component {
           </div>
 
           {/* TICKER */}
-          <div style={css('flex:none;height:32px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.25);display:flex;align-items:center')}>
+          <div className="rtm-ticker" style={css('flex:none;height:32px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.25);display:flex;align-items:center')}>
             <div style={css('display:flex;white-space:nowrap;animation:ticker 38s linear infinite')}>
               <span style={css('display:inline-flex;gap:30px;padding-right:30px;font-family:\'JetBrains Mono\';font-size:12px;align-items:center')}>{V.tickerA}</span>
               <span style={css('display:inline-flex;gap:30px;padding-right:30px;font-family:\'JetBrains Mono\';font-size:12px;align-items:center')}>{V.tickerB}</span>
