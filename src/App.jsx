@@ -52,7 +52,7 @@ function CountUp({ value, dur = 900 }) {
 }
 
 // กราฟ equity แบบ interactive — เอาเมาส์ชี้เพื่อดูค่าแต่ละจุด
-function EquityCurve({ line, area, points, lastY }) {
+function EquityCurve({ line, area, points, lastY, zeroY }) {
   const VB_W = 640, VB_H = 230;
   const wrapRef = React.useRef(null);
   const [hover, setHover] = React.useState(null); // index ของจุดที่ใกล้เมาส์
@@ -81,6 +81,7 @@ function EquityCurve({ line, area, points, lastY }) {
       <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
         <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E2C588" stopOpacity=".42"/><stop offset="55%" stopColor="#C9A65F" stopOpacity=".12"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
         <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
+        {zeroY != null && <Fragment><line x1="0" y1={zeroY} x2="640" y2={zeroY} stroke="rgba(255,255,255,.28)" strokeWidth="1" strokeDasharray="5 5"/><text x="6" y={zeroY - 5} fill="#9A9AA4" fontSize="10" fontFamily="'JetBrains Mono',monospace">เท่าทุน</text></Fragment>}
         <path d={area} fill="url(#cv)"/>
         <path className="eq-line" d={line} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         {hp ? (
@@ -896,6 +897,8 @@ class App extends React.Component {
     const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
+    // เลขบนแท่งกราฟ: โชว์ค่าจริง (มี comma) ย่อเป็น k เฉพาะเมื่อ ≥ 100,000 เพื่อไม่ให้ล้น
+    const barMoney = (n) => { const a = Math.abs(n), sign = n >= 0 ? '+$' : '−$'; return a >= 100000 ? (sign + (a / 1000).toFixed(0) + 'k') : (sign + Math.round(a).toLocaleString('en-US')); };
     // กันข้อมูลที่ pnl/rr เป็น string -> บังคับเป็นตัวเลขเสมอ
     trades = (trades || []).map(t => ({ ...t, pnl: Number(t.pnl) || 0, rr: Number(t.rr) || 0 }));
     const closed = trades.filter(t => t.status !== 'OPEN');
@@ -914,20 +917,22 @@ class App extends React.Component {
     relevant.forEach(p => (p.deposits || []).forEach(d => { const a = Number(d.amount) || 0; if (a >= 0) depIn += a; else cashOut += -a; }));
     const capitalIn = startBal + depIn;        // ต้นทุนรวมที่ใส่เข้าไป
     const equity = capitalIn - cashOut + net;  // มูลค่าพอร์ตจริง (เงินสดในบัญชี)
-    const tradeEquity = startBal + net;        // equity จากผลเทรดล้วนๆ — ใช้กับ curve/milestone (cash flow ไม่กวน)
 
-    // equity curve = ทุนเริ่มต้น + กำไรสะสมจากการเทรด (ไม่รวมเติม/ถอนเงิน) → เห็นผลงานเทรดจริง แม้ cash out
     const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
-    const curve = [startBal]; let cum = startBal;
-    chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
-    let peak = curve[0], maxDD = 0;
-    curve.forEach(v => { if (v > peak) peak = v; const dd = peak > 0 ? (peak - v) / peak * 100 : 0; if (dd > maxDD) maxDD = dd; });
+    // account equity curve (ทุนเริ่มต้น + กำไรสะสม) — ใช้คำนวณ Max Drawdown ซึ่งเป็น % จากมูลค่าพอร์ต
+    let acum = startBal, peakAcct = startBal, maxDD = 0;
+    chrono.forEach(t => { acum += t.pnl || 0; if (acum > peakAcct) peakAcct = acum; const dd = peakAcct > 0 ? (peakAcct - acum) / peakAcct * 100 : 0; if (dd > maxDD) maxDD = dd; });
 
-    // display curve ตามช่วงเวลา (ALL/3M/1M) — เริ่ม cumulative จาก equity ณ ต้นช่วง
+    // GROWTH curve = กำไร/ขาดทุนสะสม เริ่มจาก 0 → เห็นการเติบโตของเงินจริง (แพ้ = ติดลบ), ไม่รวมเติม/ถอน
+    const curve = [0]; let cum = 0;
+    chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
+    let peak = 0; curve.forEach(v => { if (v > peak) peak = v; });
+
+    // display curve ตามช่วงเวลา (ALL/3M/1M) — cumulative กำไรสะสม (0 = เท่าทุน)
     let cutoff = null;
     if (eqRange === '1M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 1); cutoff = dt.toISOString().slice(0, 10); }
     else if (eqRange === '3M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 3); cutoff = dt.toISOString().slice(0, 10); }
-    let dispBase = startBal; const dispEvents = [];
+    let dispBase = 0; const dispEvents = [];
     chrono.forEach(t => { const e = { date: t.date, amt: t.pnl || 0, kind: 'trade', sym: t.sym }; if (cutoff && t.date && t.date < cutoff) dispBase += e.amt; else dispEvents.push(e); });
     const dcurve = [dispBase]; let dc = dispBase; dispEvents.forEach(e => { dc += e.amt; dcurve.push(dc); });
 
@@ -946,12 +951,14 @@ class App extends React.Component {
     const np = plot.length;
     const xAt = (i) => np <= 1 ? 0 : (i / (np - 1)) * W;
     const yAt = (v) => pad + (H - 2 * pad) * (1 - (v - minV) / (maxV - minV));
+    // เส้นอ้างอิง "เท่าทุน" (กำไรสะสม = 0) ถ้าอยู่ในกรอบ
+    const zeroY = (minV <= 0 && maxV >= 0) ? +yAt(0).toFixed(1) : null;
     let line;
     if (np === 1) line = `M0 ${yAt(plot[0].v).toFixed(1)} L${W} ${yAt(plot[0].v).toFixed(1)}`;
     else line = plot.map((p, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(p.v).toFixed(1)).join(' ');
     const area = line + ` L${W} ${H} L0 ${H} Z`;
-    // จุดข้อมูลสำหรับ hover tooltip
-    const vstr = (v) => '$' + Math.round(v).toLocaleString('en-US');
+    // จุดข้อมูลสำหรับ hover tooltip — โชว์กำไร/ขาดทุนสะสม (ติดเครื่องหมาย)
+    const vstr = (v) => (v >= 0 ? '+$' : '−$') + Math.abs(Math.round(v)).toLocaleString('en-US');
     let equityPoints;
     if (np === 1) {
       const y0 = +yAt(plot[0].v).toFixed(1);
@@ -980,12 +987,12 @@ class App extends React.Component {
     closed.forEach(t => { dowSum[new Date(t.date + 'T00:00').getDay()] += t.pnl || 0; });
     const dowIdx = [1, 2, 3, 4, 5];
     const dowMax = Math.max(1, ...dowIdx.map(i => Math.abs(dowSum[i])));
-    const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: (dowSum[i] >= 0 ? '+$' : '−$') + (Math.abs(dowSum[i]) / 1000).toFixed(1) + 'k', color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
+    const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: barMoney(dowSum[i]), color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
 
     const sesDefs = [['Tokyo', BLUE, '123,167,217'], ['London', GOLD, '226,197,136'], ['New York', PURPLE, '155,140,255']];
     const sesSum = {}; closed.forEach(t => { sesSum[t.session] = (sesSum[t.session] || 0) + (t.pnl || 0); });
     const sesMax = Math.max(1, ...sesDefs.map(d => Math.abs(sesSum[d[0]] || 0)));
-    const sessionBars = sesDefs.map(([l, c, rgb]) => { const v = sesSum[l] || 0; return { label: l, val: (v >= 0 ? '+$' : '−$') + (Math.abs(v) / 1000).toFixed(1) + 'k', color: c, labelColor: c, bg: `linear-gradient(180deg,${c},rgba(${rgb},.2))`, glow: `0 6px 22px -8px rgba(${rgb},.6)`, h: (Math.abs(v) / sesMax * 100) + '%' }; });
+    const sessionBars = sesDefs.map(([l, c, rgb]) => { const v = sesSum[l] || 0; return { label: l, val: barMoney(v), color: c, labelColor: c, bg: `linear-gradient(180deg,${c},rgba(${rgb},.2))`, glow: `0 6px 22px -8px rgba(${rgb},.6)`, h: (Math.abs(v) / sesMax * 100) + '%' }; });
 
     const buckets = [['<-2R', v => v < -2], ['-2R', v => v >= -2 && v < -1.5], ['-1R', v => v >= -1.5 && v < -0.5], ['0R', v => v >= -0.5 && v < 0.5], ['+1R', v => v >= 0.5 && v < 1.5], ['+2R', v => v >= 1.5 && v < 2.5], ['+3R', v => v >= 2.5 && v < 3.5], ['>3R', v => v >= 3.5]];
     const rCounts = buckets.map(([l, f]) => ({ l, n: closed.filter(t => f(this._rMult(t))).length }));
@@ -1017,9 +1024,9 @@ class App extends React.Component {
     const curStreakStr = sign === 0 ? '—' : (sign > 0 ? ('ชนะ ' + cs + ' ไม้ติด') : ('แพ้ ' + cs + ' ไม้ติด'));
     const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#ECEAE3');
 
-    // drawdown (underwater) chart
-    let peak2 = curve[0]; let dd = [];
-    curve.forEach(v => { if (v > peak2) peak2 = v; dd.push(peak2 > 0 ? (peak2 - v) / peak2 * 100 : 0); });
+    // drawdown (underwater) chart — วัดจากมูลค่าพอร์ต (ทุนเริ่มต้น + กำไรสะสม) ไม่ใช่กำไรสะสมเปล่าๆ
+    let peak2 = startBal; let dd = [];
+    curve.forEach(v => { const eq = startBal + v; if (eq > peak2) peak2 = eq; dd.push(peak2 > 0 ? (peak2 - eq) / peak2 * 100 : 0); });
     let maxDDv = 0.0001; dd.forEach(v => { if (v > maxDDv) maxDDv = v; }); // ลูปแทน spread
     // downsample เช่นเดียวกับ equity curve
     if (dd.length > 640) {
@@ -1049,8 +1056,8 @@ class App extends React.Component {
     const tagStats = tagArr.sort((a, b) => a.net - b.net).map(s => ({ name: s.name, meta: s.n + ' ไม้ · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
 
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
-    // milestone อิงผลเทรด (ทุนเริ่มต้น + กำไร) ไม่รวมเติม/ถอน → เติมเงินไม่ทำให้ดูใกล้ล้านขึ้นเอง, cash out ก็ไม่ถอยหลัง
-    const progPct = Math.max(0, Math.min(100, tradeEquity / g * 100));
+    // milestone อิงกำไรสะสม (net P&L) → แพ้ก็ติดลบจริง, ไม่รวมเติม/ถอนเงิน จึงสะท้อนการเติบโตจากฝีมือเทรดล้วนๆ
+    const progPct = Math.max(0, Math.min(100, net / g * 100));
     return {
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
       consistencyStr, tradeDaysN, greenDaysN,
@@ -1064,8 +1071,8 @@ class App extends React.Component {
       donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
-      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(plot[np - 1].v).toFixed(1), equityPoints,
-      equityPeakStr: '$' + Math.round(peak).toLocaleString('en-US'),
+      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(plot[np - 1].v).toFixed(1), equityPoints, equityZeroY: zeroY,
+      equityPeakStr: (peak >= 0 ? '+$' : '−$') + Math.abs(Math.round(peak)).toLocaleString('en-US'),
       equityGrowthStr: (capitalIn > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / capitalIn * 100).toFixed(1) + '%') : '—'),
       equityGrowthColor: pc(net),
       // ต้นทุน / กำไร / ถอนออก / มูลค่าจริง — ตอบคำถาม "กำไรเท่าไร + ทุนใช้ไปเท่าไร" แม้ cash out แล้ว
@@ -1075,7 +1082,7 @@ class App extends React.Component {
       balanceStr: '$' + Math.round(equity).toLocaleString('en-US'),
       netProfitStr: fm(net), netProfitColor: pc(net),
       dowBars, sessionBars, rDist, anaStats,
-      milestoneEquity: '$' + Math.round(tradeEquity).toLocaleString('en-US'),
+      milestoneEquity: fm(net),
       milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
       goalStr: '$' + Math.round(g).toLocaleString('en-US'), goalNum: g,
       milestoneMarks: ['$0', '$' + Math.round(g / 3).toLocaleString('en-US'), '$' + Math.round(2 * g / 3).toLocaleString('en-US'), '$' + Math.round(g).toLocaleString('en-US') + ' 🏁'],
@@ -1520,7 +1527,7 @@ class App extends React.Component {
       donut: S.donut,
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr,
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
-      equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints,
+      equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints, equityZeroY: S.equityZeroY,
       equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
       capitalInStr: S.capitalInStr, cashOutStr: S.cashOutStr, hasCashFlow: S.hasCashFlow, balanceStr: S.balanceStr, netProfitStr: S.netProfitStr, netProfitColor: S.netProfitColor,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
@@ -1641,12 +1648,12 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
           <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Equity curve</div><div style={css('font-size:11.5px;color:#5E5E68;margin-top:2px')}>เส้นทางสู่ล้านแรก · since {V.startBalStr}</div></div><div style={css('display:flex;gap:5px')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#5E5E68;font-family:\'Plus Jakarta Sans\'')}>· กำไรสะสม</span></div><div style={css('font-size:11.5px;color:#5E5E68;margin-top:2px')}>การเติบโตจากการเทรด · เส้น “เท่าทุน” = 0</div></div><div style={css('display:flex;gap:5px')}>
               {['ALL', '3M', '1M'].map((rg) => (
                 <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
               ))}
             </div></div>
-            <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} />
+            <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
               <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>ต้นทุนที่ใช้</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
               <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>กำไรสะสม</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
@@ -2060,7 +2067,7 @@ class App extends React.Component {
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#5E5E68')}>· จากผลเทรด (ทุน + กำไร)</span></div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#5E5E68')}>· กำไรสะสม (Net P&amp;L)</span></div><div style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
               <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Spectral',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
               <span onClick={V.startGoal} title="คลิกเพื่อแก้เป้าหมาย" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
