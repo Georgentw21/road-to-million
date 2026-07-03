@@ -205,6 +205,7 @@ class App extends React.Component {
     // ui
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
+    logLimit: 30, // จำนวนแถวที่โชว์ใน trade log (กด "โหลดเพิ่ม" เพื่อขยาย) — กันหน้าอืดเมื่อออเดอร์เยอะมาก
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
     // เลื่อนดู period ย้อนหลัง/อนาคตใน checklist
@@ -931,26 +932,35 @@ class App extends React.Component {
     const dcurve = [dispBase]; let dc = dispBase; dispEvents.forEach(e => { dc += e.amt; dcurve.push(dc); });
 
     const W = 640, H = 230, pad = 16;
-    let minV = Math.min(...dcurve), maxV = Math.max(...dcurve);
+    // หา min/max ด้วยลูป (ห้ามใช้ spread — ประวัติหลายหมื่นจุดจะ stack overflow)
+    let minV = Infinity, maxV = -Infinity;
+    dcurve.forEach(v => { if (v < minV) minV = v; if (v > maxV) maxV = v; });
     if (minV === maxV) { minV -= 1; maxV += 1; }
-    const np = dcurve.length;
+    // downsample ให้เหลือ ~640 จุด (1 จุด/พิกเซล) — กราฟลื่นแม้มีเป็นหมื่นไม้ โดยคง จุดแรก/จุดสุดท้าย
+    let plot = dcurve.map((v, i) => ({ v, ev: i === 0 ? null : dispEvents[i - 1] }));
+    if (plot.length > 640) {
+      const step = (plot.length - 1) / 639;
+      const sampled = []; for (let k = 0; k < 640; k++) sampled.push(plot[Math.round(k * step)]);
+      plot = sampled;
+    }
+    const np = plot.length;
     const xAt = (i) => np <= 1 ? 0 : (i / (np - 1)) * W;
     const yAt = (v) => pad + (H - 2 * pad) * (1 - (v - minV) / (maxV - minV));
     let line;
-    if (np === 1) line = `M0 ${yAt(dcurve[0]).toFixed(1)} L${W} ${yAt(dcurve[0]).toFixed(1)}`;
-    else line = dcurve.map((v, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1)).join(' ');
+    if (np === 1) line = `M0 ${yAt(plot[0].v).toFixed(1)} L${W} ${yAt(plot[0].v).toFixed(1)}`;
+    else line = plot.map((p, i) => (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(p.v).toFixed(1)).join(' ');
     const area = line + ` L${W} ${H} L0 ${H} Z`;
     // จุดข้อมูลสำหรับ hover tooltip
     const vstr = (v) => '$' + Math.round(v).toLocaleString('en-US');
     let equityPoints;
     if (np === 1) {
-      const y0 = +yAt(dcurve[0]).toFixed(1);
-      equityPoints = [{ x: 0, y: y0, valueStr: vstr(dcurve[0]), label: 'เริ่มต้น' }, { x: W, y: y0, valueStr: vstr(dcurve[0]), label: 'ปัจจุบัน' }];
+      const y0 = +yAt(plot[0].v).toFixed(1);
+      equityPoints = [{ x: 0, y: y0, valueStr: vstr(plot[0].v), label: 'เริ่มต้น' }, { x: W, y: y0, valueStr: vstr(plot[0].v), label: 'ปัจจุบัน' }];
     } else {
-      equityPoints = dcurve.map((v, i) => {
+      equityPoints = plot.map((p, i) => {
         let label = 'เริ่มต้น';
-        if (i > 0) { const e = dispEvents[i - 1]; label = e ? (e.kind === 'deposit' ? ('เติม/ถอนเงิน ' + (e.amt >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(e.amt)).toLocaleString('en-US')) : ((e.date || '') + (e.sym ? ' · ' + e.sym : ''))) : ''; }
-        return { x: +xAt(i).toFixed(1), y: +yAt(v).toFixed(1), valueStr: vstr(v), label };
+        if (i > 0) { const e = p.ev; label = e ? (e.kind === 'deposit' ? ('เติม/ถอนเงิน ' + (e.amt >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(e.amt)).toLocaleString('en-US')) : ((e.date || '') + (e.sym ? ' · ' + e.sym : ''))) : ''; }
+        return { x: +xAt(i).toFixed(1), y: +yAt(p.v).toFixed(1), valueStr: vstr(p.v), label };
       });
     }
 
@@ -982,9 +992,9 @@ class App extends React.Component {
     const rMax = Math.max(1, ...rCounts.map(b => b.n));
     const rDist = rCounts.map(b => ({ label: b.l, bg: (b.l.startsWith('-') || b.l.startsWith('<')) ? 'rgba(220,106,99,.55)' : (b.l === '0R' ? 'rgba(255,255,255,.18)' : 'rgba(95,192,141,.6)'), h: (b.n / rMax * 100) + '%' }));
 
-    const pnls = closed.map(t => t.pnl || 0);
-    const best = pnls.length ? Math.max(...pnls) : 0;
-    const worst = pnls.length ? Math.min(...pnls) : 0;
+    // best/worst ด้วยลูป (ห้าม spread — trades เยอะมากจะ stack overflow)
+    let best = 0, worst = 0;
+    closed.forEach(t => { const p = t.pnl || 0; if (p > best) best = p; if (p < worst) worst = p; });
     const avgWin = wins.length ? grossP / wins.length : 0;
     const avgLoss = losses.length ? -grossL / losses.length : 0;
     let mw = 0, ml = 0, cw = 0, cl = 0;
@@ -1008,11 +1018,18 @@ class App extends React.Component {
     const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#ECEAE3');
 
     // drawdown (underwater) chart
-    let peak2 = curve[0]; const dd = [];
+    let peak2 = curve[0]; let dd = [];
     curve.forEach(v => { if (v > peak2) peak2 = v; dd.push(peak2 > 0 ? (peak2 - v) / peak2 * 100 : 0); });
-    const maxDDv = Math.max(0.0001, ...dd);
+    let maxDDv = 0.0001; dd.forEach(v => { if (v > maxDDv) maxDDv = v; }); // ลูปแทน spread
+    // downsample เช่นเดียวกับ equity curve
+    if (dd.length > 640) {
+      const dstep = (dd.length - 1) / 639;
+      const ds = []; for (let k = 0; k < 640; k++) ds.push(dd[Math.round(k * dstep)]);
+      dd = ds;
+    }
     const Wd = 640, Hd = 120;
-    const xd = (i) => np <= 1 ? 0 : (i / (np - 1)) * Wd;
+    const ddN = dd.length; // ใช้จำนวนจุดของ dd เอง (เดิมใช้ np ของ equity curve ทำให้เส้นเพี้ยนตอนเลือกช่วง 1M/3M)
+    const xd = (i) => ddN <= 1 ? 0 : (i / (ddN - 1)) * Wd;
     const yd = (d) => (d / maxDDv) * (Hd - 10);
     const ddLine = dd.map((d, i) => (i === 0 ? 'M' : 'L') + xd(i).toFixed(1) + ' ' + yd(d).toFixed(1)).join(' ');
     const ddArea = ddLine + ` L${Wd} 0 L0 0 Z`;
@@ -1046,7 +1063,7 @@ class App extends React.Component {
       donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
-      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(dcurve[np - 1]).toFixed(1), equityPoints,
+      setupBars, equityLine: line, equityArea: area, equityLastY: yAt(plot[np - 1].v).toFixed(1), equityPoints,
       equityPeakStr: '$' + Math.round(peak).toLocaleString('en-US'),
       equityGrowthStr: ((startBal + depTotal) > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / (startBal + depTotal) * 100).toFixed(1) + '%') : '—'),
       equityGrowthColor: pc(net),
@@ -1101,8 +1118,10 @@ class App extends React.Component {
     const mapTrade = (t0) => {
       const t = { ...t0, pnl: Number(t0.pnl) || 0, rr: Number(t0.rr) || 0 };
       const su = this._setupById(t.setupId);
-      const dd = new Date(t.date + 'T00:00');
-      const dShort = dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      // cache รูปแบบวันที่ (toLocaleDateString แพง — วันที่ซ้ำกันเยอะ)
+      if (!this._dShortCache) this._dShortCache = {};
+      let dShort = this._dShortCache[t.date];
+      if (!dShort) { dShort = this._dShortCache[t.date] = new Date(t.date + 'T00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); }
       return {
         id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name, accent: su.accent,
         session: t.session, dateShort: dShort,
@@ -1121,29 +1140,34 @@ class App extends React.Component {
       };
     };
     const sortedTrades = trades.slice().sort((a, b) => b.date.localeCompare(a.date));
-    const allMapped = sortedTrades.map(mapTrade);
-    const recent = allMapped.slice(0, 6);
+    const recent = sortedTrades.slice(0, 6).map(mapTrade);
 
-    // log filter
+    // log filter — กรอง/เรียงบนข้อมูลดิบก่อน แล้วค่อย map เฉพาะแถวที่โชว์จริง (เร็วแม้มีหลายหมื่นไม้)
     const lf = st.logFilter;
     const q = (st.logSearch || '').trim().toLowerCase();
-    let filteredTrades = allMapped.filter(t => {
-      if (lf === 'win') { if (!(t.status !== 'OPEN' && t.pnlNum > 0)) return false; }
-      else if (lf === 'loss') { if (!(t.status !== 'OPEN' && t.pnlNum < 0)) return false; }
+    let filteredRaw = sortedTrades.filter(t => {
+      const p = Number(t.pnl) || 0;
+      if (lf === 'win') { if (!(t.status !== 'OPEN' && p > 0)) return false; }
+      else if (lf === 'loss') { if (!(t.status !== 'OPEN' && p < 0)) return false; }
       else if (lf === 'open') { if (t.status !== 'OPEN') return false; }
       else if (lf === 'long') { if (t.side !== 'BUY') return false; }
       else if (lf === 'short') { if (t.side !== 'SELL') return false; }
-      if (q && !((t.sym + ' ' + t.setupName + ' ' + t.notes).toLowerCase().includes(q))) return false;
+      if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
     const so = st.logSort;
-    if (so === 'date-asc') filteredTrades.sort((a, b) => a.dateRaw.localeCompare(b.dateRaw));
-    else if (so === 'pnl-desc') filteredTrades.sort((a, b) => b.pnlNum - a.pnlNum);
-    else if (so === 'pnl-asc') filteredTrades.sort((a, b) => a.pnlNum - b.pnlNum);
+    if (so === 'date-asc') filteredRaw.sort((a, b) => a.date.localeCompare(b.date));
+    else if (so === 'pnl-desc') filteredRaw.sort((a, b) => (Number(b.pnl) || 0) - (Number(a.pnl) || 0));
+    else if (so === 'pnl-asc') filteredRaw.sort((a, b) => (Number(a.pnl) || 0) - (Number(b.pnl) || 0));
     // date-desc = ค่าเริ่มต้น (เรียงอยู่แล้ว)
+    // แสดงเป็นหน้า: โชว์ตาม logLimit แล้วกด "โหลดเพิ่ม" — data เยอะแค่ไหนหน้าก็ไม่อืด
+    const logTotal = filteredRaw.length;
+    const logShownN = Math.min(logTotal, st.logLimit);
+    const logHasMore = logTotal > logShownN;
+    const filteredTrades = filteredRaw.slice(0, logShownN).map(mapTrade);
     const filterDefs = [['all', 'ทั้งหมด'], ['win', 'Win'], ['loss', 'Loss'], ['open', 'Open'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
-      label, click: () => this.setState({ logFilter: k }),
+      label, click: () => this.setState({ logFilter: k, logLimit: 30 }),
       fg: lf === k ? '#1a1408' : '#9A9AA4',
       bg: lf === k ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'rgba(255,255,255,.03)',
       border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
@@ -1191,9 +1215,15 @@ class App extends React.Component {
     }
     let monthTotal = 0; Object.values(dayPnl).forEach(v => monthTotal += v);
 
-    // weekly summary
+    // weekly summary — แบ่งตามสัปดาห์จริงของปฏิทิน (อาทิตย์–เสาร์) ให้ตรงกับแถวในตารางเดือน
     const wkRange = (a, b) => { let s = 0, td = 0; for (let d = a; d <= b; d++) { if (dayTradesMap[d]) { td += dayTradesMap[d].length; s += (dayPnl[d] || 0); } } return { s, td }; };
-    const wkDefs = [[1, 7, 'สัปดาห์ 1 · 1–7'], [8, 14, 'สัปดาห์ 2 · 8–14'], [15, 21, 'สัปดาห์ 3 · 15–21'], [22, 31, 'สัปดาห์ 4 · 22–สิ้นเดือน']];
+    const wkDefs = [];
+    { let start = 1, wn = 1;
+      while (start <= daysInMonth) {
+        const end = Math.min(daysInMonth, start === 1 ? (7 - firstDow) || 7 : start + 6);
+        wkDefs.push([start, end, 'สัปดาห์ ' + wn + ' · ' + start + '–' + end]);
+        start = end + 1; wn++;
+      } }
     const weeks = wkDefs.map(([a, b, label]) => { const r = wkRange(a, b); return { label, pnl: r.td ? this._fmtMoney(r.s) : '—', color: r.s >= 0 ? GREEN : RED, meta: r.td ? (r.td + ' ออเดอร์') : 'ไม่มีการเทรด' }; });
 
     // ---- mini heatmap (Dashboard = เดือนปัจจุบันเสมอ แยกจากปฏิทินที่เลื่อนได้) ----
@@ -1488,9 +1518,12 @@ class App extends React.Component {
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
-      setupBars, recent, allMapped, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: filteredTrades.length,
-      logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value }),
-      logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value }),
+      setupBars, recent, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: logTotal,
+      logShownN, logHasMore, logRemaining: logTotal - logShownN,
+      loadMoreLog: () => this.setState({ logLimit: st.logLimit + 50 }),
+      showAllLog: () => this.setState({ logLimit: logTotal }),
+      logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value, logLimit: 30 }),
+      logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value, logLimit: 30 }),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       calMonthLabel, calMonthShort, dashMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
@@ -1739,6 +1772,13 @@ class App extends React.Component {
               <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#5E5E68" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 6h16M4 12h16M4 18h10"/></svg>
               <div style={css('font-size:14px;color:#9A9AA4;margin-bottom:6px')}>{V.tradeCount === 0 ? 'ยังไม่มีออเดอร์' : 'ไม่พบออเดอร์ที่ตรงกับตัวกรอง'}</div>
               <div style={css('font-size:12.5px;color:#5E5E68')}>{V.tradeCount === 0 ? 'กดปุ่ม “+ เพิ่มออเดอร์” หรือกดปุ่ม N เพื่อเริ่มบันทึก' : 'ลองล้างการค้นหา/เปลี่ยนตัวกรอง'}</div>
+            </div>
+          )}
+          {V.logHasMore && (
+            <div style={css('display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
+              <span onClick={V.loadMoreLog} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 20px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);transition:.14s')}>โหลดเพิ่ม 50 รายการ</span>
+              <span onClick={V.showAllLog} className="hv-cancel" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#9A9AA4;border:1px solid rgba(255,255,255,.12);transition:.14s')}>แสดงทั้งหมด</span>
+              <span style={css('font-size:11.5px;color:#5E5E68;font-family:JetBrains Mono')}>แสดง {V.logShownN} / {V.filteredCount}</span>
             </div>
           )}
         </div>
