@@ -1054,15 +1054,20 @@ class App extends React.Component {
     const symMap = {};
     closed.forEach(t => { const k = t.sym || '—'; const m = symMap[k] || (symMap[k] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; });
     const symArr = Object.keys(symMap).map(k => ({ name: k, net: symMap[k].net, n: symMap[k].n, wr: symMap[k].n ? Math.round(symMap[k].w / symMap[k].n * 100) : 0 }));
-    const symMaxAbs = Math.max(1, ...symArr.map(s => Math.abs(s.net)));
-    const symbolBars = symArr.sort((a, b) => b.net - a.net).map(s => ({ name: s.name, meta: s.n + 't · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / symMaxAbs * 100) + '%' }));
+    let symMaxAbs = 1; symArr.forEach(s => { const a = Math.abs(s.net); if (a > symMaxAbs) symMaxAbs = a; }); // ลูปแทน spread
+    const symSorted = symArr.sort((a, b) => b.net - a.net);
+    const LIST_CAP = 15; // โชว์สูงสุด 15 แถว กัน list ยาวเกินเมื่อสัญลักษณ์เยอะ
+    const symbolBars = symSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + 't · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / symMaxAbs * 100) + '%' }));
+    const symbolMore = Math.max(0, symSorted.length - LIST_CAP);
 
     // by tag / อารมณ์
     const tagMap = {};
     closed.forEach(t => (t.tags || []).forEach(tag => { const m = tagMap[tag] || (tagMap[tag] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; }));
     const tagArr = Object.keys(tagMap).map(tag => ({ name: tag, net: tagMap[tag].net, n: tagMap[tag].n, wr: tagMap[tag].n ? Math.round(tagMap[tag].w / tagMap[tag].n * 100) : 0 }));
-    const tagMaxAbs = Math.max(1, ...tagArr.map(s => Math.abs(s.net)));
-    const tagStats = tagArr.sort((a, b) => a.net - b.net).map(s => ({ name: s.name, meta: s.n + ' ไม้ · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
+    let tagMaxAbs = 1; tagArr.forEach(s => { const a = Math.abs(s.net); if (a > tagMaxAbs) tagMaxAbs = a; });
+    const tagSorted = tagArr.sort((a, b) => a.net - b.net);
+    const tagStats = tagSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + ' ไม้ · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
+    const tagMore = Math.max(0, tagSorted.length - LIST_CAP);
 
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
     // milestone อิงกำไรสะสม (net P&L) → แพ้ก็ติดลบจริง, ไม่รวมเติม/ถอนเงิน จึงสะท้อนการเติบโตจากฝีมือเทรดล้วนๆ
@@ -1070,7 +1075,7 @@ class App extends React.Component {
     return {
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
       consistencyStr, tradeDaysN, greenDaysN,
-      ddLine, ddArea, symbolBars, tagStats,
+      ddLine, ddArea, symbolBars, tagStats, symbolMore, tagMore,
       maxWinStreak: String(mw), maxLossStreak: String(ml),
       kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
       kNet: fm(net), kNetColor: pc(net), kWin: winRate.toFixed(1) + '%',
@@ -1127,7 +1132,7 @@ class App extends React.Component {
       let run = start; const withRun = raw.map(d => { const a = Number(d.amount) || 0; run += a; return { d, a, run }; });
       const movements = withRun.reverse().map(({ d, a, run }) => ({
         id: d.id, date: d.date, isW: a < 0,
-        amtStr: (a >= 0 ? '+$' : '−$') + Math.abs(Math.round(a)).toLocaleString('en-US'),
+        amtStr: '$' + Math.abs(Math.round(a)).toLocaleString('en-US'), // สี+ป้าย ฝาก/ถอน บอกทิศทางแล้ว ไม่ต้องมี +/−
         runStr: money(run), // ยอดทุน (ฝาก−ถอน) สะสมหลังรายการนี้
         del: (e) => { if (e) e.stopPropagation(); this.delMovement(p.id, d.id); },
       }));
@@ -1574,7 +1579,7 @@ class App extends React.Component {
       calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
       dowBars, sessionBars, rDist, anaStats, setupCards,
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
-      ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats,
+      ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
@@ -1648,8 +1653,8 @@ class App extends React.Component {
                   <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ทุนสุทธิ</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
                 </div>
                 <div style={css('display:flex;gap:8px')}>
-                  <span onClick={(e) => { e.stopPropagation(); p.deposit(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>＋ ฝากเงิน</span>
-                  <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>－ ถอนเงิน</span>
+                  <span onClick={(e) => { e.stopPropagation(); p.deposit(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>ฝากเงิน</span>
+                  <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>ถอนเงิน</span>
                 </div>
                 {p.movements.length > 0 && (
                   <div style={css('margin-top:11px;border-top:1px solid rgba(255,255,255,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px')}>
@@ -1917,6 +1922,7 @@ class App extends React.Component {
               {V.symbolBars.length ? V.symbolBars.map((s, i) => (
                 <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
               )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีข้อมูล</div>}
+              {V.symbolMore > 0 && <div style={css('font-size:11.5px;color:#5E5E68;text-align:center;margin-top:2px')}>+ อีก {V.symbolMore} symbol (แสดง 15 อันดับแรกตามกำไร)</div>}
             </div>
           </div>
         </div>
@@ -1927,6 +1933,7 @@ class App extends React.Component {
             {V.tagStats.length ? V.tagStats.map((s, i) => (
               <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#5E5E68;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
             )) : <div style={css('font-size:12.5px;color:#5E5E68')}>ยังไม่มีแท็กในเทรด — ใส่แท็กตอนบันทึกออเดอร์เพื่อดูว่าอารมณ์ไหนทำให้เสีย</div>}
+            {V.tagMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#5E5E68;text-align:center')}>+ อีก {V.tagMore} แท็ก (แสดง 15 อันดับแรก)</div>}
           </div>
         </div>
       </div>
@@ -2304,17 +2311,17 @@ class App extends React.Component {
               <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>พอร์ตจริง</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#E2C588')}>{p.equityStr}</div></div>
             </div>
             <div style={css('display:flex;gap:8px;margin-top:14px')}>
-              <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>＋ ฝากเงิน</span>
-              <span onClick={p.withdraw} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>－ ถอนเงิน</span>
+              <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>ฝากเงิน</span>
+              <span onClick={p.withdraw} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>ถอนเงิน</span>
             </div>
           </div>
           <div style={css('padding:8px 12px 16px')}>
             {p.movements.length === 0 && <div style={css('padding:36px 20px;text-align:center;font-size:13px;color:#5E5E68')}>ยังไม่มีรายการฝาก/ถอน</div>}
             {p.movements.map((m) => (
               <div key={m.id} className="hv-chk" style={css('display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;transition:.14s')}>
-                <div style={css('display:flex;align-items:center;gap:11px')}>
-                  <span style={{ ...css('width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none'), color: m.isW ? '#DC6A63' : '#5FC08D', background: m.isW ? 'rgba(220,106,99,.12)' : 'rgba(95,192,141,.12)' }}>{m.isW ? '−' : '+'}</span>
-                  <div><div style={css('font-size:13px;color:#ECEAE3;font-weight:600')}>{m.isW ? 'ถอนเงิน' : 'ฝากเงิน'}</div><div style={css('font-size:11px;color:#5E5E68;font-family:JetBrains Mono')}>{m.date} · คงเหลือ {m.runStr}</div></div>
+                <div style={css('display:flex;align-items:center;gap:12px')}>
+                  <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: m.isW ? '#DC6A63' : '#5FC08D' }}></span>
+                  <div><div style={{ ...css('font-size:13px;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.isW ? 'ถอนเงิน' : 'ฝากเงิน'}</div><div style={css('font-size:11px;color:#5E5E68;font-family:JetBrains Mono')}>{m.date} · คงเหลือ {m.runStr}</div></div>
                 </div>
                 <div style={css('display:flex;align-items:center;gap:12px')}>
                   <span style={{ ...css('font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span>
