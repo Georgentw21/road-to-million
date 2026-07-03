@@ -880,15 +880,21 @@ class App extends React.Component {
     const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, startBalance: num } : p);
     this.setState({ portfolios }); this._save();
   }
-  // เติมเงินเข้าพอร์ต (ค่าบวก) หรือถอน (ค่าลบ) — บันทึกเป็นรายการพร้อมวันที่ แล้วรวมเข้ากับ equity
-  depositPortfolio(id) {
-    const raw = window.prompt('เติมเงินเข้าพอร์ต ใส่จำนวน (บวก = เติม, ลบ = ถอน)\nเช่น 100 หรือ -50');
+  // ฝาก/ถอนเงินเข้าพอร์ต — แยกปุ่มชัดเจน, เก็บเป็นรายการมีวันที่ (ฝาก = บวก, ถอน = ลบ)
+  addFunds(id, isWithdraw) {
+    const raw = window.prompt(isWithdraw ? 'ถอนเงินออกจากพอร์ต — ใส่จำนวนเงินที่ถอน (เช่น 50)' : 'ฝากเงินเข้าพอร์ต — ใส่จำนวนเงินที่ฝาก (เช่น 100)');
     if (raw == null) return;
-    const amt = parseFloat(String(raw).replace(/[^0-9.\-]/g, ''));
-    if (!amt || isNaN(amt)) return;
+    const mag = Math.abs(parseFloat(String(raw).replace(/[^0-9.\-]/g, '')));
+    if (!mag || isNaN(mag)) return;
+    const amt = isWithdraw ? -mag : mag;
     const n = new Date();
     const date = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
-    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, deposits: [...(p.deposits || []), { id: 'dep' + Date.now(), amount: amt, date }] } : p);
+    const portfolios = this.state.portfolios.map(p => p.id === id ? { ...p, deposits: [...(p.deposits || []), { id: 'mv' + Date.now(), amount: amt, date }] } : p);
+    this.setState({ portfolios }); this._save();
+  }
+  // ลบรายการฝาก/ถอน (ไว้แก้ที่กรอกผิด)
+  delMovement(portId, movId) {
+    const portfolios = this.state.portfolios.map(p => p.id === portId ? { ...p, deposits: (p.deposits || []).filter(d => d.id !== movId) } : p);
     this.setState({ portfolios }); this._save();
   }
 
@@ -1075,8 +1081,9 @@ class App extends React.Component {
       equityPeakStr: (peak >= 0 ? '+$' : '−$') + Math.abs(Math.round(peak)).toLocaleString('en-US'),
       equityGrowthStr: (capitalIn > 0 ? ((net >= 0 ? '+' : '−') + Math.abs(net / capitalIn * 100).toFixed(1) + '%') : '—'),
       equityGrowthColor: pc(net),
-      // ต้นทุน / กำไร / ถอนออก / มูลค่าจริง — ตอบคำถาม "กำไรเท่าไร + ทุนใช้ไปเท่าไร" แม้ cash out แล้ว
-      capitalInStr: '$' + Math.round(capitalIn).toLocaleString('en-US'),
+      // สรุปกระแสเงิน (broker-statement): ทุนสุทธิ (ฝาก−ถอน) + กำไร = พอร์ตจริง
+      capitalInStr: '$' + Math.round(capitalIn - cashOut).toLocaleString('en-US'), // ทุนสุทธิที่ยังอยู่ในพอร์ต
+      depositedStr: '$' + Math.round(capitalIn).toLocaleString('en-US'),           // ฝากเข้ารวม (รวมทุนเริ่มต้น)
       cashOutStr: cashOut > 0 ? ('−$' + Math.round(cashOut).toLocaleString('en-US')) : '$0',
       cashOut, hasCashFlow: (depIn > 0 || cashOut > 0),
       balanceStr: '$' + Math.round(equity).toLocaleString('en-US'),
@@ -1105,17 +1112,30 @@ class App extends React.Component {
       const ts = st.trades.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
       ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += this._rMult(t); rrN++; } });
+      const start = Number(p.startBalance) || 0;
+      let depIn = 0, wOut = 0;
+      (p.deposits || []).forEach(d => { const a = Number(d.amount) || 0; if (a >= 0) depIn += a; else wOut += -a; });
+      const grossDep = start + depIn;          // ฝากเข้ารวม (รวมทุนเริ่มต้น)
+      const netCap = grossDep - wOut;          // ทุนสุทธิ
+      const bal = netCap + net;                // พอร์ตจริง
+      const money = (v) => '$' + Math.round(v).toLocaleString('en-US');
+      // ledger: ทุนเริ่มต้น + รายการฝาก/ถอน เรียงใหม่ล่าสุดก่อน
+      const movements = (p.deposits || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(d => {
+        const a = Number(d.amount) || 0;
+        return { id: d.id, date: d.date, isW: a < 0, amtStr: (a >= 0 ? '+$' : '−$') + Math.abs(Math.round(a)).toLocaleString('en-US'), del: (e) => { if (e) e.stopPropagation(); this.delMovement(p.id, d.id); } };
+      });
       return {
         id: p.id, name: p.name, trades: ts.length,
         netStr: this._fmtMoney(net), netColor: pc(net),
         wr: closed ? Math.round(wins / closed * 100) : 0,
         avgRStr: ((rrN ? rrSum / rrN : 0) >= 0 ? '+' : '−') + Math.abs(rrN ? rrSum / rrN : 0).toFixed(2) + 'R',
         avgRColor: (rrN ? rrSum / rrN : 0) >= 0 ? GREEN : RED,
-        startBalance: Number(p.startBalance) || 0,
-        depositStr: this._portDeposits(p) ? ((this._portDeposits(p) >= 0 ? '+$' : '−$') + Math.abs(Math.round(this._portDeposits(p))).toLocaleString('en-US')) : '',
-        equityStr: '$' + Math.round((Number(p.startBalance) || 0) + this._portDeposits(p) + net).toLocaleString('en-US'),
+        startBalance: start,
+        netCapStr: money(netCap), depositedStr: money(grossDep), withdrawnStr: wOut > 0 ? ('−' + money(wOut)) : '$0', hasCashFlow: (depIn > 0 || wOut > 0),
+        equityStr: money(bal),
         setBalance: (e) => this.setPortfolioBalance(p.id, e.target.value),
-        addFunds: () => this.depositPortfolio(p.id),
+        deposit: () => this.addFunds(p.id, false), withdraw: () => this.addFunds(p.id, true),
+        movements,
         isCurrent: cpId === p.id,
         select: () => this.selectPortfolio(p.id),
         del: (e) => this.delPortfolio(p.id, e),
@@ -1529,7 +1549,7 @@ class App extends React.Component {
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints, equityZeroY: S.equityZeroY,
       equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
-      capitalInStr: S.capitalInStr, cashOutStr: S.cashOutStr, hasCashFlow: S.hasCashFlow, balanceStr: S.balanceStr, netProfitStr: S.netProfitStr, netProfitColor: S.netProfitColor,
+      capitalInStr: S.capitalInStr, depositedStr: S.depositedStr, cashOutStr: S.cashOutStr, hasCashFlow: S.hasCashFlow, balanceStr: S.balanceStr, netProfitStr: S.netProfitStr, netProfitColor: S.netProfitColor,
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
@@ -1604,16 +1624,32 @@ class App extends React.Component {
                 {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>กำลังดู</span>}
                 <span onClick={p.del} title="ลบพอร์ต" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#5E5E68;cursor:pointer;transition:.14s;flex:none')}>✕</span>
               </div>
-              <div style={css('display:flex;gap:12px;margin-bottom:14px')}>
-                <div style={{ flex: 1 }}><div style={LBL}>ทุนเริ่มต้น ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:100%;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;outline:none')} /></div>
-                <div style={{ flex: 1 }}>
-                  <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:5px')}>
-                    <span style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68')}>Equity ปัจจุบัน</span>
-                    <span onClick={(e) => { e.stopPropagation(); p.addFunds(); }} title="เติม/ถอนเงินเข้าพอร์ต" style={css('font-size:10.5px;font-weight:700;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:3px;flex:none')}>+ เติมเงิน</span>
-                  </div>
-                  <div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div>
-                  {p.depositStr ? <div style={css('font-size:10.5px;color:#7BA7D9;margin-top:3px;font-family:JetBrains Mono')}>รวมเติม/ถอน {p.depositStr}</div> : null}
+              {/* ===== การจัดการเงิน (ฝาก/ถอน) ===== */}
+              <div style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);padding:14px 15px;margin-bottom:14px')}>
+                <div style={css('display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px')}>
+                  <div><div style={LBL}>ทุนเริ่มต้น ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:110px;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;outline:none')} /></div>
+                  <div style={css('text-align:right')}><div style={LBL}>พอร์ตจริงตอนนี้</div><div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div></div>
                 </div>
+                {/* breakdown */}
+                <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px')}>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ฝากเข้ารวม</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#9A9AA4')}>{p.depositedStr}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ถอนออก</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.hasCashFlow && p.withdrawnStr !== '$0' ? '#DC6A63' : '#9A9AA4' }}>{p.withdrawnStr}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5E5E68;margin-bottom:3px')}>ทุนสุทธิ</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
+                </div>
+                <div style={css('display:flex;gap:8px')}>
+                  <span onClick={(e) => { e.stopPropagation(); p.deposit(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>＋ ฝากเงิน</span>
+                  <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>－ ถอนเงิน</span>
+                </div>
+                {p.movements.length > 0 && (
+                  <div style={css('margin-top:11px;border-top:1px solid rgba(255,255,255,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px;max-height:120px;overflow-y:auto')} className="rtm-scroll">
+                    {p.movements.map((m) => (
+                      <div key={m.id} style={css('display:flex;align-items:center;justify-content:space-between;font-size:11.5px')}>
+                        <span style={css('color:#5E5E68;font-family:JetBrains Mono')}>{m.isW ? 'ถอน' : 'ฝาก'} · {m.date}</span>
+                        <span style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span><span onClick={m.del} title="ลบรายการนี้" className="hv-deltext" style={css('color:#5E5E68;cursor:pointer')}>✕</span></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
                 <div><div style={LBL}>Net P&amp;L</div><div style={{ ...VAL, color: p.netColor }}>{p.netStr}</div></div>
@@ -1655,9 +1691,9 @@ class App extends React.Component {
             </div></div>
             <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
-              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>ต้นทุนที่ใช้</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>ทุนสุทธิ (ฝาก−ถอน)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
               <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>กำไรสะสม</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>{V.hasCashFlow ? 'ถอนออก (cash out)' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
+              <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>{V.hasCashFlow ? 'ถอนออกแล้ว' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
               <div><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5E5E68;margin-bottom:5px')}>พอร์ตจริงตอนนี้</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
             </div>
           </div>
