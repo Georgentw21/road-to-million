@@ -222,6 +222,7 @@ class App extends React.Component {
     exporting: false,
     exportRange: 'all', // ช่วงข้อมูลที่จะส่งออก: all | week | month
     txnPort: null, // พอร์ตที่กำลังเปิดดูประวัติฝาก/ถอนเต็ม
+    lastBackup: null, // เวลาที่สำรองข้อมูลครั้งล่าสุด
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -291,6 +292,7 @@ class App extends React.Component {
     const imgCount = imgReady ? st.storage.count : 0;
     const imgPct = Math.min(100, imgBytes / IMG_LIMIT * 100);
     const dataPct = Math.min(100, dataBytes / DATA_LIMIT * 100);
+    const usedPct = Math.max(imgPct, dataPct);
     return {
       storageLoadingFlag: st.storageLoading, storageReady: imgReady,
       storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB') : (st.storageLoading ? 'กำลังคำนวณ…' : 'กำลังโหลด…'),
@@ -298,6 +300,8 @@ class App extends React.Component {
       storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E2C588' : '#5FC08D'),
       storageDataText: fmt(dataBytes) + ' / 500 MB',
       storageDataWidth: dataPct.toFixed(2) + '%',
+      storageNearFull: imgReady && usedPct >= 80, // ≥80% = ใกล้เต็ม เตือนสำรอง
+      storagePctNum: Math.round(usedPct),
     };
   }
   async _loadFromCloud() {
@@ -345,6 +349,7 @@ class App extends React.Component {
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
+      lastBackup: s.lastBackup,
       // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
       draft: s.draft, draftIsNew: s.draftIsNew, sDraft: s.sDraft, setupIsNew: s.setupIsNew,
     };
@@ -380,6 +385,52 @@ class App extends React.Component {
     const d = JSON.parse(JSON.stringify(this._pristine));
     this.setState({ ...d, showReset: false, showUserMenu: false, view: 'dashboard' }, () => { this._loaded = true; this._persist(); });
     deleteImages(paths);
+  }
+  // ===== สำรอง / กู้คืน / เก็บถาวร =====
+  // ดาวน์โหลดข้อมูลทั้งหมดเป็นไฟล์ .json (กู้คืนได้ทีหลัง) — กันข้อมูลหายก่อนล้างพื้นที่
+  backupJournal() {
+    try {
+      const payload = { app: 'road-to-million', v: 1, ts: new Date().toISOString(), data: this._blob() };
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'rtm-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.setState({ lastBackup: Date.now() }); this._save();
+    } catch (e) { window.alert('สำรองข้อมูลไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
+  }
+  async restoreJournal(file) {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const data = (parsed && parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+      if (!data || typeof data !== 'object' || !Array.isArray(data.trades)) throw new Error('ไฟล์สำรองไม่ถูกต้อง');
+      if (!window.confirm('กู้คืนข้อมูลจากไฟล์นี้? ข้อมูลปัจจุบันในเครื่องจะถูกแทนที่ทั้งหมด')) return;
+      this.setState({ ...data, images: data.images || {}, showUserMenu: false }, () => { this._loaded = true; this._persist(); });
+      window.alert('กู้คืนข้อมูลสำเร็จ');
+    } catch (e) { window.alert('กู้คืนไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
+  }
+  // เก็บถาวรออเดอร์ที่ปิดแล้วและเก่ากว่า N เดือน: รวม P&L เข้า baseline ของพอร์ต (milestone/Growth เดินต่อ) + ลบรายละเอียด+รูป เพื่อคืนพื้นที่
+  archiveOldTrades(months) {
+    const now = new Date(); const dt = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+    const cutoff = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    const firstPf = this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1';
+    const keep = [], arch = [];
+    this.state.trades.forEach(t => { if (t.status !== 'OPEN' && String(t.date) < cutoff) arch.push(t); else keep.push(t); });
+    if (!arch.length) { window.alert('ไม่มีออเดอร์ที่ปิดแล้วและเก่ากว่า ' + months + ' เดือน'); return; }
+    if (!window.confirm('เก็บถาวร ' + arch.length + ' ออเดอร์ (ก่อน ' + cutoff + ')?\n• กำไร/ขาดทุนจะถูกรวมไว้ ทำให้ milestone และกราฟ Growth เดินต่อเนื่อง\n• รายละเอียดออเดอร์และรูปจะถูกลบเพื่อคืนพื้นที่ (ย้อนกลับไม่ได้)\n\nแนะนำกด “สำรองข้อมูล” ก่อน')) return;
+    const portfolios = this.state.portfolios.map(p => {
+      const mine = arch.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
+      if (!mine.length) return p;
+      const addPnl = mine.reduce((a, t) => a + (Number(t.pnl) || 0), 0);
+      return { ...p, archivedPnl: (Number(p.archivedPnl) || 0) + addPnl, archivedCount: (Number(p.archivedCount) || 0) + mine.length, archivedUntil: cutoff };
+    });
+    const images = { ...this.state.images }; const paths = [];
+    arch.forEach(t => Object.keys(images).filter(k => k.startsWith('trade-' + t.id + '-')).forEach(k => { if (images[k]) paths.push(images[k]); delete images[k]; }));
+    this.setState({ trades: keep, portfolios, images }); this._save(); deleteImages(paths);
+    window.alert('เก็บถาวร ' + arch.length + ' ออเดอร์แล้ว — คืนพื้นที่รูป ' + paths.length + ' ไฟล์ (milestone/Growth ยังต่อเนื่อง)');
   }
   setNewPortName(v) { this.setState({ newPortName: v }); }
   addPortfolioNamed() {
@@ -925,7 +976,7 @@ class App extends React.Component {
     const closed = trades.filter(t => t.status !== 'OPEN');
     const wins = closed.filter(t => (t.pnl || 0) > 0);
     const losses = closed.filter(t => (t.pnl || 0) < 0);
-    const net = closed.reduce((s, t) => s + (t.pnl || 0), 0);
+    const closedNet = closed.reduce((s, t) => s + (t.pnl || 0), 0);
     const grossP = wins.reduce((s, t) => s + t.pnl, 0);
     const grossL = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
     const winRate = closed.length ? (wins.length / closed.length * 100) : 0;
@@ -933,6 +984,10 @@ class App extends React.Component {
     const avgR = closed.length ? closed.reduce((s, t) => s + this._rMult(t), 0) / closed.length : 0;
     const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
     const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
+    // baseline จากออเดอร์ที่เก็บถาวรแล้ว — รวมกำไรไว้เพื่อให้ net/milestone/Growth เดินต่อเนื่องหลังคืนพื้นที่
+    const archPnl = relevant.reduce((s, p) => s + (Number(p.archivedPnl) || 0), 0);
+    const archCount = relevant.reduce((s, p) => s + (Number(p.archivedCount) || 0), 0);
+    const net = closedNet + archPnl; // กำไรสุทธิรวม (ออเดอร์ปัจจุบัน + ที่เก็บถาวร)
     // แยกเงินเติม (บวก) กับถอน/cash out (ลบ) ออกจากกัน เพื่อโชว์ต้นทุน/กำไรให้ชัด
     let depIn = 0, cashOut = 0;
     relevant.forEach(p => (p.deposits || []).forEach(d => { const a = Number(d.amount) || 0; if (a >= 0) depIn += a; else cashOut += -a; }));
@@ -940,20 +995,20 @@ class App extends React.Component {
     const equity = capitalIn - cashOut + net;  // มูลค่าพอร์ตจริง (เงินสดในบัญชี)
 
     const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
-    // account equity curve (ทุนเริ่มต้น + กำไรสะสม) — ใช้คำนวณ Max Drawdown ซึ่งเป็น % จากมูลค่าพอร์ต
-    let acum = startBal, peakAcct = startBal, maxDD = 0;
+    // account equity curve (ทุนเริ่มต้น + กำไรสะสม รวม baseline ที่เก็บถาวร) — ใช้คำนวณ Max Drawdown
+    let acum = startBal + archPnl, peakAcct = startBal + archPnl, maxDD = 0;
     chrono.forEach(t => { acum += t.pnl || 0; if (acum > peakAcct) peakAcct = acum; const dd = peakAcct > 0 ? (peakAcct - acum) / peakAcct * 100 : 0; if (dd > maxDD) maxDD = dd; });
 
-    // GROWTH curve = กำไร/ขาดทุนสะสม เริ่มจาก 0 → เห็นการเติบโตของเงินจริง (แพ้ = ติดลบ), ไม่รวมเติม/ถอน
-    const curve = [0]; let cum = 0;
+    // GROWTH curve = กำไรสะสม เริ่มจาก baseline ที่เก็บถาวร (archPnl) เพื่อให้เดินต่อเนื่องแม้ล้างออเดอร์เก่า
+    const curve = [archPnl]; let cum = archPnl;
     chrono.forEach(t => { cum += t.pnl || 0; curve.push(cum); });
-    let peak = 0; curve.forEach(v => { if (v > peak) peak = v; });
+    let peak = archPnl; curve.forEach(v => { if (v > peak) peak = v; });
 
     // display curve ตามช่วงเวลา (ALL/3M/1M) — cumulative กำไรสะสม (0 = เท่าทุน)
     let cutoff = null;
     if (eqRange === '1M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 1); cutoff = dt.toISOString().slice(0, 10); }
     else if (eqRange === '3M') { const dt = new Date(); dt.setMonth(dt.getMonth() - 3); cutoff = dt.toISOString().slice(0, 10); }
-    let dispBase = 0; const dispEvents = [];
+    let dispBase = archPnl; const dispEvents = [];
     chrono.forEach(t => { const e = { date: t.date, amt: t.pnl || 0, kind: 'trade', sym: t.sym }; if (cutoff && t.date && t.date < cutoff) dispBase += e.amt; else dispEvents.push(e); });
     const dcurve = [dispBase]; let dc = dispBase; dispEvents.forEach(e => { dc += e.amt; dcurve.push(dc); });
 
@@ -1034,7 +1089,7 @@ class App extends React.Component {
     ];
 
     // expectancy ($/ไม้) + current streak
-    const expectancy = closed.length ? net / closed.length : 0;
+    const expectancy = closed.length ? closedNet / closed.length : 0;
     const dayNet = {};
     closed.forEach(t => { dayNet[t.date] = (dayNet[t.date] || 0) + (t.pnl || 0); });
     const tradeDaysN = Object.keys(dayNet).length;
@@ -1096,6 +1151,7 @@ class App extends React.Component {
       kDD: maxDD.toFixed(1) + '%',
       donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
+      archCount, archNote: archCount > 0 ? ('รวมออเดอร์ที่เก็บถาวรแล้ว ' + archCount + ' รายการในกำไร/กราฟ') : '',
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
       setupBars, equityLine: line, equityArea: area, equityLastY: yAt(plot[np - 1].v).toFixed(1), equityPoints, equityZeroY: zeroY,
       equityPeakStr: (peak >= 0 ? '+$' : '−$') + Math.abs(Math.round(peak)).toLocaleString('en-US'),
@@ -1132,6 +1188,7 @@ class App extends React.Component {
       const ts = st.trades.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
       ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += this._rMult(t); rrN++; } });
+      net += (Number(p.archivedPnl) || 0); // รวมกำไรที่เก็บถาวรแล้ว
       const start = Number(p.startBalance) || 0;
       let depIn = 0, wOut = 0;
       (p.deposits || []).forEach(d => { const a = Number(d.amount) || 0; if (a >= 0) depIn += a; else wOut += -a; });
@@ -1565,13 +1622,15 @@ class App extends React.Component {
       userEmail: this.props.userEmail || '',
       signOut: () => this.props.onSignOut && this.props.onSignOut(),
       showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
+      backupJournal: () => this.backupJournal(), restoreJournal: (f) => this.restoreJournal(f), archiveOldTrades: (m) => this.archiveOldTrades(m),
+      lastBackupStr: st.lastBackup ? new Date(st.lastBackup).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'ยังไม่เคยสำรอง',
       exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
       exportRange: st.exportRange, setExportRange: (e) => this.setState({ exportRange: e.target.value }),
       stop: (e) => e.stopPropagation(),
       // KPI
       kEquity: S.kEquity, kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
       donut: S.donut,
-      totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr,
+      totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr, archNote: S.archNote,
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints, equityZeroY: S.equityZeroY,
       equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
@@ -1689,6 +1748,24 @@ class App extends React.Component {
             </div>
           ))}
         </div>
+
+        {/* ===== สำรองข้อมูล & จัดการพื้นที่ ===== */}
+        <div style={css('margin-top:22px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .12s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:6px')}>
+            <div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>สำรองข้อมูล &amp; จัดการพื้นที่</div>
+            <span style={css('font-size:11px;color:#5E5E68;font-family:JetBrains Mono')}>สำรองล่าสุด: {V.lastBackupStr}</span>
+          </div>
+          <div style={css('font-size:12.5px;color:#9A9AA4;line-height:1.6;margin-bottom:16px')}>ดาวน์โหลดข้อมูลทั้งหมดเก็บไว้ (กู้คืนได้) · เมื่อพื้นที่ใกล้เต็ม “เก็บถาวรออเดอร์เก่า” เพื่อคืนพื้นที่รูป — กำไร/ขาดทุนจะถูกรวมไว้ให้ <b style={css('color:#E2C588')}>milestone และกราฟ Growth เดินต่อเนื่อง ไม่รีเซ็ต</b></div>
+          <div style={css('display:flex;flex-wrap:wrap;gap:10px;align-items:center')}>
+            <span onClick={V.backupJournal} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);transition:.14s')}>⤓ สำรองข้อมูล (.json)</span>
+            <label className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);transition:.14s')}>⤒ กู้คืนจากไฟล์<input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.restoreJournal(f); e.target.value = ''; }} /></label>
+            <div style={css('flex:1')}></div>
+            <span style={css('font-size:12px;color:#9A9AA4')}>เก็บถาวรออเดอร์เก่ากว่า</span>
+            {[6, 12, 24].map((mo) => (
+              <span key={mo} onClick={() => { if (window.confirm('แนะนำ “สำรองข้อมูล” ก่อนเก็บถาวร — สำรองแล้วหรือยัง? (ตกลง = ดำเนินการต่อ)')) V.archiveOldTrades(mo); }} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;color:#DC6A63;background:rgba(220,106,99,.08);border:1px solid rgba(220,106,99,.28);transition:.14s')}>{mo === 24 ? '2 ปี' : mo + ' เดือน'}</span>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1729,7 +1806,7 @@ class App extends React.Component {
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
               <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:9px;color:#5E5E68;letter-spacing:.1em')}>WIN RATE</span></div></div>
-              <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div></div>
+              <div><div style={css('font-size:11px;color:#5E5E68;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div>{V.archNote ? <div style={css('font-size:10.5px;color:#7BA7D9;margin-top:7px;line-height:1.4')}>{V.archNote}</div> : null}</div>
             </div>
             <div className="hv-brd-gold" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#5E5E68')}>net P&amp;L</span></div>
@@ -2485,7 +2562,14 @@ class App extends React.Component {
                       <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden', marginBottom: 11 }}><div style={{ height: '100%', borderRadius: 99, width: V.storageReady ? V.storageImgWidth : '0%', background: V.storageImgColor, transition: 'width .5s' }}></div></div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#9A9AA4', marginBottom: 5 }}><span>ข้อมูล</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: '#7BA7D9' }}>{V.storageDataText}</span></div>
                       <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 99, width: V.storageDataWidth, background: '#7BA7D9', transition: 'width .5s' }}></div></div>
+                      {V.storageNearFull && (
+                        <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(); }} style={{ marginTop: 11, padding: '9px 11px', borderRadius: 9, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', cursor: 'pointer' }}>
+                          <div style={{ fontSize: 11.5, color: '#DC6A63', fontWeight: 600, marginBottom: 2 }}>⚠ พื้นที่ใกล้เต็ม ({V.storagePctNum}%)</div>
+                          <div style={{ fontSize: 10.5, color: '#9A9AA4' }}>แตะเพื่อสำรองข้อมูล แล้วเก็บถาวรออเดอร์เก่าในหน้าบัญชี</div>
+                        </div>
+                      )}
                     </div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>สำรองข้อมูล (ดาวน์โหลด)<span style={{ fontSize: 10.5, color: '#5E5E68' }}>{V.lastBackupStr}</span></div>
                     <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>บัญชี &amp; พอร์ต</div>
                     <div onClick={() => { this.setState({ showUserMenu: false }); this.setView('playbook'); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Playbook · หลักคิด</div>
                     <div onClick={V.togglePlanReminders} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>เตือนวางแผน<span style={{ fontSize: 11, fontWeight: 700, color: V.planReminders ? '#5FC08D' : '#5E5E68' }}>{V.planReminders ? 'เปิด' : 'ปิด'}</span></div>
