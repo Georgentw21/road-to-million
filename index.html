@@ -118,6 +118,31 @@ select option{background:#15151c;color:#ECEAE3}
 @keyframes modalIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
 /* KPI value shine on hover */
 .hv-k-gold:hover,.hv-k-green:hover,.hv-k-blue:hover,.hv-k-purple:hover,.hv-k-red:hover{box-shadow:0 14px 34px -18px rgba(0,0,0,.85)}
+/* ===== premium pass ===== */
+/* gold shine sweeps across gradient-text numbers (milestone) */
+@keyframes goldShine{0%,60%{background-position:200% 0}100%{background-position:-40% 0}}
+.rtm-goldshine{background:linear-gradient(105deg,#C9A65F 20%,#FBF3DF 42%,#F6E7C4 50%,#C9A65F 72%)!important;background-size:220% 100%!important;-webkit-background-clip:text!important;background-clip:text!important;animation:goldShine 4.2s ease-in-out infinite}
+/* logo mark breathes softly */
+@keyframes logoBreathe{0%,100%{box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55)}50%{box-shadow:0 0 0 1px rgba(201,166,95,.5),0 8px 26px -6px rgba(201,166,95,.85)}}
+.rtm-logo{animation:logoBreathe 3.6s ease-in-out infinite}
+/* ticker pauses on hover so prices can be read */
+.rtm-ticker:hover>div{animation-play-state:paused}
+/* table rows glide right on hover */
+.hv-row{transition:transform .16s, background .14s !important}
+.hv-row:hover{transform:translateX(4px)}
+/* equity hover dot pops in */
+@keyframes dotIn{from{r:2}to{r:6}}
+.rtm-hoverdot{animation:dotIn .18s cubic-bezier(.34,1.5,.5,1) both}
+/* premium focus ring everywhere (keyboard users) */
+:focus-visible{outline:2px solid rgba(226,197,136,.65);outline-offset:2px;border-radius:4px}
+/* gold selection */
+::selection{background:rgba(201,166,95,.35);color:#FBF3DF}
+/* period pills & KPI cards get a soft glow when hovered */
+.hv-period:hover{box-shadow:0 10px 26px -14px rgba(201,166,95,.55)}
+/* readiness ring card floats gently */
+@keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.rtm-float{animation:cardFloat 5.2s ease-in-out infinite}
+
 /* respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
