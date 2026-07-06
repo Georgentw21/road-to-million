@@ -868,6 +868,54 @@ class App extends React.Component {
     return out;
   }
 
+  // คีย์รอบปัจจุบันของแต่ละ scope (ใช้ตัดรอบอนาคตออกจากการคิดวินัย)
+  _curPeriodKey(scope) {
+    const d = new Date();
+    if (scope === 'weekly') return this._isoWeekKey(d);
+    if (scope === 'yearly') return String(d.getFullYear());
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  // ===== สรุปวินัย (Discipline tracker) =====
+  // รวมทุกรอบที่มีข้อมูลจริง (มีรายการ/มีการเช็ก) นับถึงรอบปัจจุบัน แล้วสรุปว่าทำตามวินัยได้กี่ %
+  // และข้อไหนพลาดบ่อยที่สุด — คิดจากทุกรอบ ไม่จำกัดหน้าที่กำลังดู เพื่อให้ภาพรวมนิ่งแม้ data เยอะ
+  _disciplineStats(scope) {
+    const st = this.state;
+    const checksMap = (st.checks && st.checks[scope]) || {};
+    const itemsMap = (st.periodItems && st.periodItems[scope]) || {};
+    const curKey = this._curPeriodKey(scope);
+    const keySet = {};
+    Object.keys(checksMap).forEach(k => { keySet[k] = 1; });
+    Object.keys(itemsMap).forEach(k => { keySet[k] = 1; });
+    // เฉพาะรอบที่มาถึงแล้ว (≤ ปัจจุบัน) เรียงเก่า→ใหม่
+    const list = Object.keys(keySet).filter(k => k <= curKey).sort();
+    const perItem = {}; // ข้อความรายการ -> { present, done }
+    let sumRatio = 0, counted = 0, fullCount = 0;
+    const spark = []; // สัดส่วนรายรอบ (ล่าสุด n รอบ) ไว้วาดแท่งเล็กๆ
+    list.forEach((k) => {
+      const its = this._periodItems(scope, k);
+      if (!its.length) return;
+      const c = checksMap[k] || {};
+      let done = 0;
+      its.forEach((it) => {
+        const t = (it.text || '').trim() || '(ไม่มีชื่อ)';
+        if (!perItem[t]) perItem[t] = { present: 0, done: 0 };
+        perItem[t].present++;
+        if (c[it.id]) { done++; perItem[t].done++; }
+      });
+      const ratio = done / its.length;
+      sumRatio += ratio; counted++;
+      if (done === its.length) fullCount++;
+      spark.push({ ratio, done, total: its.length });
+    });
+    const avgPct = counted ? Math.round((sumRatio / counted) * 100) : 0;
+    const missed = Object.keys(perItem).map((t) => {
+      const o = perItem[t];
+      return { text: t, adher: o.present ? o.done / o.present : 0, miss: o.present - o.done, present: o.present };
+    }).filter((m) => m.miss > 0).sort((a, b) => (b.miss - a.miss) || (a.adher - b.adher)).slice(0, 3);
+    return { avgPct, counted, fullCount, missed, spark: spark.slice(-14) };
+  }
+
   // ===== เตือนวางแผนล่วงหน้า =====
   // คืน reminder ที่ครบกำหนด (ก่อนขึ้นสัปดาห์/เดือนใหม่ ≤2 วัน)
   _dueReminders() {
@@ -1404,7 +1452,8 @@ class App extends React.Component {
     const items = this._periodItems(scope, periodKey); // รายการของรอบที่เลือกอยู่ (แยกตามสัปดาห์/เดือน/ปี)
     // นับความคืบหน้าของแต่ละรอบ โดยใช้รายการเฉพาะของรอบนั้นๆ
     const periodCheck = (pk) => { const its = this._periodItems(scope, pk); const c = (st.checks[scope] && st.checks[scope][pk]) || {}; let done = 0; its.forEach(it => { if (c[it.id]) done++; }); return { done, total: its.length }; };
-    const periods = defs.map(([key, label]) => {
+    // เรียงการ์ดรอบจากซ้าย→ขวา เก่า→ใหม่ (รอบปัจจุบันอยู่ขวาสุด) — slice().reverse() ไม่กระทบ curKey/periodKey
+    const periods = defs.slice().reverse().map(([key, label]) => {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
       return {
         label, click: () => this.setState(isYearly ? { yearKey: key } : (isWeekly ? { weekKey: key } : { monthKey: key })),
@@ -1436,6 +1485,32 @@ class App extends React.Component {
     let cdone = 0; items.forEach(it => { if (curChecks[it.id]) cdone++; });
     const readyPct = items.length ? Math.round(cdone / items.length * 100) : 0;
     const checkPeriodLabel = (defs.find(d => d[0] === periodKey) || ['', ''])[1];
+
+    // ---- สรุปวินัย (Discipline) — ภาพรวมทุกรอบของ scope ที่กำลังดู ----
+    const ds = this._disciplineStats(scope);
+    const dColor = ds.avgPct >= 80 ? GREEN : (ds.avgPct >= 50 ? GOLD : RED);
+    const scopeWord = isYearly ? 'ปี' : (isWeekly ? 'สัปดาห์' : 'เดือน');
+    const disc = {
+      pct: ds.avgPct + '%', pctNum: ds.avgPct, color: dColor,
+      hasData: ds.counted > 0,
+      caption: ds.counted > 0
+        ? ('จาก ' + ds.counted + ' ' + scopeWord + ' · ทำครบทั้งหมด ' + ds.fullCount + ' ' + scopeWord)
+        : ('ยังไม่มีข้อมูล' + scopeWord + 'ที่ผ่านมา'),
+      grade: ds.avgPct >= 80 ? 'มีวินัยเยี่ยม' : (ds.avgPct >= 50 ? 'พอใช้ — พัฒนาต่อได้' : 'ต้องกลับมามีวินัย'),
+      offset: 327 - 327 * ds.avgPct / 100,
+      spark: ds.spark.map(s => ({
+        h: Math.max(6, Math.round(s.ratio * 100)),
+        bg: s.total > 0 && s.done === s.total ? GREEN : (s.done > 0 ? 'rgba(201,166,95,.7)' : 'rgba(255,255,255,.14)'),
+        title: s.done + '/' + s.total,
+      })),
+      missed: ds.missed.map(m => ({
+        text: m.text, pct: Math.round(m.adher * 100) + '%',
+        w: Math.round(m.adher * 100),
+        sub: 'พลาด ' + m.miss + '/' + m.present + ' ครั้ง',
+        barBg: m.adher >= 0.5 ? 'rgba(201,166,95,.6)' : 'rgba(224,90,90,.6)',
+      })),
+      allClear: ds.counted > 0 && ds.missed.length === 0,
+    };
 
     // pre-trade — คีย์ตามวันที่จริง → รีเซ็ตเองทุกวัน
     const _pd = new Date();
@@ -1656,7 +1731,7 @@ class App extends React.Component {
       // checklist
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
       wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(tab === 'monthly'), yrTabStyle: this._segStyle(isYearly),
-      periods, checkItems, checkPeriodLabel, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
+      periods, checkItems, checkPeriodLabel, disc, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
       addCheckKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, periodKey, e.target.value); e.target.value = ''; } },
@@ -2099,6 +2174,51 @@ class App extends React.Component {
     );
   }
 
+  // การ์ดสรุปวินัย — % ทำตามวินัยรวมทุกรอบ + สปาร์กไลน์ + ข้อที่พลาดบ่อย (คอมแพกต์ ไม่ยาว)
+  _renderDiscipline(V) {
+    const d = V.disc;
+    return (
+      <div className="rtm-float" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(180deg,rgba(155,140,255,.08),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.09)')}>
+        <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
+          <span style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F')}>สรุปวินัย</span>
+          <span style={{ ...css('font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px'), color: d.color, background: 'rgba(255,255,255,.05)' }}>{d.grade}</span>
+        </div>
+        {d.hasData ? (
+          <Fragment>
+            <div style={css('display:flex;align-items:baseline;gap:8px')}>
+              <span style={{ ...css('font-family:\'JetBrains Mono\';font-size:38px;font-weight:600;line-height:1'), color: d.color }}>{d.pct}</span>
+              <span style={css('font-size:11.5px;color:#9A9AA4')}>ทำตามวินัยสำเร็จ</span>
+            </div>
+            <div style={css('height:6px;border-radius:4px;background:rgba(255,255,255,.07);margin:12px 0 6px;overflow:hidden')}><div style={{ ...css('height:100%;border-radius:4px;transition:width .5s'), width: d.pctNum + '%', background: d.color }}></div></div>
+            <div style={css('font-size:11px;color:#5E5E68;margin-bottom:14px')}>{d.caption}</div>
+            {d.spark.length > 1 && (
+              <div style={css('display:flex;align-items:flex-end;gap:3px;height:34px;margin-bottom:14px')}>
+                {d.spark.map((s, i) => (
+                  <div key={i} title={s.title} style={{ ...css('flex:1;border-radius:2px 2px 0 0;min-width:3px'), height: s.h + '%', background: s.bg }}></div>
+                ))}
+              </div>
+            )}
+            <div style={css('font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AA4;margin-bottom:9px')}>{d.allClear ? 'ไม่มีข้อที่พลาด ✓' : 'ข้อที่พลาดบ่อย'}</div>
+            {d.allClear ? (
+              <div style={css('font-size:12px;color:#5FD0C8;line-height:1.5')}>ทำครบทุกข้อที่ตั้งไว้ทุกรอบ — รักษาไว้ให้ดี</div>
+            ) : d.missed.map((m, i) => (
+              <div key={i} style={css('margin-bottom:10px')}>
+                <div style={css('display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px')}>
+                  <span style={css('font-size:12px;color:#D6D2C6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{m.text}</span>
+                  <span style={css('font-size:10.5px;color:#9A9AA4;flex:none;font-family:JetBrains Mono')}>{m.pct}</span>
+                </div>
+                <div style={css('height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:3px'), width: m.w + '%', background: m.barBg }}></div></div>
+                <div style={css('font-size:10px;color:#5E5E68;margin-top:3px')}>{m.sub}</div>
+              </div>
+            ))}
+          </Fragment>
+        ) : (
+          <div style={css('font-size:12.5px;color:#5E5E68;line-height:1.6;padding:8px 0')}>{d.caption}<br/>เริ่มเช็กลิสต์ในแต่ละรอบ แล้วระบบจะสรุปวินัยให้อัตโนมัติ</div>
+        )}
+      </div>
+    );
+  }
+
   renderChecklist(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
@@ -2137,7 +2257,10 @@ class App extends React.Component {
               <input key={'addcheck-' + V.checkTab} placeholder="เพิ่มรายการใหม่ แล้วกด Enter" onKeyDown={V.addCheckKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
             </div>
           </div>
-          {this._renderReadiness(V.readyStroke, V.readyOffset, V.readyPct, '', V.readyFrac)}
+          <div style={css('display:flex;flex-direction:column;gap:14px')}>
+            {this._renderReadiness(V.readyStroke, V.readyOffset, V.readyPct, '', V.readyFrac)}
+            {this._renderDiscipline(V)}
+          </div>
         </div>
 
         <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .16s both')}>
