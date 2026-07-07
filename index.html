@@ -85,6 +85,11 @@ select option{background:#15151c;color:#ECEAE3}
 /* nicer focus ring on inputs */
 .hv-focus{transition:border-color .15s, box-shadow .15s}
 .hv-focus:focus{box-shadow:0 0 0 3px rgba(201,166,95,.12)!important}
+/* premium select: custom gold chevron, dark menu, tactile hover/focus */
+.rtm-select{-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C9A65F' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 11px center;background-size:11px;padding-right:32px!important;transition:border-color .15s,box-shadow .15s,background-color .15s;cursor:pointer}
+.rtm-select:hover{border-color:rgba(201,166,95,.42)!important;background-color:rgba(201,166,95,.05)!important}
+.rtm-select:focus{border-color:rgba(201,166,95,.6)!important;box-shadow:0 0 0 3px rgba(201,166,95,.12)!important}
+.rtm-select option{background:#14141b;color:#ECEAE3}
 /* equity curve draws itself */
 @keyframes drawLine{to{stroke-dashoffset:0}}
 .eq-line{stroke-dasharray:1100;stroke-dashoffset:1100;animation:drawLine 1.9s cubic-bezier(.4,.8,.3,1) .25s forwards;filter:drop-shadow(0 3px 7px rgba(226,197,136,.4))}

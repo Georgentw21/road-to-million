@@ -196,6 +196,7 @@ class App extends React.Component {
     // trade-log analysis filters + breakdown lens
     logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
+    fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
     setups: [
       { id: 's1', name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
@@ -790,11 +791,32 @@ class App extends React.Component {
   }
   setLogF(field, value) { this.setState({ logF: { ...this.state.logF, [field]: value }, logLimit: 30 }); }
   setLogDim(v) { this.setState({ logDim: v }); }
+  // ----- manage analysis-field options (LTF/MTF/HTF/Fibo/Entry lists) -----
+  openFieldCfg() { this.setState({ fieldCfg: true }); }
+  closeFieldCfg() { this.setState({ fieldCfg: null }); this._save(); }
+  addFieldOpt(field, value) {
+    const v = (value || '').trim(); if (!v) return;
+    const cur = this._fieldOpts(field); if (cur.includes(v)) return;
+    this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur.concat([v]) } }); this._save();
+  }
+  removeFieldOpt(field, value) {
+    const cur = this._fieldOpts(field).filter(x => x !== value);
+    this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur } }); this._save();
+  }
+  moveFieldOpt(field, value, dir) {
+    const cur = this._fieldOpts(field).slice(); const i = cur.indexOf(value); const j = i + dir;
+    if (i < 0 || j < 0 || j >= cur.length) return;
+    cur.splice(i, 1); cur.splice(j, 0, value);
+    this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur } }); this._save();
+  }
   // day-of-week helpers (Monday-first labelling everywhere)
   _DOW_SHORT() { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; }
   _DOW_FULL() { return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; }
   _dowShort(dateStr) { if (!dateStr) return ''; return this._DOW_SHORT()[new Date(dateStr + 'T00:00').getDay()]; }
   _dowFull(dateStr) { if (!dateStr) return ''; return this._DOW_FULL()[new Date(dateStr + 'T00:00').getDay()]; }
+  // a distinct colour per weekday (Sun..Sat) — Monday = gold, then blue/green/purple/amber, weekends muted
+  _DOW_COLORS() { return ['#C77B7B', '#E2C588', '#7BA7D9', '#5FC08D', '#B79CE8', '#E39A6A', '#6E7686']; }
+  _dowColor(dateStr) { if (!dateStr) return '#9A9AA4'; return this._DOW_COLORS()[new Date(dateStr + 'T00:00').getDay()]; }
   // "8 Jul 2026 · Wed"
   _fullDateLabel(dateStr) {
     if (!dateStr) return '—';
@@ -1546,7 +1568,8 @@ class App extends React.Component {
       return {
         id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name, accent: su.accent,
         session: t.session, dateShort: dShort, chips,
-        dowShort: this._dowShort(t.date), fullDate: this._fullDateLabel(t.date),
+        dowShort: this._dowShort(t.date), fullDate: this._fullDateLabel(t.date), dowColor: this._dowColor(t.date),
+        dateLong: (() => { const dt = new Date(t.date + 'T00:00'); return dt.getDate() + ' ' + this._EN_MONS_SHORT()[dt.getMonth()] + ' ' + dt.getFullYear(); })(),
         ltf: t.ltf || '', mtf: t.mtf || '', htf: t.htf || '', retest: t.retest || '', fibo: t.fibo || '', entryType: t.entryType || '',
         sideColor: t.side === 'BUY' ? GREEN : RED,
         sessionColor: sessColor(t.session),
@@ -1643,8 +1666,10 @@ class App extends React.Component {
       dims: Object.keys(dimDefs).map(k => ({ v: k, label: dimDefs[k].label })),
       rows: groupKeys.map(k => {
         const a = groupAgg[k];
+        const dowI = dayFull.indexOf(k);
         return {
           name: k, nStr: a.n + (a.n === 1 ? ' trade' : ' trades'),
+          dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#C9A65F',
           wr: a.closed ? a.wr + '%' : '—', wrColor: a.closed ? (a.wr >= 50 ? GREEN : RED) : '#9A9AA4',
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
@@ -2169,6 +2194,15 @@ class App extends React.Component {
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
       clearLogFilters: () => this.setState({ logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' }, logLimit: 30 }),
+      fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
+      fieldCfgVM: [
+        { key: 'ltf', label: 'LTF condition', opts: this._fieldOpts('ltf') },
+        { key: 'mtf', label: 'MTF condition', opts: this._fieldOpts('mtf') },
+        { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
+        { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
+        { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
+      ],
+      addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       calMonthLabel, calMonthShort, dashMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
@@ -2355,7 +2389,7 @@ class App extends React.Component {
             <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>View all →</span></div>
             <div style={css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:10px 20px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>P&amp;L</span><span>R</span></div>
             {V.recent.map((t, i) => (
-              <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (0.45 + i * 0.05) + 's' }}><span style={css('color:#5FC08D;font-family:JetBrains Mono;font-size:11.5px;font-weight:500')}>{t.fullDate}</span><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
+              <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (0.45 + i * 0.05) + 's' }}><span style={css('display:flex;align-items:center;gap:7px;font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateLong}</span><span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '22' }}>{t.dowShort}</span></span><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
             ))}
             {V.recent.length === 0 && (
               <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#83838C')}>No trades yet — press N to start logging</div>
@@ -2421,7 +2455,7 @@ class App extends React.Component {
             {V.logFilters.map((f, i) => (
               <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
             ))}
-            <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
+            <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
               <option value="week">Export: This week</option>
               <option value="month">Export: This month</option>
@@ -2433,7 +2467,7 @@ class App extends React.Component {
         </div>
         <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
           <input value={V.logSearch} onChange={V.setLogSearch} placeholder="🔍 Search symbol / setup / notes…" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
-          <select value={V.logSort} onChange={V.setLogSort} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
+          <select value={V.logSort} onChange={V.setLogSort} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
             <option value="date-desc">Newest → oldest</option>
             <option value="date-asc">Oldest → newest</option>
             <option value="pnl-desc">Highest P&amp;L</option>
@@ -2444,13 +2478,16 @@ class App extends React.Component {
           <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Filter &amp; analyse</div>
-              {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>✕ Clear filters</span>}
+              <div style={css('display:flex;align-items:center;gap:8px')}>
+                {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>✕ Clear filters</span>}
+                <span onClick={V.openFieldCfg} className="hv-lift" title="Add / edit the choices for each field" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Edit options</span>
+              </div>
             </div>
             <div style={css('display:flex;flex-wrap:wrap;gap:10px')}>
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:4px')}>
                   <span style={css('font-size:10px;color:#83838C;letter-spacing:.04em')}>{f.label}</span>
-                  <select value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus" style={{ ...css('background:rgba(255,255,255,.04);border-radius:8px;padding:8px 11px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer;min-width:120px'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
+                  <select value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer;min-width:132px'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
                     <option value="all">All</option>
                     {f.options.map((o) => (<option key={o.v} value={o.v}>{o.label}</option>))}
                   </select>
@@ -2476,16 +2513,16 @@ class App extends React.Component {
           <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Win rate by</div>
-              <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 11px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+              <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                 {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
               </select>
               <span style={css('font-size:11px;color:#83838C')}>· across {V.filteredCount} filtered trades</span>
             </div>
-            <div style={css('display:flex;flex-direction:column;gap:11px')}>
+            <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:13px;max-height:326px;overflow-y:auto;padding-right:4px')}>
               {V.logBreakdown.rows.length ? V.logBreakdown.rows.map((r, i) => (
                 <div key={i} style={css('display:grid;grid-template-columns:1.5fr .7fr .95fr .6fr;gap:14px;align-items:center')}>
                   <div>
-                    <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px')}><span style={css('color:#ECEAE3')}>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
+                    <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
                     <div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
                   </div>
                   <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: r.wrColor }}>{r.wr}</span><div style={css('font-size:9.5px;color:#83838C')}>win rate</div></div>
@@ -2501,7 +2538,7 @@ class App extends React.Component {
           {V.filteredTrades.map((t, i) => (
             <div key={t.id} className="rtm-cascade" style={{ ...css('border-top:1px solid rgba(255,255,255,.05)'), animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
               <div onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:.9fr 1fr .5fr .8fr .7fr .42fr .72fr .85fr .5fr .72fr;gap:10px;padding:' + (t.chips.length ? '12px 20px 7px' : '12px 20px') + ';font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}>
-                <span style={css('font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateShort}</span> <span style={css('color:#5FC08D')}>{t.dowShort}</span></span>
+                <span style={css('display:flex;align-items:center;gap:6px;font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateShort}</span><span style={{ ...css('font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '22' }}>{t.dowShort}</span></span>
                 <span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span>
                 <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                 <span style={css('color:#9A9AA4')}>{t.setupName}</span>
@@ -3123,13 +3160,13 @@ class App extends React.Component {
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup</div><select value={V.dSetup} onChange={V.setSetup} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup</div><select value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} style={css(V.sellStyle)}>SELL / Short</div></div></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry price</div><input value={V.dEntry} onChange={V.setEntry} placeholder="2418.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
@@ -3140,7 +3177,7 @@ class App extends React.Component {
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dStatusOpen ? '' : V.dPnl} onChange={V.setPnl} disabled={V.dStatusOpen} placeholder={V.dStatusOpen ? 'Trade still open' : '1240 or -680'} className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor, opacity: V.dStatusOpen ? 0.5 : 1, cursor: V.dStatusOpen ? 'not-allowed' : 'text' }} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Status</div><select value={V.dStatus} onChange={V.setStatus} style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="CLOSED">Closed</option><option value="OPEN">Open</option></select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Status</div><select value={V.dStatus} onChange={V.setStatus} className="rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="CLOSED">Closed</option><option value="OPEN">Open</option></select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
@@ -3154,7 +3191,7 @@ class App extends React.Component {
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div style={css('display:flex;align-items:center;justify-content:space-between')}>
               <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
-              <div style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</div>
+              <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>LTF condition</div><input list="rtm-ltf" value={V.dLtf} onChange={V.setLtf} placeholder="Type or pick…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-ltf">{V.optsLtf.map(o => (<option key={o} value={o} />))}</datalist></div>
@@ -3201,6 +3238,44 @@ class App extends React.Component {
               <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'Cancel' : 'Close'}</div>
               <div onClick={V.saveTrade} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  renderFieldCfgModal(V) {
+    const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 13px;color:#ECEAE3;font-size:13px;outline:none';
+    return (
+      <div onClick={V.closeFieldCfg} style={css('position:fixed;inset:0;z-index:34;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
+        <div onClick={V.stop} className="rtm-scroll" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px);z-index:2')}>
+            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Spectral\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
+            <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+          </div>
+          <div style={css('padding:8px 26px 24px')}>
+            <div style={css('font-size:12.5px;color:#83838C;line-height:1.6;margin:12px 0 18px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
+            {V.fieldCfgVM.map((f) => (
+              <div key={f.key} style={css('margin-bottom:20px')}>
+                <div style={css('font-size:12px;font-weight:600;color:#E2C588;margin-bottom:9px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
+                <div style={css('display:flex;flex-direction:column;gap:6px;margin-bottom:9px')}>
+                  {f.opts.length ? f.opts.map((o, oi) => (
+                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
+                      <span style={css('flex:1;font-size:13px;color:#ECEAE3')}>{o}</span>
+                      <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
+                      <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
+                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px')}>✕</span>
+                    </div>
+                  )) : <div style={css('font-size:12px;color:#83838C;padding:4px 2px')}>No choices yet — add one below.</div>}
+                </div>
+                <div style={css('display:flex;gap:8px')}>
+                  <input placeholder={'Add a choice for ' + f.label + ', then Enter'} onKeyDown={(e) => { if (e.key === 'Enter') { V.addFieldOpt(f.key, e.target.value); e.target.value = ''; } }} className="hv-focus" style={css(inp)} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={css('display:flex;justify-content:flex-end;gap:12px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.07);position:sticky;bottom:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px)')}>
+            <div onClick={V.closeFieldCfg} className="hv-save" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -3470,6 +3545,7 @@ class App extends React.Component {
 
         {V.showDay && this.renderDayModal(V)}
         {V.showTrade && this.renderTradeModal(V)}
+        {V.fieldCfgOpen && this.renderFieldCfgModal(V)}
         {V.showSetup && this.renderSetupModal(V)}
         {V.showReset && this.renderResetModal(V)}
         {V.showPlan && this.renderPlanModal(V)}
