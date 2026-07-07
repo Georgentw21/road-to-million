@@ -3,6 +3,41 @@ import { createRoot } from 'react-dom/client';
 import { supabase } from './supabaseClient';
 import App from './App.jsx';
 
+// Catch any render/runtime crash and show a helpful screen (never a blank page).
+// Also offers a hard reset that clears caches + the service worker, in case a stale
+// cache is the culprit.
+class ErrorBoundary extends React.Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) { console.error('[App crash]', err, info); }
+  async _hardReset() {
+    try { if ('serviceWorker' in navigator) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((r) => r.unregister())); } } catch (e) {}
+    try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } } catch (e) {}
+    location.reload(true);
+  }
+  render() {
+    if (!this.state.err) return this.props.children;
+    const msg = (this.state.err && this.state.err.message) ? this.state.err.message : String(this.state.err);
+    const btn = { padding: '11px 20px', borderRadius: 11, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'inherit' };
+    return (
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#08080B', padding: 24, textAlign: 'center' }}>
+        <div style={{ maxWidth: 460, width: '100%', padding: '34px 30px', borderRadius: 20, background: 'linear-gradient(180deg,#171017,#0e0e13)', border: '1px solid rgba(220,106,99,.3)', boxShadow: '0 40px 100px -30px rgba(0,0,0,.9)' }}>
+          <div style={{ width: 52, height: 52, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </div>
+          <div style={{ fontFamily: "'Spectral',serif", fontSize: 22, color: '#ECEAE3', marginBottom: 8 }}>Something went wrong</div>
+          <div style={{ fontSize: 13, color: '#9A9AA4', lineHeight: 1.6, marginBottom: 8 }}>Your data is safe in the cloud. Try reloading — if it keeps happening, use “Clear cache &amp; reload”.</div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5, color: '#DC6A63', background: 'rgba(220,106,99,.08)', border: '1px solid rgba(220,106,99,.2)', borderRadius: 8, padding: '8px 10px', margin: '0 0 20px', wordBreak: 'break-word', maxHeight: 90, overflow: 'auto' }}>{msg}</div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => location.reload()} style={{ ...btn, background: 'linear-gradient(150deg,#E2C588,#C9A65F)', color: '#1a1408' }}>Reload</button>
+            <button onClick={() => this._hardReset()} style={{ ...btn, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.16)', color: '#ECEAE3' }}>Clear cache &amp; reload</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 function Splash({ text }) {
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, background: '#08080B' }}>
@@ -88,7 +123,7 @@ function Root() {
   return <App userEmail={session.user && session.user.email} onSignOut={() => supabase.auth.signOut()} />;
 }
 
-createRoot(document.getElementById('root')).render(<Root />);
+createRoot(document.getElementById('root')).render(<ErrorBoundary><Root /></ErrorBoundary>);
 
 // PWA: ติดตั้งได้ + offline บางส่วน
 if ('serviceWorker' in navigator) {
