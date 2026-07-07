@@ -223,6 +223,43 @@ class App extends React.Component {
     exportRange: 'all', // ช่วงข้อมูลที่จะส่งออก: all | week | month
     txnPort: null, // พอร์ตที่กำลังเปิดดูประวัติฝาก/ถอนเต็ม
     lastBackup: null, // เวลาที่สำรองข้อมูลครั้งล่าสุด
+    // ===== Habit tracker (Loop-style grid) =====
+    // นิสัยแบบ track ต่อเนื่อง: log เมื่อไหร่ก็ได้ วัดที่ยอดสะสมต่อรอบ (สัปดาห์/เดือน) เทียบเป้า
+    habits: [
+      { id: 'h1', name: 'จดเทรดทุกไม้', kind: 'bool', unit: 'ครั้ง', target: 20, period: 'monthly', accent: '#5FC08D' },
+      { id: 'h2', name: 'รีวิวผลเทรด', kind: 'bool', unit: 'ครั้ง', target: 4, period: 'weekly', accent: '#7BA7D9' },
+      { id: 'h3', name: 'อ่านหนังสือ', kind: 'measure', unit: 'หน้า', target: 300, period: 'monthly', accent: '#C9A65F' },
+      { id: 'h4', name: 'ออกกำลังกาย', kind: 'bool', unit: 'ครั้ง', target: 12, period: 'monthly', accent: '#DC6A63' },
+      { id: 'h5', name: 'นั่งสมาธิ', kind: 'bool', unit: 'ครั้ง', target: 15, period: 'monthly', accent: '#9B8CFF' },
+    ],
+    // habitLogs[habitId][YYYY-MM-DD] = ค่า (bool=1 / measure=จำนวนของวันนั้น) — seed ตัวอย่างให้กริดมีชีวิตตอนเปิดครั้งแรก
+    habitLogs: (() => {
+      const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const today = new Date(); const day = (k) => { const d = new Date(today); d.setDate(today.getDate() - k); return iso(d); };
+      const L = { h1: {}, h2: {}, h3: {}, h4: {}, h5: {} };
+      const pages = [12, 0, 20, 15, 0, 30, 18, 0, 25, 22, 10, 0, 28, 16];
+      [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 13].forEach(k => { L.h1[day(k)] = 1; });
+      [0, 3, 6, 10].forEach(k => { L.h2[day(k)] = 1; });
+      pages.forEach((p, k) => { if (p > 0) L.h3[day(k)] = p; });
+      [1, 4, 8, 11].forEach(k => { L.h4[day(k)] = 1; });
+      [0, 2, 3, 5, 7, 9, 12].forEach(k => { L.h5[day(k)] = 1; });
+      return L;
+    })(),
+    // เป้าหมายครั้งเดียวรายเดือน (แยกจากนิสัย ไม่ปนกับ % วินัย) monthlyGoals[YYYY-MM] = [{id,text,done}]
+    monthlyGoals: (() => {
+      const d = new Date(); const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      return { [k]: [
+        { id: 'g1', text: 'น้ำหนักลง 2 kg', done: false },
+        { id: 'g2', text: 'จบ Aj.job → สรุปเป็น skill.md', done: false },
+        { id: 'g3', text: 'ทำระบบเก็บ Daily report บริษัท', done: false },
+      ] };
+    })(),
+    habitDayOffset: 0, // เลื่อนดูคอลัมน์วันย้อนหลัง
+    editHabit: null,   // id นิสัยที่กำลังแก้ชื่อ inline
+    habitCfg: null,    // นิสัยที่กำลังตั้งค่าใน modal (หรือ new)
+    cellEdit: null,    // ช่อง measure ที่กำลังพิมค่า "habitId|date"
+    editGoalId: null,
+    goalDraft: '',
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -235,6 +272,7 @@ class App extends React.Component {
       periodItems: { weekly: {}, monthly: {}, yearly: {} },
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
+      habits: clone(s.habits), habitLogs: {}, monthlyGoals: {},
       goal: s.goal, tags: clone(s.tags), trades: [], images: {},
       planReminders: s.planReminders, dismissedReminders: {},
       draft: null, draftIsNew: false, sDraft: null, setupIsNew: false, // ล้าง draft ที่ค้างด้วย
@@ -348,6 +386,7 @@ class App extends React.Component {
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags,
+      habits: s.habits, habitLogs: s.habitLogs, monthlyGoals: s.monthlyGoals,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
       lastBackup: s.lastBackup,
       // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
@@ -915,6 +954,105 @@ class App extends React.Component {
     }).filter((m) => m.miss > 0).sort((a, b) => (b.miss - a.miss) || (a.adher - b.adher)).slice(0, 3);
     return { avgPct, counted, fullCount, missed, spark: spark.slice(-14) };
   }
+
+  // ===== Habit tracker (Loop-style) =====
+  _fmtNum(n) { const v = Number(n) || 0; return Number.isInteger(v) ? v.toLocaleString('en-US') : v.toLocaleString('en-US', { maximumFractionDigits: 1 }); }
+  _iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  _todayISO() { return this._iso(new Date()); }
+  _curMonthKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  _periodKeyFor(period, dateISO) {
+    const d = new Date(dateISO + 'T00:00:00');
+    if (period === 'weekly') return this._isoWeekKey(d);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  _recentDays(n, offset = 0) {
+    const out = []; const t = new Date();
+    for (let i = 0; i < n; i++) { const d = new Date(t); d.setDate(t.getDate() - (i + offset)); out.push(d); }
+    return out; // ใหม่→เก่า
+  }
+  // ไล่คีย์รอบตามปฏิทินจากวันเริ่มถึงวันนี้ (รวมรอบที่ไม่มี log ด้วย เพื่อคิด streak/consistency ให้ถูก)
+  _enumPeriods(period, fromISO, toISO) {
+    const out = [];
+    if (period === 'weekly') {
+      let d = new Date(fromISO + 'T00:00:00'); const end = new Date(toISO + 'T00:00:00'); const seen = {}; let guard = 0;
+      while (d <= end && guard++ < 6000) { const k = this._isoWeekKey(d); if (!seen[k]) { seen[k] = 1; out.push(k); } d.setDate(d.getDate() + 7); }
+      const ek = this._isoWeekKey(end); if (!seen[ek]) out.push(ek);
+    } else {
+      let d = new Date(Number(fromISO.slice(0, 4)), Number(fromISO.slice(5, 7)) - 1, 1);
+      const end = new Date(Number(toISO.slice(0, 4)), Number(toISO.slice(5, 7)) - 1, 1); let guard = 0;
+      while (d <= end && guard++ < 6000) { out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); d.setMonth(d.getMonth() + 1); }
+    }
+    return out;
+  }
+  _habitStats(h) {
+    const logs = (this.state.habitLogs && this.state.habitLogs[h.id]) || {};
+    const dates = Object.keys(logs).filter(dt => (Number(logs[dt]) || 0) > 0).sort();
+    const target = Number(h.target) || 0; const need = target > 0 ? target : 1;
+    const byPeriod = {};
+    dates.forEach(dt => { const pk = this._periodKeyFor(h.period, dt); const add = h.kind === 'bool' ? 1 : (Number(logs[dt]) || 0); byPeriod[pk] = (byPeriod[pk] || 0) + add; });
+    const curPk = this._periodKeyFor(h.period, this._todayISO());
+    const curSum = byPeriod[curPk] || 0;
+    const curPct = target > 0 ? Math.round(curSum / target * 100) : (curSum > 0 ? 100 : 0);
+    const done = curSum >= need;
+    if (!dates.length) return { curSum: 0, curPct: 0, done: false, streak: 0, best: 0, consistency: 0, target, need };
+    const periods = this._enumPeriods(h.period, dates[0], this._todayISO());
+    const succ = periods.map(pk => (byPeriod[pk] || 0) >= need);
+    let i = periods.length - 1; if (!succ[i]) i--; // ข้ามรอบปัจจุบันถ้ายังไม่ถึงเป้า (กำลังทำอยู่)
+    let streak = 0; while (i >= 0 && succ[i]) { streak++; i--; }
+    let best = 0, run = 0; succ.forEach(s => { if (s) { run++; if (run > best) best = run; } else run = 0; });
+    let num = 0; succ.forEach(s => { if (s) num++; });
+    let denom = periods.length; if (!succ[periods.length - 1]) denom = Math.max(1, periods.length - 1);
+    const consistency = denom ? Math.round(num / denom * 100) : 0;
+    return { curSum, curPct, done, streak, best, consistency, target, need };
+  }
+  _setHabitLog(id, dateISO, value) {
+    const logs = JSON.parse(JSON.stringify(this.state.habitLogs || {}));
+    if (!logs[id]) logs[id] = {};
+    const v = Number(value) || 0;
+    if (v > 0) logs[id][dateISO] = v; else delete logs[id][dateISO];
+    this.setState({ habitLogs: logs, cellEdit: null }); this._save();
+  }
+  toggleHabitDay(id, dateISO) { const cur = ((this.state.habitLogs || {})[id] || {})[dateISO]; this._setHabitLog(id, dateISO, cur ? 0 : 1); }
+  openCell(id, dateISO) { this.setState({ cellEdit: id + '|' + dateISO }); }
+  commitCell(id, dateISO, e) { const v = parseFloat(String(e && e.target ? e.target.value : '').replace(/[^0-9.]/g, '')) || 0; this._setHabitLog(id, dateISO, v); }
+  pageHabitDays(delta) { this.setState({ habitDayOffset: Math.max(0, this.state.habitDayOffset + delta) }); }
+  // habit CRUD
+  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'ครั้ง', target: 1, period: 'monthly', accent: '#C9A65F' } }); }
+  closeHabitCfg() { this.setState({ habitCfg: null }); }
+  patchHabitCfg(patch) { this.setState({ habitCfg: { ...this.state.habitCfg, ...patch } }); }
+  saveHabitCfg() {
+    const c = this.state.habitCfg; if (!c || !String(c.name).trim()) { this.setState({ habitCfg: null }); return; }
+    const clean = {
+      id: c.id || ('h' + Date.now()), name: String(c.name).trim(),
+      kind: c.kind === 'measure' ? 'measure' : 'bool', unit: (c.unit || (c.kind === 'measure' ? 'หน่วย' : 'ครั้ง')),
+      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#C9A65F',
+    };
+    let habits = this.state.habits.slice();
+    const idx = habits.findIndex(x => x.id === clean.id);
+    if (idx >= 0) habits[idx] = clean; else habits = habits.concat([clean]);
+    this.setState({ habits, habitCfg: null }); this._save();
+  }
+  delHabit(id) {
+    if (!window.confirm('ลบนิสัยนี้และประวัติทั้งหมด?')) return;
+    const habits = this.state.habits.filter(x => x.id !== id);
+    const logs = { ...this.state.habitLogs }; delete logs[id];
+    this.setState({ habits, habitLogs: logs, habitCfg: null }); this._save();
+  }
+  renameHabit(id, e) { const v = String(e && e.target ? e.target.value : '').trim(); const habits = this.state.habits.map(x => x.id === id ? { ...x, name: v || x.name } : x); this.setState({ habits, editHabit: null }); this._save(); }
+  reorderHabit(fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return;
+    const arr = this.state.habits.slice();
+    const from = arr.findIndex(x => x.id === fromId), to = arr.findIndex(x => x.id === toId);
+    if (from < 0 || to < 0) return; const [m] = arr.splice(from, 1); arr.splice(to, 0, m);
+    this.setState({ habits: arr }); this._save();
+  }
+  // monthly goals (เป้าหมายครั้งเดียวรายเดือน)
+  _goalsForMonth(k) { return (this.state.monthlyGoals && this.state.monthlyGoals[k]) || []; }
+  addGoal(text) { text = String(text || '').trim(); if (!text) return; const k = this._curMonthKey(); const g = this._goalsForMonth(k).concat([{ id: 'g' + Date.now(), text, done: false }]); this.setState({ monthlyGoals: { ...this.state.monthlyGoals, [k]: g }, goalDraft: '' }); this._save(); }
+  toggleGoal(id) { const k = this._curMonthKey(); const g = this._goalsForMonth(k).map(x => x.id === id ? { ...x, done: !x.done } : x); this.setState({ monthlyGoals: { ...this.state.monthlyGoals, [k]: g } }); this._save(); }
+  delGoal(id) { const k = this._curMonthKey(); const g = this._goalsForMonth(k).filter(x => x.id !== id); this.setState({ monthlyGoals: { ...this.state.monthlyGoals, [k]: g } }); this._save(); }
+  editGoalItem(id) { this.setState({ editGoalId: id }); }
+  commitGoalEdit(id, e) { const v = String(e && e.target ? e.target.value : '').trim(); const k = this._curMonthKey(); const g = this._goalsForMonth(k).map(x => x.id === id ? { ...x, text: v || x.text } : x); this.setState({ monthlyGoals: { ...this.state.monthlyGoals, [k]: g }, editGoalId: null }); this._save(); }
 
   // ===== เตือนวางแผนล่วงหน้า =====
   // คืน reminder ที่ครบกำหนด (ก่อนขึ้นสัปดาห์/เดือนใหม่ ≤2 วัน)
@@ -1512,6 +1650,88 @@ class App extends React.Component {
       allClear: ds.counted > 0 && ds.missed.length === 0,
     };
 
+    // ---- Habit tracker grid (Loop-style) ----
+    const HB_MONS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const HB_DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const _now2 = new Date(); const hbMonthName = HB_MONS[_now2.getMonth()] + ' ' + (_now2.getFullYear() + 543);
+    const HB_COLS = 8;
+    const todayISO2 = this._todayISO();
+    const dayCols = this._recentDays(HB_COLS, st.habitDayOffset).reverse().map(d => {
+      const iso = this._iso(d);
+      return { iso, dow: HB_DOW[d.getDay()], day: d.getDate(), isToday: iso === todayISO2, isFuture: iso > todayISO2, weekend: d.getDay() === 0 || d.getDay() === 6 };
+    });
+    const habitStatsAll = [];
+    const habitRows = st.habits.map((h) => {
+      const sta = this._habitStats(h); habitStatsAll.push(sta);
+      const logs = (st.habitLogs && st.habitLogs[h.id]) || {};
+      const isMeasure = h.kind === 'measure';
+      const cells = dayCols.map(dc => {
+        const raw = Number(logs[dc.iso]) || 0;
+        return {
+          key: h.id + '|' + dc.iso, isToday: dc.isToday, isFuture: dc.isFuture, weekend: dc.weekend,
+          has: raw > 0, isMeasure, display: isMeasure && raw > 0 ? this._fmtNum(raw) : '',
+          editing: st.cellEdit === (h.id + '|' + dc.iso),
+          onClick: dc.isFuture ? undefined : (isMeasure ? () => this.openCell(h.id, dc.iso) : () => this.toggleHabitDay(h.id, dc.iso)),
+          commit: (e) => this.commitCell(h.id, dc.iso, e),
+        };
+      });
+      const capPct = Math.min(100, sta.curPct);
+      return {
+        id: h.id, name: h.name, accent: h.accent, isMeasure,
+        targetLabel: (h.period === 'weekly' ? 'สัปดาห์ละ ' : 'เดือนละ ') + this._fmtNum(h.target) + ' ' + (h.unit || 'ครั้ง'),
+        curLabel: this._fmtNum(sta.curSum) + ' / ' + this._fmtNum(h.target) + ' ' + (h.unit || ''),
+        curPct: capPct, done: sta.done,
+        ring: sta.curPct >= 100 ? GREEN : (sta.curPct >= 50 ? GOLD : '#8a7742'),
+        ringOffset: 100 - 100 * capPct / 100,
+        streak: sta.streak, best: sta.best, consistency: sta.consistency,
+        cells,
+        editing: st.editHabit === h.id, startRename: () => this.setState({ editHabit: h.id }),
+        rename: (e) => this.renameHabit(h.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+        cfg: () => this.openHabitCfg(h), del: () => this.delHabit(h.id),
+        dragging: st.dragId === ('h:' + h.id),
+        onDragStart: (e) => { this.setState({ dragId: 'h:' + h.id }); if (e && e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', h.id); } catch (_) {} } },
+        onDragEnter: () => { const dz = this.state.dragId; if (dz && dz.startsWith('h:') && dz !== ('h:' + h.id)) this.reorderHabit(dz.slice(2), h.id); },
+        onDragEnd: () => this.setState({ dragId: null }),
+      };
+    });
+    let hbSumPct = 0, hbDone = 0, hbCons = 0, hbBest = 0;
+    habitStatsAll.forEach(sa => { hbSumPct += Math.min(100, sa.curPct); if (sa.done) hbDone++; hbCons += sa.consistency; if (sa.streak > hbBest) hbBest = sa.streak; });
+    const hbAvg = st.habits.length ? Math.round(hbSumPct / st.habits.length) : 0;
+    const habitSummary = {
+      avg: hbAvg + '%', avgNum: hbAvg, avgColor: hbAvg >= 80 ? GREEN : (hbAvg >= 50 ? GOLD : RED),
+      avgOffset: 327 - 327 * hbAvg / 100,
+      doneStr: hbDone + ' / ' + st.habits.length, consStr: (st.habits.length ? Math.round(hbCons / st.habits.length) : 0) + '%',
+      bestStreak: hbBest, monthName: hbMonthName, empty: st.habits.length === 0,
+    };
+    const gcols = '206px repeat(' + dayCols.length + ', minmax(44px,1fr)) 104px';
+    // monthly goals
+    const gk2 = this._curMonthKey(); const goalsRaw = this._goalsForMonth(gk2);
+    const goalsDone = goalsRaw.filter(g => g.done).length;
+    const goalsVM = {
+      monthName: hbMonthName, doneCount: goalsDone, total: goalsRaw.length,
+      pct: goalsRaw.length ? Math.round(goalsDone / goalsRaw.length * 100) : 0,
+      items: goalsRaw.map(g => ({
+        id: g.id, text: g.text, done: g.done, editing: st.editGoalId === g.id,
+        toggle: () => this.toggleGoal(g.id), del: () => this.delGoal(g.id), edit: () => this.editGoalItem(g.id),
+        commit: (e) => this.commitGoalEdit(g.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
+      })),
+      addKey: (e) => { if (e.key === 'Enter') { this.addGoal(e.target.value); e.target.value = ''; } },
+    };
+    // habit config modal
+    const hc = st.habitCfg;
+    const habitCfgVM = hc ? {
+      isNew: !hc.id, name: hc.name, kind: hc.kind, unit: hc.unit, target: hc.target, period: hc.period, accent: hc.accent,
+      setName: (e) => this.patchHabitCfg({ name: e.target.value }),
+      pickBool: () => this.patchHabitCfg({ kind: 'bool', unit: hc.unit === 'หน้า' ? 'ครั้ง' : hc.unit }),
+      pickMeasure: () => this.patchHabitCfg({ kind: 'measure', unit: hc.unit === 'ครั้ง' ? 'หน้า' : hc.unit }),
+      setUnit: (e) => this.patchHabitCfg({ unit: e.target.value }),
+      setTarget: (e) => this.patchHabitCfg({ target: e.target.value.replace(/[^0-9.]/g, '') }),
+      pickWeekly: () => this.patchHabitCfg({ period: 'weekly' }), pickMonthly: () => this.patchHabitCfg({ period: 'monthly' }),
+      setAccent: (a) => this.patchHabitCfg({ accent: a }),
+      save: () => this.saveHabitCfg(), close: () => this.closeHabitCfg(), del: hc.id ? () => this.delHabit(hc.id) : null,
+      accents: ['#C9A65F', '#5FC08D', '#7BA7D9', '#DC6A63', '#9B8CFF', '#5FD0C8', '#E2A34B'],
+    } : null;
+
     // pre-trade — คีย์ตามวันที่จริง → รีเซ็ตเองทุกวัน
     const _pd = new Date();
     const preKey = _pd.getFullYear() + '-' + String(_pd.getMonth() + 1).padStart(2, '0') + '-' + String(_pd.getDate()).padStart(2, '0');
@@ -1732,6 +1952,11 @@ class App extends React.Component {
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
       wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(tab === 'monthly'), yrTabStyle: this._segStyle(isYearly),
       periods, checkItems, checkPeriodLabel, disc, checkListHint: 'แตะกล่องเพื่อเช็ก · ดินสอแก้ไข · กากบาทลบ',
+      // habit tracker
+      habitRows, dayCols, gcols, habitSummary, goalsVM, habitCfgVM,
+      habitDayOffset: st.habitDayOffset, habitAtPresent: st.habitDayOffset === 0,
+      pageHabitOlder: () => this.pageHabitDays(1), pageHabitNewer: () => this.pageHabitDays(-1),
+      addHabit: () => this.openHabitCfg(null),
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
       addCheckKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, periodKey, e.target.value); e.target.value = ''; } },
@@ -2219,56 +2444,214 @@ class App extends React.Component {
     );
   }
 
+  // วงแหวนเล็กสำหรับสถิติรายนิสัย
+  _hbRing(pct, color, size) {
+    const s = size || 40; const r = (s - 6) / 2; const c = 2 * Math.PI * r; const off = c * (1 - Math.min(100, pct) / 100);
+    return (
+      <svg width={s} height={s} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke="rgba(255,255,255,.09)" strokeWidth="4" />
+        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1)' }} />
+      </svg>
+    );
+  }
+  // ช่องกริดหนึ่งช่อง (วันหนึ่งของนิสัยหนึ่ง)
+  _renderHabitCell(c, accent) {
+    if (c.isFuture) return <div key={c.key} style={css('display:flex;align-items:center;justify-content:center')}><span style={css('width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.05)')}></span></div>;
+    const wrap = 'display:flex;align-items:center;justify-content:center;position:relative';
+    if (c.isMeasure) {
+      if (c.editing) return <div key={c.key} style={css(wrap)}><input autoFocus defaultValue={c.display} onBlur={c.commit} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} inputMode="decimal" style={{ width: 42, textAlign: 'center', fontSize: 12.5, fontFamily: 'JetBrains Mono', color: '#ECEAE3', background: 'rgba(0,0,0,.4)', border: '1px solid ' + accent, borderRadius: 8, padding: '4px 2px', outline: 'none' }} /></div>;
+      return (
+        <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
+          {c.has
+            ? <span className="hb-fill" style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:4px 7px;border-radius:8px;line-height:1'), color: accent, background: accent + '24', border: '1px solid ' + accent + '55' }}>{c.display}</span>
+            : <span style={{ ...css('font-size:15px;color:rgba(255,255,255,.16)'), fontWeight: 300 }}>+</span>}
+        </div>
+      );
+    }
+    return (
+      <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
+        {c.has
+          ? <span className="hb-fill" style={{ ...css('width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center'), background: 'radial-gradient(circle at 35% 30%,' + accent + ',' + accent + 'cc)', boxShadow: '0 2px 10px ' + accent + '55' }}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#12100b" strokeWidth="3.2"><path className="hb-draw" d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+          : <span style={{ ...css('width:22px;height:22px;border-radius:50%'), border: '1.6px solid rgba(255,255,255,.14)' }}></span>}
+      </div>
+    );
+  }
+  _renderHabitRow(r, V, idx) {
+    return (
+      <div key={r.id} className="hb-row" onDragEnter={r.onDragEnter} onDragOver={(e) => e.preventDefault()} style={{ ...css('display:grid;align-items:center;border-top:1px solid rgba(255,255,255,.05);min-height:52px'), gridTemplateColumns: V.gcols, opacity: r.dragging ? 0.4 : 1, animation: 'rise .45s both', animationDelay: (0.04 * idx) + 's' }}>
+        {/* ชื่อ นิสัย */}
+        <div className="hb-namecell" style={css('display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;min-width:0')}>
+          <span draggable onDragStart={r.onDragStart} onDragEnd={r.onDragEnd} title="ลากจัดลำดับ" style={css('flex:none;cursor:grab;color:#4a4a52;display:flex;font-size:13px;line-height:1;letter-spacing:-2px')}>⋮⋮</span>
+          <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '88' }}></span>
+          <div style={css('min-width:0;flex:1')}>
+            {r.editing
+              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
+              : <div onClick={r.startRename} title="คลิกแก้ชื่อ" style={css('font-size:13.5px;color:#ECEAE3;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25')}>{r.name}</div>}
+            <div style={css('font-size:10px;color:#5E5E68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px')}>{r.targetLabel}</div>
+          </div>
+          <div className="hb-actions" style={css('flex:none;display:flex;gap:5px')}>
+            <span onClick={r.cfg} title="ตั้งค่า" className="hv-op" style={css('color:#9A9AA4;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H1a2 2 0 110-4h.1A1.6 1.6 0 002.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V1a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H23a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" transform="scale(.72) translate(4.7 4.7)" /></svg></span>
+            <span onClick={r.del} title="ลบ" className="hv-deltext" style={css('color:#5E5E68;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
+          </div>
+        </div>
+        {/* ช่องรายวัน */}
+        {r.cells.map(c => this._renderHabitCell(c, r.accent))}
+        {/* สถิติรอบนี้ */}
+        <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:6px 12px 6px 4px')}>
+          <div style={css('text-align:right')}>
+            <div style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;line-height:1'), color: r.ring }}>{r.curPct}%</div>
+            <div title="ทำถึงเป้าติดกัน" style={css('font-size:10px;color:#9A9AA4;margin-top:2px;white-space:nowrap')}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span> {r.streak}</span> : <span style={css('color:#4a4a52')}>—</span>}</div>
+          </div>
+          <div style={css('position:relative;flex:none')}>{this._hbRing(r.curPct, r.ring, 40)}<div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}>{r.done ? <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke={r.ring} strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span style={{ ...css('width:5px;height:5px;border-radius:50%'), background: r.ring }}></span>}</div></div>
+        </div>
+      </div>
+    );
+  }
+  _renderHabitCfg(V) {
+    const m = V.habitCfgVM; if (!m) return null;
+    const seg = (active) => css('flex:1;text-align:center;padding:8px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.14s') + (active ? ';background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : ';color:#9A9AA4');
+    return (
+      <div onClick={m.close} style={css('position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(4px);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s both')}>
+        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(201,166,95,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
+          <div style={css('padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
+            <div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>{m.isNew ? 'เพิ่มนิสัยใหม่' : 'ตั้งค่านิสัย'}</div>
+            <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#9A9AA4;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
+          </div>
+          <div style={css('padding:20px 22px;display:flex;flex-direction:column;gap:16px')}>
+            <div>
+              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>ชื่อ นิสัย</div>
+              <input autoFocus defaultValue={m.name} onChange={m.setName} placeholder="เช่น อ่านหนังสือ, จดเทรด" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>ประเภทการวัด</div>
+              <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
+                <div onClick={m.pickBool} style={css(seg(m.kind === 'bool'))}>ทำ / ไม่ทำ</div>
+                <div onClick={m.pickMeasure} style={css(seg(m.kind === 'measure'))}>ใส่จำนวน</div>
+              </div>
+            </div>
+            <div style={css('display:flex;gap:12px')}>
+              <div style={css('flex:1')}>
+                <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>เป้าต่อรอบ</div>
+                <input defaultValue={m.target} onChange={m.setTarget} inputMode="decimal" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono' }} />
+              </div>
+              <div style={css('flex:1')}>
+                <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>หน่วย</div>
+                <input defaultValue={m.unit} onChange={m.setUnit} placeholder="ครั้ง / หน้า / นาที" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div>
+              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>นับเป้าต่อ</div>
+              <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
+                <div onClick={m.pickWeekly} style={css(seg(m.period === 'weekly'))}>สัปดาห์</div>
+                <div onClick={m.pickMonthly} style={css(seg(m.period === 'monthly'))}>เดือน</div>
+              </div>
+            </div>
+            <div>
+              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:8px')}>สีประจำนิสัย</div>
+              <div style={css('display:flex;gap:9px')}>
+                {m.accents.map(a => <span key={a} onClick={() => m.setAccent(a)} style={{ ...css('width:26px;height:26px;border-radius:50%;cursor:pointer;transition:.14s'), background: a, border: m.accent === a ? '2px solid #fff' : '2px solid transparent', transform: m.accent === a ? 'scale(1.12)' : 'scale(1)', boxShadow: '0 2px 8px ' + a + '66' }}></span>)}
+              </div>
+            </div>
+          </div>
+          <div style={css('padding:16px 22px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
+            {m.del ? <span onClick={m.del} className="hv-deltext" style={css('font-size:13px;color:#DC6A63;cursor:pointer')}>ลบนิสัยนี้</span> : <span></span>}
+            <div style={css('display:flex;gap:10px')}>
+              <span onClick={m.close} className="hv-close" style={css('font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)')}>ยกเลิก</span>
+              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F)')}>บันทึก</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   renderChecklist(V) {
+    const S = V.habitSummary; const g = V.goalsVM;
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Routine checklist</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>เช็กลิสต์ <span style={css('font-style:italic;color:#E2C588')}>รายสัปดาห์ · เดือน · ปี</span></div></div>
-          <div style={css('display:flex;align-items:center;gap:12px')}>
-            <span onClick={V.openPlanManual} className="hv-lift" title="เปิดวางแผนรอบถัดไป" style={css('font-size:12px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>วางแผนล่วงหน้า</span>
-            <div style={css('display:flex;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:4px')}>
-              <span onClick={V.tabWeekly} style={css(V.wkTabStyle)}>Weekly</span>
-              <span onClick={V.tabMonthly} style={css(V.moTabStyle)}>Monthly</span>
-              <span onClick={V.tabYearly} style={css(V.yrTabStyle)}>Yearly</span>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>นิสัย &amp; วินัย <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
+          <span onClick={V.addHabit} className="hv-setbtn" style={css('font-size:12.5px;font-weight:600;padding:10px 17px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>เพิ่มนิสัย</span>
+        </div>
+
+        {/* สรุปวินัยเดือนนี้ */}
+        <div style={css('position:relative;overflow:hidden;display:flex;align-items:center;gap:26px;padding:20px 26px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.15),rgba(155,140,255,.07));border:1px solid rgba(201,166,95,.24);margin-bottom:16px;animation:rise .5s .05s both')}>
+          <div style={css('position:absolute;top:-40%;right:-4%;width:36%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
+          <div style={css('position:relative;width:96px;height:96px;flex:none')}>
+            <svg viewBox="0 0 120 120" style={css('width:96px;height:96px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="10" /><circle cx="60" cy="60" r="52" fill="none" stroke={S.avgColor} strokeWidth="10" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={S.avgOffset} style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.2,.7,.3,1)' }} /></svg>
+            <div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:24px;font-weight:600'), color: S.avgColor }}>{S.avg}</span></div>
+          </div>
+          <div style={css('flex:1')}>
+            <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>วินัยเดือนนี้ · {S.monthName}</div>
+            <div style={css('font-family:\'Spectral\',serif;font-size:19px;color:#F3E9D2;margin-bottom:14px')}>ความคืบหน้าเฉลี่ยของทุกนิสัยในรอบนี้</div>
+            <div style={css('display:flex;gap:26px;flex-wrap:wrap')}>
+              <div><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:600;color:#ECEAE3')}>{S.doneStr}</div><div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>ทำถึงเป้าแล้ว</div></div>
+              <div><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:600;color:#5FD0C8')}>{S.consStr}</div><div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>สม่ำเสมอโดยรวม</div></div>
+              <div><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:600;color:#E2C588')}><span className="hb-flame" style={{ fontSize: 16 }}>🔥</span> {S.bestStreak}</div><div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>สตรีคยาวสุด</div></div>
             </div>
           </div>
         </div>
 
-        <div style={css('display:flex;gap:10px;margin-bottom:16px;align-items:stretch;animation:rise .5s .05s both')}>
-          <div onClick={V.pageOlder} title="ก่อนหน้า" className="hv-close" style={css('flex:none;width:38px;border-radius:11px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div>
-          <div style={css('flex:1;display:flex;gap:10px;overflow-x:auto')} className="rtm-scroll">
-            {V.periods.map((pp, i) => (
-              <div key={i} onClick={pp.click} className="hv-period" style={{ ...css('flex:1;min-width:130px;padding:10px 15px;border-radius:11px;cursor:pointer;transition:.14s'), background: pp.bg, border: pp.border }}>
-                <div style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: pp.dot }}></span><span style={{ ...css('font-size:12.5px;font-weight:600'), color: pp.labelColor }}>{pp.label}</span></div>
-                <div style={css('font-size:10.5px;color:#5E5E68;margin-top:4px;font-family:JetBrains Mono')}>{pp.status}</div>
+        {/* กริดนิสัย */}
+        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden;animation:rise .5s .1s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)')}>
+            <div style={css('font-size:12px;color:#9A9AA4')}>แตะช่องเพื่อบันทึก · ช่องตัวเลขแตะเพื่อใส่จำนวน · ลากจัดลำดับได้</div>
+            <div style={css('display:flex;align-items:center;gap:8px')}>
+              <span onClick={V.pageHabitOlder} title="ก่อนหน้า" className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg></span>
+              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="ถัดไป" className="hv-close" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.35 : 1 }}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg></span>
+            </div>
+          </div>
+          <div style={css('overflow-x:auto')} className="rtm-scroll">
+            <div style={css('min-width:640px')}>
+              {/* header วัน */}
+              <div style={{ ...css('display:grid;align-items:end;padding-bottom:2px'), gridTemplateColumns: V.gcols }}>
+                <div style={css('padding:10px 12px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E5E68')}>นิสัย</div>
+                {V.dayCols.map((d, i) => (
+                  <div key={i} style={css('text-align:center;padding:8px 0 6px')}>
+                    <div style={{ ...css('font-size:9.5px;letter-spacing:.03em'), color: d.isToday ? '#E2C588' : (d.weekend ? '#6a5f48' : '#5E5E68') }}>{d.dow}</div>
+                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;margin-top:2px;width:26px;height:26px;line-height:26px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#1a1408' : '#ECEAE3', background: d.isToday ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'transparent' }}>{d.day}</div>
+                  </div>
+                ))}
+                <div style={css('text-align:right;padding:10px 12px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E5E68')}>รอบนี้</div>
               </div>
-            ))}
-          </div>
-          <div onClick={V.atPresent ? undefined : V.pageNewer} title="ถัดไป" className="hv-close" style={{ ...css('flex:none;width:38px;border-radius:11px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.atPresent ? 'default' : 'pointer', opacity: V.atPresent ? 0.35 : 1 }}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div>
-          {!V.atPresent && <div onClick={V.pageReset} className="hv-lift" title="กลับมาปัจจุบัน" style={css('flex:none;display:flex;align-items:center;padding:0 14px;border-radius:11px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;font-size:12px;font-weight:600;cursor:pointer')}>ปัจจุบัน</div>}
-        </div>
-
-        <div style={css('display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;animation:rise .5s .1s both')}>
-          <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden')}>
-            <div style={css('padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.checkPeriodLabel}</div><span style={css('font-size:11px;color:#5E5E68')}>{V.checkListHint}</span></div>
-            {V.checkItems.map((c, i) => this._renderCheckRow(c, i))}
-            <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-              <input key={'addcheck-' + V.checkTab} placeholder="เพิ่มรายการใหม่ แล้วกด Enter" onKeyDown={V.addCheckKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+              {S.empty
+                ? <div style={css('padding:40px;text-align:center;color:#5E5E68;font-size:13.5px;border-top:1px solid rgba(255,255,255,.05)')}>ยังไม่มีนิสัย — กด “เพิ่มนิสัย” เพื่อเริ่มสร้างวินัยของคุณ</div>
+                : V.habitRows.map((r, i) => this._renderHabitRow(r, V, i))}
             </div>
           </div>
-          <div style={css('display:flex;flex-direction:column;gap:14px')}>
-            {this._renderReadiness(V.readyStroke, V.readyOffset, V.readyPct, '', V.readyFrac)}
-            {this._renderDiscipline(V)}
+          <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.05);color:#C9A65F;font-size:13px;cursor:pointer;transition:.14s')}>
+            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>เพิ่มนิสัยใหม่
           </div>
         </div>
 
-        <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .16s both')}>
+        {/* เป้าหมายรายเดือน */}
+        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden;margin-top:16px;animation:rise .5s .15s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}>
+            <div style={css('display:flex;align-items:center;gap:10px')}><span style={css('font-size:16px')}>🎯</span><div style={css('font-family:\'Spectral\',serif;font-size:17px;color:#ECEAE3')}>เป้าหมายรายเดือน <span style={css('font-size:12px;color:#5E5E68;font-family:\'Plus Jakarta Sans\'')}>· {g.monthName}</span></div></div>
+            <div style={css('display:flex;align-items:center;gap:10px')}><span style={css('font-family:JetBrains Mono;font-size:12.5px;color:#9A9AA4')}>{g.doneCount}/{g.total}</span><div style={css('width:70px;height:6px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:4px;transition:width .5s'), width: g.pct + '%', background: 'linear-gradient(90deg,#C9A65F,#E2C588)' }}></div></div></div>
+          </div>
+          {g.items.map((it) => (
+            <div key={it.id} className="hb-row" style={css('display:flex;align-items:center;gap:13px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.04)')}>
+              <span onClick={it.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s'), border: it.done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)', background: it.done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent' }}>{it.done && <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#12100b" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
+              {it.editing
+                ? <input autoFocus defaultValue={it.text} onBlur={it.commit} onKeyDown={it.key} style={{ flex: 1, fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 7, padding: '5px 10px', outline: 'none' }} />
+                : <span onClick={it.edit} style={{ ...css('flex:1;font-size:14px;cursor:text'), color: it.done ? '#5E5E68' : '#ECEAE3', textDecoration: it.done ? 'line-through' : 'none' }}>{it.text}</span>}
+              <span onClick={it.del} className="hv-deltext" style={css('flex:none;color:#5E5E68;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
+            </div>
+          ))}
+          <div style={css('display:flex;align-items:center;gap:13px;padding:13px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
+            <span style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>
+            <input placeholder="เพิ่มเป้าหมายของเดือนนี้ แล้วกด Enter" onKeyDown={g.addKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+          </div>
+        </div>
+
+        <div onClick={V.goPlay} title="แก้ไขได้ในหน้า Playbook" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .2s both')}>
           <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
           <span style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
           <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
           <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
+
+        {this._renderHabitCfg(V)}
       </div>
     );
   }
@@ -2632,7 +3015,7 @@ class App extends React.Component {
           {navIcon(V.navLog, V.goLog, 'Trade Log', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg>)}
           {navIcon(V.navAna, V.goAna, 'Analytics', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 19V5M4 19h16M8 16v-5M13 16V8M18 16v-8" strokeLinecap="round"/></svg>)}
           {navIcon(V.navSet, V.goSet, 'Setups', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l2.4 5.8L20 9l-4.5 3.9L17 19l-5-3-5 3 1.5-6.1L4 9l5.6-1.2z" strokeLinejoin="round"/></svg>)}
-          {navIcon(V.navCheck, V.goCheck, 'Checklist', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" strokeLinecap="round"/></svg>)}
+          {navIcon(V.navCheck, V.goCheck, 'Habits · นิสัย', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><path d="M14 17.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>)}
           {navIcon(V.navPlay, V.goPlay, 'Playbook', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2"/></svg>)}
           {navIcon(V.navVision, V.goVision, 'Vision Board', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>)}
           <div onClick={V.openNew} title="Log a trade" className="hv-addbtn" style={css('margin-top:auto;width:44px;height:44px;border-radius:13px;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 10px 24px -10px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>

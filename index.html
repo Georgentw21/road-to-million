@@ -143,6 +143,23 @@ select option{background:#15151c;color:#ECEAE3}
 @keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 .rtm-float{animation:cardFloat 5.2s ease-in-out infinite}
 
+/* ===== habit tracker grid ===== */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes cellPop{0%{transform:scale(.35);opacity:0}70%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
+@keyframes hbDraw{to{stroke-dashoffset:0}}
+@keyframes flamePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.hb-cell{transition:transform .14s cubic-bezier(.34,1.5,.5,1)}
+.hb-cell:hover{transform:scale(1.16)}
+.hb-cell:active{transform:scale(.9)}
+.hb-fill{animation:cellPop .34s cubic-bezier(.34,1.5,.5,1) both}
+.hb-draw{stroke-dasharray:26;stroke-dashoffset:26;animation:hbDraw .42s cubic-bezier(.6,.2,.3,1) .04s forwards}
+.hb-row{transition:background .15s}
+.hb-row:hover{background:rgba(255,255,255,.022)}
+.hb-actions{opacity:0;transition:opacity .16s}
+.hb-namecell:hover .hb-actions{opacity:1}
+.hb-flame{display:inline-block;animation:flamePulse 2.2s ease-in-out infinite}
+
 /* respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
