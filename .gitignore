@@ -1,5 +1,8 @@
 node_modules
 dist
+dist-standalone
+standalone.html
+road-to-million-backtest.html
 .env
 .env.local
 .env.*.local
