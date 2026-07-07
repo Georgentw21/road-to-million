@@ -2155,31 +2155,7 @@ class App extends React.Component {
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        {/* Vision board — milestone + dreams, first on the dashboard */}
-        <div style={css('position:relative;overflow:hidden;padding:22px 26px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.15),rgba(155,140,255,.09));border:1px solid rgba(201,166,95,.26);box-shadow:0 14px 50px -26px rgba(201,166,95,.55);animation:rise .5s both')}>
-          <div style={css('position:absolute;top:-40%;right:-3%;width:34%;height:150%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
-          <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;position:relative')}>
-            <div><div style={css('font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board <span style={css('text-transform:none;letter-spacing:0;color:#8a8a92')}>· Road to a million</span></div>
-              <div className="rtm-goldshine" style={css('font-family:\'Spectral\',serif;font-size:34px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} <span style={css('font-size:17px;color:#9CA0A6;-webkit-text-fill-color:#9CA0A6')}>/ {V.goalStr}</span></div>
-            </div>
-            <div style={css('text-align:right')}><div style={css('font-family:\'JetBrains Mono\';font-size:26px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div><div onClick={V.goVision} className="hv-op" style={css('font-size:12px;color:#C9A65F;cursor:pointer;margin-top:2px')}>Open vision board →</div></div>
-          </div>
-          <div className="rtm-progress" style={css('height:13px;border-radius:99px;background:rgba(0,0,0,.4);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);transition:width .8s ease'), width: V.milestoneWidth }}></div></div>
-          <div style={css('display:flex;justify-content:space-between;margin-top:9px;font-size:11px;font-family:JetBrains Mono;color:#8a8a92')}>{V.milestoneMarks.map((m, i) => (<span key={i}>{m}</span>))}</div>
-          {V.visionItems.length > 0 && (
-            <div style={css('display:flex;gap:10px;margin-top:16px;overflow-x:auto;position:relative')} className="rtm-scroll">
-              {V.visionItems.map((v) => { const url = getImageUrl(this.state.images['vision-' + v.id]); return (
-                <div key={v.id} onClick={V.goVision} className="hv-scale" style={{ ...css('flex:none;width:132px;height:74px;border-radius:11px;overflow:hidden;position:relative;cursor:pointer;border:1px solid rgba(255,255,255,.1)'), background: url ? ('center/cover no-repeat url(' + url + ')') : 'linear-gradient(135deg,rgba(201,166,95,.16),rgba(155,140,255,.12))' }}>
-                  <div style={css('position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.72))')}></div>
-                  <div style={css('position:absolute;left:9px;right:9px;bottom:7px;font-size:11.5px;font-weight:600;color:#F3E9D2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{v.title}</div>
-                </div>
-              ); })}
-            </div>
-          )}
-        </div>
-
-        {/* Trader affirmation — second */}
-        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s .05s both')}>
+        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s both')}>
           <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F')}><span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span></div>
           <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
           <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
@@ -3160,6 +3136,7 @@ class App extends React.Component {
         {/* ICON RAIL */}
         <div style={css('position:relative;z-index:2;width:72px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0;border-right:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.32);backdrop-filter:blur(8px)')}>
           <div className="rtm-logo" style={css('width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center;margin-bottom:10px')}><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+          {navIcon(V.navVision, V.goVision, 'Vision Board', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>)}
           {navIcon(V.navDash, V.goDash, 'Dashboard', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>)}
           {navIcon(V.navCal, V.goCal, 'Calendar', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>)}
           {navIcon(V.navLog, V.goLog, 'Trade Log', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg>)}
@@ -3167,7 +3144,6 @@ class App extends React.Component {
           {navIcon(V.navSet, V.goSet, 'Setups', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l2.4 5.8L20 9l-4.5 3.9L17 19l-5-3-5 3 1.5-6.1L4 9l5.6-1.2z" strokeLinejoin="round"/></svg>)}
           {navIcon(V.navCheck, V.goCheck, 'Habits', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><path d="M14 17.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>)}
           {navIcon(V.navPlay, V.goPlay, 'Playbook', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2"/></svg>)}
-          {navIcon(V.navVision, V.goVision, 'Vision Board', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>)}
           <div onClick={V.openNew} title="Log a trade" className="hv-addbtn" style={css('margin-top:auto;width:44px;height:44px;border-radius:13px;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 10px 24px -10px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
         </div>
 
