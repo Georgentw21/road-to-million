@@ -1553,7 +1553,7 @@ class App extends React.Component {
       dayTradesMap[dnum].push(t);
       if (t.status !== 'OPEN') dayPnl[dnum] += t.pnl;
     });
-    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const firstDow = (new Date(calYear, calMonth, 1).getDay() + 6) % 7; // Monday-based leading offset (0=Mon)
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
     const _now = new Date();
     const isCurMonth = _now.getFullYear() === calYear && _now.getMonth() === calMonth;
@@ -1584,16 +1584,22 @@ class App extends React.Component {
     }
     let monthTotal = 0; Object.values(dayPnl).forEach(v => monthTotal += v);
 
-    // weekly summary — แบ่งตามสัปดาห์จริงของปฏิทิน (อาทิตย์–เสาร์) ให้ตรงกับแถวในตารางเดือน
-    const wkRange = (a, b) => { let s = 0, td = 0; for (let d = a; d <= b; d++) { if (dayTradesMap[d]) { td += dayTradesMap[d].length; s += (dayPnl[d] || 0); } } return { s, td }; };
-    const wkDefs = [];
-    { let start = 1, wn = 1;
-      while (start <= daysInMonth) {
-        const end = Math.min(daysInMonth, start === 1 ? (7 - firstDow) || 7 : start + 6);
-        wkDefs.push([start, end, 'Week ' + wn + ' · ' + start + '–' + end]);
-        start = end + 1; wn++;
-      } }
-    const weeks = wkDefs.map(([a, b, label]) => { const r = wkRange(a, b); return { label, pnl: r.td ? this._fmtMoney(r.s) : '—', color: r.s >= 0 ? GREEN : RED, meta: r.td ? (r.td + ' ออเดอร์') : 'ไม่มีการเทรด' }; });
+    // weekly summary — continuous Monday→Sunday ISO weeks (same week definition as the habit tracker)
+    const _byWeek = {};
+    trades.forEach(t => { const wk = this._isoWeekKey(new Date(t.date + 'T00:00:00')); if (!_byWeek[wk]) _byWeek[wk] = { s: 0, td: 0 }; _byWeek[wk].td++; if (t.status !== 'OPEN') _byWeek[wk].s += (Number(t.pnl) || 0); });
+    const _Ms = this._EN_MONS_SHORT();
+    const weeks = []; {
+      const mStart = new Date(calYear, calMonth, 1), mEnd = new Date(calYear, calMonth + 1, 0);
+      const cur = new Date(mStart); cur.setDate(mStart.getDate() - ((mStart.getDay() + 6) % 7)); // Monday on/before the 1st
+      let wn = 1, guard = 0;
+      while (cur <= mEnd && guard++ < 8) {
+        const wEnd = new Date(cur); wEnd.setDate(cur.getDate() + 6);
+        const g = _byWeek[this._isoWeekKey(cur)] || { s: 0, td: 0 };
+        const label = 'Week ' + wn + ' · ' + _Ms[cur.getMonth()] + ' ' + cur.getDate() + '–' + (wEnd.getMonth() === cur.getMonth() ? wEnd.getDate() : _Ms[wEnd.getMonth()] + ' ' + wEnd.getDate());
+        weeks.push({ label, pnl: g.td ? this._fmtMoney(g.s) : '—', color: g.s >= 0 ? GREEN : RED, meta: g.td ? (g.td + ' trades') : 'no trades' });
+        cur.setDate(cur.getDate() + 7); wn++;
+      }
+    }
 
     // ---- mini heatmap (Dashboard = เดือนปัจจุบันเสมอ แยกจากปฏิทินที่เลื่อนได้) ----
     const heat = [];
@@ -1602,7 +1608,7 @@ class App extends React.Component {
       const hn = new Date();
       const hPrefix = hn.getFullYear() + '-' + String(hn.getMonth() + 1).padStart(2, '0');
       dashMonthShort = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(hn);
-      const hFirstDow = new Date(hn.getFullYear(), hn.getMonth(), 1).getDay();
+      const hFirstDow = (new Date(hn.getFullYear(), hn.getMonth(), 1).getDay() + 6) % 7; // Monday-based
       const hDays = new Date(hn.getFullYear(), hn.getMonth() + 1, 0).getDate();
       const hToday = hn.getDate();
       const hPnl = {}; const hHas = {};
@@ -1716,19 +1722,21 @@ class App extends React.Component {
       allClear: ds.counted > 0 && ds.missed.length === 0,
     };
 
-    // ---- Habit tracker grid (Loop-style, daily logging) ----
+    // ---- Habit tracker grid (one clean Monday→Sunday week per view) ----
     const HB_MONS = this._EN_MONS();
     const HB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const _now2 = new Date(); const hbMonthName = HB_MONS[_now2.getMonth()] + ' ' + _now2.getFullYear();
-    const HB_COLS = 8; const HB_MSHORT = this._EN_MONS_SHORT();
+    const HB_COLS = 7; const HB_MSHORT = this._EN_MONS_SHORT();
     const todayISO2 = this._todayISO();
-    const dayColDates = this._recentDays(HB_COLS, st.habitDayOffset).reverse();
+    // Monday of the viewed week (habitDayOffset now counts WEEKS back), then Mon→Sun
+    const _wkMon = new Date(_now2); const _wd0 = (_wkMon.getDay() + 6) % 7; _wkMon.setDate(_wkMon.getDate() - _wd0 - st.habitDayOffset * 7);
+    const dayColDates = []; for (let i = 0; i < 7; i++) { const d = new Date(_wkMon); d.setDate(_wkMon.getDate() + i); dayColDates.push(d); }
     const dayCols = dayColDates.map(d => {
       const iso = this._iso(d);
       return { iso, dow: HB_DOW[d.getDay()], day: d.getDate(), isToday: iso === todayISO2, isFuture: iso > todayISO2, weekend: d.getDay() === 0 || d.getDay() === 6 };
     });
-    // ป้ายช่วงวันที่กำลังดู (ไว้ย้อนดูเดือนอื่น) เช่น "Jun 24 – Jul 1"
-    const _gf = dayColDates[0], _gl = dayColDates[dayColDates.length - 1];
+    // week range label, e.g. "Jun 30 – Jul 6"
+    const _gf = dayColDates[0], _gl = dayColDates[6];
     const gridRangeLabel = HB_MSHORT[_gf.getMonth()] + ' ' + _gf.getDate() + ' – ' + (_gl.getMonth() === _gf.getMonth() ? _gl.getDate() : HB_MSHORT[_gl.getMonth()] + ' ' + _gl.getDate()) + (_gl.getFullYear() !== _now2.getFullYear() ? ' ' + _gl.getFullYear() : '');
     const perLabel = { weekly: 'per week', monthly: 'per month' };
     // view period drives BOTH the grid's period-% column and the roll-up (weekly ↔ monthly connected)
@@ -1766,7 +1774,7 @@ class App extends React.Component {
         onDragEnd: () => this.setState({ dragId: null }),
       };
     });
-    const gcols = '226px repeat(' + dayCols.length + ', minmax(44px,1fr)) 116px';
+    const gcols = '226px repeat(' + dayCols.length + ', minmax(46px,1fr)) 134px';
 
     // ---- Progress roll-up (Weekly / Monthly). Every habit appears in both — the target
     // for the OFF-period is derived (5×/week ⇒ 20×/month), so the two views stay connected. ----
@@ -2054,9 +2062,10 @@ class App extends React.Component {
       wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(tab === 'monthly'), yrTabStyle: this._segStyle(isYearly),
       periods, checkItems, checkPeriodLabel, disc, checkListHint: 'Tap to check · pencil to edit · × to delete',
       // habit tracker
-      habitRows, dayCols, gcols, habitRollup, habitCfgVM, yearGoalsVM, habitMonthName: hbMonthName, gridRangeLabel,
+      habitRows, dayCols, gcols, habitRollup, habitCfgVM, yearGoalsVM, habitMonthName: hbMonthName,
+      gridRangeLabel: (st.habitDayOffset === 0 ? 'This week · ' : '') + gridRangeLabel,
       habitDayOffset: st.habitDayOffset, habitAtPresent: st.habitDayOffset === 0,
-      pageHabitOlder: () => this.pageHabitDays(HB_COLS), pageHabitNewer: () => this.pageHabitDays(-HB_COLS), resetHabitDays: () => this.resetHabitDays(),
+      pageHabitOlder: () => this.pageHabitDays(1), pageHabitNewer: () => this.pageHabitDays(-1), resetHabitDays: () => this.resetHabitDays(),
       addHabit: () => this.openHabitCfg(null),
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
@@ -2234,7 +2243,7 @@ class App extends React.Component {
           <div style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
-              {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d,i)=>(<div key={i} style={css('text-align:center;font-size:10px;color:#83838C')}>{d}</div>))}
+              {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px')}>
               {V.heat.map((d, i) => (
@@ -2259,7 +2268,7 @@ class App extends React.Component {
         <div style={css('display:grid;grid-template-columns:1fr 240px;gap:16px;animation:rise .5s .08s both')}>
           <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);padding:16px')}>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:10px')}>
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i)=>(<div key={i} style={css('text-align:center;font-size:10px;letter-spacing:.1em;color:#83838C;text-transform:uppercase')}>{d}</div>))}
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:8px')}>
               {V.calDays.map((d, i) => (
@@ -2547,11 +2556,11 @@ class App extends React.Component {
 
   // วงแหวนเล็กสำหรับสถิติรายนิสัย
   _hbRing(pct, color, size) {
-    const s = size || 40; const r = (s - 6) / 2; const c = 2 * Math.PI * r; const off = c * (1 - Math.min(100, pct) / 100);
+    const s = size || 52; const sw = 6; const r = (s - sw - 1) / 2; const c = 2 * Math.PI * r; const off = c * (1 - Math.min(100, pct) / 100);
     return (
       <svg width={s} height={s} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke="rgba(255,255,255,.09)" strokeWidth="4" />
-        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1)' }} />
+        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth={sw} />
+        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1)', filter: 'drop-shadow(0 0 3px ' + color + '66)' }} />
       </svg>
     );
   }
@@ -2603,7 +2612,7 @@ class App extends React.Component {
             <div style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;line-height:1'), color: r.ring }}>{r.curPct}%</div>
             <div title="Consecutive days" style={css('font-size:11px;color:#9CA0A6;margin-top:2px;white-space:nowrap')}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span> {r.streak}</span> : <span style={css('color:#6a6a72')}>—</span>}</div>
           </div>
-          <div style={css('position:relative;flex:none')}>{this._hbRing(r.curPct, r.ring, 40)}<div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}>{r.done ? <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke={r.ring} strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span style={{ ...css('width:5px;height:5px;border-radius:50%'), background: r.ring }}></span>}</div></div>
+          <div style={css('position:relative;flex:none')}>{this._hbRing(r.curPct, r.ring, 54)}<div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}>{r.done ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={r.ring} strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span style={{ ...css('width:7px;height:7px;border-radius:50%'), background: r.ring }}></span>}</div></div>
         </div>
       </div>
     );
@@ -2684,12 +2693,12 @@ class App extends React.Component {
             </div>
             <div style={css('display:flex;align-items:center;gap:8px')}>
               {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;cursor:pointer')}>Today</span>}
-              <span onClick={V.pageHabitOlder} title="Earlier days" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Later days" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+              <span onClick={V.pageHabitOlder} title="Previous week" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Next week" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
             </div>
           </div>
           <div style={css('overflow-x:auto')} className="rtm-scroll">
-            <div style={css('min-width:700px')}>
+            <div style={css('min-width:640px')}>
               <div style={{ ...css('display:grid;align-items:end;padding-bottom:2px'), gridTemplateColumns: V.gcols }}>
                 <div style={css('padding:10px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a92')}>Habit</div>
                 {V.dayCols.map((d, i) => (
