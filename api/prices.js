@@ -2,14 +2,21 @@
 // (เรียกจาก browser ตรงๆ ติด CORS เลยต้อง proxy ผ่านฝั่ง server)
 // เรียกใช้: GET /api/prices
 
+// Crypto trades 24/7, so list it first — a closed FX/stock market never leaves
+// the strip looking frozen; there's always something live moving.
 const SYMBOLS = [
+  { label: 'BTCUSD', y: 'BTC-USD' },
+  { label: 'ETHUSD', y: 'ETH-USD' },
+  { label: 'SOLUSD', y: 'SOL-USD' },
+  { label: 'XRPUSD', y: 'XRP-USD' },
+  { label: 'BNBUSD', y: 'BNB-USD' },
+  { label: 'DOGEUSD', y: 'DOGE-USD' },
   { label: 'XAUUSD', y: 'GC=F' },
   { label: 'EURUSD', y: 'EURUSD=X' },
   { label: 'GBPJPY', y: 'GBPJPY=X' },
+  { label: 'USDJPY', y: 'USDJPY=X' },
   { label: 'US30', y: '^DJI' },
   { label: 'NAS100', y: '^NDX' },
-  { label: 'BTCUSD', y: 'BTC-USD' },
-  { label: 'USDJPY', y: 'USDJPY=X' },
   { label: 'NVDA', y: 'NVDA' },
   { label: 'GOOG', y: 'GOOG' },
   { label: 'AAPL', y: 'AAPL' },
