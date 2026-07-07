@@ -1046,14 +1046,25 @@ class App extends React.Component {
     const d = new Date(t.getFullYear(), t.getMonth() - offset, 1);
     return { key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: (offset === 0 ? 'This month · ' : '') + M[d.getMonth()] + ' ' + d.getFullYear() };
   }
+  // ===== connected weekly ↔ monthly targets =====
+  // A habit's target is anchored to one base period (week or month). The other period's
+  // target is DERIVED so weekly & monthly stay consistent: 4 weeks ≈ 1 month.
+  //   5×/week  → 20×/month   ·   300 pages/month → 75 pages/week
+  _WPM() { return 4; }
+  _weeklyBase(h) { const t = Number(h.target) || 0; return h.period === 'monthly' ? t / this._WPM() : t; }
+  _targetFor(h, periodType) {
+    const raw = periodType === 'weekly' ? this._weeklyBase(h) : this._weeklyBase(h) * this._WPM();
+    // keep neat: whole number for counts / big values, otherwise one decimal
+    return raw >= 10 || Number.isInteger(raw) ? Math.round(raw) : Math.round(raw * 10) / 10;
+  }
   _habitPeriodProgress(h, periodType, offset) {
     const logs = (this.state.habitLogs && this.state.habitLogs[h.id]) || {};
     const info = this._periodInfo(periodType, offset);
     let sum = 0;
     Object.keys(logs).forEach(dt => { const v = Number(logs[dt]) || 0; if (v > 0 && this._periodKeyFor(periodType, dt) === info.key) sum += (h.kind === 'bool' ? 1 : v); });
-    const target = Number(h.target) || 0; const need = target > 0 ? target : 1;
+    const target = this._targetFor(h, periodType); const need = target > 0 ? target : 1;
     const pct = target > 0 ? Math.round(sum / target * 100) : (sum > 0 ? 100 : 0);
-    return { sum, pct: Math.min(100, pct), done: sum >= need, remaining: Math.max(0, target - sum), label: info.label, key: info.key };
+    return { sum, target, pct: Math.min(100, pct), done: sum >= need, remaining: Math.max(0, target - sum), label: info.label, key: info.key };
   }
   pageRollup(delta) { this.setState({ rollupOffset: Math.max(0, this.state.rollupOffset + delta) }); }
   resetRollup() { this.setState({ rollupOffset: 0 }); }
@@ -1078,7 +1089,7 @@ class App extends React.Component {
   pageHabitDays(delta) { this.setState({ habitDayOffset: Math.max(0, this.state.habitDayOffset + delta) }); }
   resetHabitDays() { this.setState({ habitDayOffset: 0 }); }
   // habit CRUD
-  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 1, period: 'monthly', accent: '#C9A65F' } }); }
+  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#C9A65F' } }); }
   closeHabitCfg() { this.setState({ habitCfg: null }); }
   patchHabitCfg(patch) { this.setState({ habitCfg: { ...this.state.habitCfg, ...patch } }); }
   saveHabitCfg() {
@@ -1720,9 +1731,13 @@ class App extends React.Component {
     const _gf = dayColDates[0], _gl = dayColDates[dayColDates.length - 1];
     const gridRangeLabel = HB_MSHORT[_gf.getMonth()] + ' ' + _gf.getDate() + ' – ' + (_gl.getMonth() === _gf.getMonth() ? _gl.getDate() : HB_MSHORT[_gl.getMonth()] + ' ' + _gl.getDate()) + (_gl.getFullYear() !== _now2.getFullYear() ? ' ' + _gl.getFullYear() : '');
     const perLabel = { weekly: 'per week', monthly: 'per month' };
+    // view period drives BOTH the grid's period-% column and the roll-up (weekly ↔ monthly connected)
+    const rv = st.habitPeriodView === 'weekly' ? 'weekly' : 'monthly';
+    const roff = st.rollupOffset;
     const habitStatsAll = [];
     const habitRows = st.habits.map((h) => {
       const sta = this._habitStats(h); habitStatsAll.push({ h, sta });
+      const gp = this._habitPeriodProgress(h, rv, 0); // progress in the selected view period (this week/this month)
       const logs = (st.habitLogs && st.habitLogs[h.id]) || {};
       const isMeasure = h.kind === 'measure';
       const cells = dayCols.map(dc => {
@@ -1735,12 +1750,10 @@ class App extends React.Component {
           commit: (e) => this.commitCell(h.id, dc.iso, e),
         };
       });
-      const capPct = Math.min(100, sta.curPct);
       return {
         id: h.id, name: h.name, accent: h.accent, isMeasure,
-        targetLabel: this._fmtNum(h.target) + ' ' + (h.unit || 'times') + ' ' + (perLabel[h.period] || 'per month'),
-        curLabel: this._fmtNum(sta.curSum) + ' / ' + this._fmtNum(h.target) + ' ' + (h.unit || ''),
-        curPct: capPct, done: sta.done,
+        targetLabel: this._fmtNum(h.target) + ' ' + (h.unit || 'times') + ' / ' + (h.period === 'weekly' ? 'week' : 'month'),
+        curPct: Math.min(100, gp.pct), done: gp.done,
         ring: h.accent, // วงล้อใช้สีประจำนิสัย
         streak: sta.dayStreak, best: sta.bestDayStreak, consistency: sta.consistency,
         cells,
@@ -1755,19 +1768,17 @@ class App extends React.Component {
     });
     const gcols = '226px repeat(' + dayCols.length + ', minmax(44px,1fr)) 116px';
 
-    // ---- Progress roll-up (Weekly / Monthly, with step-back navigation) ----
-    const rv = st.habitPeriodView === 'weekly' ? 'weekly' : 'monthly';
-    const roff = st.rollupOffset;
-    const rollHabits = st.habits.filter(h => h.period === rv);
-    const rollRows = rollHabits.map((h) => {
+    // ---- Progress roll-up (Weekly / Monthly). Every habit appears in both — the target
+    // for the OFF-period is derived (5×/week ⇒ 20×/month), so the two views stay connected. ----
+    const rollRows = st.habits.map((h) => {
       const pp = this._habitPeriodProgress(h, rv, roff);
       const sta = this._habitStats(h);
       return {
         id: h.id, name: h.name, accent: h.accent, done: pp.done,
-        cur: this._fmtNum(pp.sum), target: this._fmtNum(h.target), unit: h.unit || '',
+        cur: this._fmtNum(pp.sum), target: this._fmtNum(pp.target), unit: h.unit || '',
         pct: pp.pct, remaining: this._fmtNum(pp.remaining), remainPct: Math.max(0, 100 - pp.pct),
         streak: sta.dayStreak, best: sta.bestDayStreak,
-        badge: pp.done ? 'On target' : (h.target > 0 ? this._fmtNum(pp.remaining) + ' ' + (h.unit || '') + ' to go' : '—'),
+        badge: pp.done ? 'On target' : (pp.target > 0 ? this._fmtNum(pp.remaining) + ' ' + (h.unit || '') + ' to go' : '—'),
       };
     });
     const rollMet = rollRows.filter(r => r.done).length;
@@ -1812,6 +1823,14 @@ class App extends React.Component {
       setAccent: (a) => this.patchHabitCfg({ accent: a }),
       save: () => this.saveHabitCfg(), close: () => this.closeHabitCfg(), del: hc.id ? () => this.delHabit(hc.id) : null,
       accents: ['#C9A65F', '#5FC08D', '#7BA7D9', '#DC6A63', '#9B8CFF', '#5FD0C8', '#E2A34B'],
+      // live "connected" hint: the derived target for the other period
+      derivedHint: (() => {
+        const n = Number(hc.target) || 0; const u = hc.unit || 'times';
+        if (n <= 0) return '';
+        return hc.period === 'weekly'
+          ? ('≈ ' + this._fmtNum(this._targetFor(hc, 'monthly')) + ' ' + u + ' / month')
+          : ('≈ ' + this._fmtNum(this._targetFor(hc, 'weekly')) + ' ' + u + ' / week');
+      })(),
     } : null;
 
     // pre-trade — คีย์ตามวันที่จริง → รีเซ็ตเองทุกวัน
@@ -2626,7 +2645,8 @@ class App extends React.Component {
                 <span onClick={m.pickWeekly} className={'rtm-seg' + (m.period === 'weekly' ? ' on' : '')} style={{ flex: 1 }}>Week</span>
                 <span onClick={m.pickMonthly} className={'rtm-seg' + (m.period === 'monthly' ? ' on' : '')} style={{ flex: 1 }}>Month</span>
               </div>
-              <div style={css('font-size:11px;color:#8a8a92;margin-top:7px;line-height:1.5')}>Yearly ambitions go in “Yearly goals” below the tracker — a checklist you edit each year.</div>
+              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#C9A65F')}> {m.derivedHint}</span> : null}</div>
+              <div style={css('font-size:11px;color:#8a8a92;margin-top:5px;line-height:1.5')}>Yearly ambitions go in “Yearly goals” below the tracker.</div>
             </div>
             <div>
               <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:8px')}>Colour</div>
@@ -2705,7 +2725,7 @@ class App extends React.Component {
             </div>
           </div>
           {R.empty
-            ? <div style={css('padding:34px 20px;text-align:center;color:#7d7d86;font-size:13.5px')}>{R.hasAnyHabit ? ('No ' + (R.isW ? 'weekly' : 'monthly') + '-target habits. Set a habit’s target to “' + (R.isW ? 'Week' : 'Month') + '” to track it here.') : 'Add a habit to see its progress here.'}</div>
+            ? <div style={css('padding:34px 20px;text-align:center;color:#7d7d86;font-size:13.5px')}>Add a habit to see its weekly &amp; monthly progress here.</div>
             : (
               <div style={css('display:grid;grid-template-columns:190px 1fr;align-items:stretch')}>
                 <div style={css('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 16px;border-right:1px solid rgba(255,255,255,.06)')}>
