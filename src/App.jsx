@@ -2722,7 +2722,7 @@ class App extends React.Component {
                       <div style={css('flex:1;min-width:0')}>
                         <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px')}>
                           <span style={css('font-size:14px;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span>
-                          <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;flex:none'), color: r.done ? GREEN : '#B9B9C0' }}>{r.cur}/{r.target} {r.unit}</span>
+                          <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;flex:none'), color: r.done ? '#5FC08D' : '#B9B9C0' }}>{r.cur}/{r.target} {r.unit}</span>
                         </div>
                         <div style={css('height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.pct + '%', background: r.done ? 'linear-gradient(90deg,#5FC08D,#7DDca0)' : 'linear-gradient(90deg,' + r.accent + ',' + r.accent + 'cc)' }}></div></div>
                       </div>
