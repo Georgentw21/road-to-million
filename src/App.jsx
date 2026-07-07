@@ -2746,9 +2746,15 @@ class App extends React.Component {
                         </div>
                         <div style={css('height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.pct + '%', background: r.done ? 'linear-gradient(90deg,#5FC08D,#7DDca0)' : 'linear-gradient(90deg,' + r.accent + ',' + r.accent + 'cc)' }}></div></div>
                       </div>
-                      <div style={css('flex:none;text-align:center;min-width:56px')}>
-                        <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.streak > 0 ? '#E2A34B' : '#6a6a72' }}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span>{r.streak}</span> : '—'}</div>
-                        <div style={css('font-size:10.5px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>day streak</div>
+                      <div style={css('flex:none;display:flex;align-items:center;gap:14px')}>
+                        <div style={css('text-align:center;min-width:44px')}>
+                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.streak > 0 ? '#E2A34B' : '#6a6a72' }}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span>{r.streak}</span> : '—'}</div>
+                          <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>current</div>
+                        </div>
+                        <div style={css('text-align:center;min-width:42px')}>
+                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#C9A65F' : '#6a6a72' }}>{r.best > 0 ? r.best : '—'}</div>
+                          <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>best</div>
+                        </div>
                       </div>
                       <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap'), color: r.done ? '#12100b' : '#E2C588', background: r.done ? 'linear-gradient(180deg,#7DDca0,#5FC08D)' : 'rgba(201,166,95,.14)', border: r.done ? 'none' : '1px solid rgba(201,166,95,.3)' }}>{r.badge}</span>
                     </div>

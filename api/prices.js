@@ -1,16 +1,14 @@
-// Vercel Serverless Function — ดึงราคาเรียลไทม์จาก Yahoo Finance
-// (เรียกจาก browser ตรงๆ ติด CORS เลยต้อง proxy ผ่านฝั่ง server)
-// เรียกใช้: GET /api/prices
-
-// Crypto trades 24/7, so list it first — a closed FX/stock market never leaves
-// the strip looking frozen; there's always something live moving.
+// Vercel Serverless Function — realtime prices proxy.
+// Crypto is pulled from Binance (rock-solid from a server, 24/7 — always moving) and
+// listed first; the rest come from Yahoo. Called from the browser: GET /api/prices
+// `b` = Binance symbol, `y` = Yahoo symbol.
 const SYMBOLS = [
-  { label: 'BTCUSD', y: 'BTC-USD' },
-  { label: 'ETHUSD', y: 'ETH-USD' },
-  { label: 'SOLUSD', y: 'SOL-USD' },
-  { label: 'XRPUSD', y: 'XRP-USD' },
-  { label: 'BNBUSD', y: 'BNB-USD' },
-  { label: 'DOGEUSD', y: 'DOGE-USD' },
+  { label: 'BTCUSD', b: 'BTCUSDT', y: 'BTC-USD' },
+  { label: 'ETHUSD', b: 'ETHUSDT', y: 'ETH-USD' },
+  { label: 'SOLUSD', b: 'SOLUSDT', y: 'SOL-USD' },
+  { label: 'XRPUSD', b: 'XRPUSDT', y: 'XRP-USD' },
+  { label: 'BNBUSD', b: 'BNBUSDT', y: 'BNB-USD' },
+  { label: 'DOGEUSD', b: 'DOGEUSDT', y: 'DOGE-USD' },
   { label: 'XAUUSD', y: 'GC=F' },
   { label: 'EURUSD', y: 'EURUSD=X' },
   { label: 'GBPJPY', y: 'GBPJPY=X' },
@@ -57,15 +55,41 @@ async function fetchFrom(host, item) {
   };
 }
 
-// ลองหลาย host ของ Yahoo (บางตัว rate-limit เป็นช่วงๆ) — กันสินทรัพย์หลุดหาย
-async function fetchOne(item) {
+// Binance 24hr ticker — very reliable from a server, always live for crypto.
+async function fetchBinance(item) {
+  // data-api.binance.vision is the geo-neutral public market-data host (no region block); try it first.
+  const hosts = ['data-api.binance.vision', 'api.binance.com', 'api.binance.us'];
+  for (const host of hosts) {
+    try {
+      const r = await fetch(`https://${host}/api/v3/ticker/24hr?symbol=${item.b}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const price = parseFloat(j.lastPrice);
+      const pct = parseFloat(j.priceChangePercent);
+      if (!isFinite(price)) continue;
+      const up = !(pct < 0);
+      return { label: item.label, price: fmtPrice(price), changePct: (up ? '+' : '−') + Math.abs(isFinite(pct) ? pct : 0).toFixed(2) + '%', up, ok: true };
+    } catch (e) { /* try next host */ }
+  }
+  return null;
+}
+
+// try several Yahoo hosts (they rate-limit in bursts)
+async function fetchYahoo(item) {
   const hosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
   for (const host of hosts) {
     try {
       const res = await fetchFrom(host, item);
       if (res) return res;
-    } catch (e) { /* ลอง host ถัดไป */ }
+    } catch (e) { /* next host */ }
   }
+  return null;
+}
+
+async function fetchOne(item) {
+  // crypto: Binance first (24/7, reliable), Yahoo as backup
+  if (item.b) { const c = await fetchBinance(item); if (c) return c; }
+  if (item.y) { const y = await fetchYahoo(item); if (y) return y; }
   return blank(item);
 }
 
