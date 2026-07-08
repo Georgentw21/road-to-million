@@ -192,6 +192,7 @@ class App extends React.Component {
       htf: ['Bullish Trend', 'Bearish Trend', 'Bullish Shift', 'Bearish Shift', 'Ranging'],
       fibo: ['Premium (0.5–0.79)', 'Discount (0.5–0.79)', 'OTE (0.62–0.79)', 'Equilibrium (0.5)', 'Below 0.79'],
       entryType: ['M5 Completed Stick', 'M15 Completed Stick', 'M5 Doji', 'M15 Doji'],
+      slZone: [], // SL zone — add your own choices in "Edit options"
     },
     // trade-log analysis filters + breakdown lens
     logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' },
@@ -548,12 +549,12 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'portfolio', 'tags', 'notes'];
+    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -735,7 +736,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -1592,7 +1593,7 @@ class App extends React.Component {
         session: t.session, dateShort: dShort, chips,
         dowShort: this._dowShort(t.date), fullDate: this._fullDateLabel(t.date), dowColor: this._dowColor(t.date),
         dateLong: (() => { const dt = new Date(t.date + 'T00:00'); return dt.getDate() + ' ' + this._EN_MONS_SHORT()[dt.getMonth()] + ' ' + dt.getFullYear(); })(),
-        ltf: t.ltf || '', mtf: t.mtf || '', htf: t.htf || '', retest: t.retest || '', fibo: t.fibo || '', entryType: t.entryType || '',
+        ltf: t.ltf || '', mtf: t.mtf || '', htf: t.htf || '', retest: t.retest || '', fibo: t.fibo || '', entryType: t.entryType || '', slZone: t.slZone || '',
         sideColor: t.side === 'BUY' ? GREEN : RED,
         sessionColor: sessColor(t.session),
         pnlStr: t.status === 'OPEN' ? '—' : this._fmtMoney(t.pnl),
@@ -1624,7 +1625,7 @@ class App extends React.Component {
       else if (lf === 'long') { if (t.side !== 'BUY') return false; }
       else if (lf === 'short') { if (t.side !== 'SELL') return false; }
       if (LF.day && LF.day !== 'all' && this._dowFull(t.date) !== LF.day) return false;
-      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'entryType')) return false;
+      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'entryType') || !fieldMatch(t, 'slZone')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
@@ -1648,7 +1649,7 @@ class App extends React.Component {
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry']];
+    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['slZone', 'SL zone']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
     const logFieldFilters = [{ key: 'day', label: 'Day', value: LF.day || 'all', options: [1, 2, 3, 4, 5, 6, 0].map(i => ({ v: dayFull[i], label: dayFull[i] })) }]
       .concat(ANA_FIELDS.map(([key, label]) => ({
@@ -1673,6 +1674,7 @@ class App extends React.Component {
       retest: { label: 'Retest', get: t => t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—'), order: ['Yes', 'No', '—'] },
       fibo: { label: 'Fibo M15 side', get: t => (t.fibo || '').trim() || '—' },
       entryType: { label: 'Entry model', get: t => (t.entryType || '').trim() || '—' },
+      slZone: { label: 'SL zone', get: t => (t.slZone || '').trim() || '—' },
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
     };
@@ -2077,10 +2079,10 @@ class App extends React.Component {
         dCommission: d.commission != null ? String(d.commission) : '', setCommission: (e) => this.setD('commission', e.target.value),
         dNet: (() => { const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (isNaN(g)) return null; const n = g - c; return { str: this._fmtMoney(n), color: n >= 0 ? '#5FC08D' : '#DC6A63', show: !!c }; })(),
         dDayLabel: this._fullDateLabel(d.date),
-        dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '',
-        optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType),
+        dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
+        optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
-        setFibo: (e) => this.setDField('fibo', e.target.value), setEntryType: (e) => this.setDField('entryType', e.target.value),
+        setFibo: (e) => this.setDField('fibo', e.target.value), setEntryType: (e) => this.setDField('entryType', e.target.value), setSlZone: (e) => this.setDField('slZone', e.target.value),
         setRetest: (v) => this.setD('retest', d.retest === v ? '' : v),
         dTags: d.tags || [], tagList: st.tags,
         toggleTag: (tag) => this.toggleDraftTag(tag), delTag: (tag, e) => this.delTagGlobal(tag, e),
@@ -2233,6 +2235,7 @@ class App extends React.Component {
         { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
         { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
         { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
+        { key: 'slZone', label: 'SL zone', opts: this._fieldOpts('slZone') },
       ],
       addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
@@ -2480,8 +2483,8 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '172px 96px 62px 96px 100px 52px 92px 80px 92px 62px 156px 156px 138px 78px 156px 156px';
-    const gminw = 1920;
+    const gcols = '172px 96px 62px 96px 100px 52px 92px 80px 92px 62px 150px 150px 132px 74px 150px 150px 140px';
+    const gminw = 2050;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -2523,7 +2526,7 @@ class App extends React.Component {
                 <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-weight:600;font-family:JetBrains Mono;padding:7px 15px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
               ))}
             </div>
-            <div style={css('display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px')}>
+            <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px')}>
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:5px;min-width:0')}>
                   <span style={css('font-size:10px;color:#83838C;letter-spacing:.04em')}>{f.label}</span>
@@ -2541,10 +2544,10 @@ class App extends React.Component {
                 { l: 'Net P&L', v: V.logAgg.netStr, c: V.logAgg.netColor, sub: 'after commission' },
                 { l: 'Avg R', v: V.logAgg.avgRStr, c: V.logAgg.avgRColor, sub: 'per trade' },
               ].map((s, i) => (
-                <div key={i} style={css('padding:15px 18px;border-radius:14px;background:linear-gradient(180deg,' + s.c + '14,rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + s.c)}>
-                  <div style={css('font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{s.l}</div>
-                  <div style={{ ...css('font-family:JetBrains Mono;font-size:26px;font-weight:600;line-height:1'), color: s.c }}>{s.v}</div>
-                  {s.sub && <div style={css('font-size:11px;color:#83838C;margin-top:8px')}>{s.sub}</div>}
+                <div key={i} style={css('padding:13px 16px;border-radius:13px;background:linear-gradient(180deg,' + s.c + '14,rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + s.c)}>
+                  <div style={css('font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#83838C;margin-bottom:8px')}>{s.l}</div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: s.c }}>{s.v}</div>
+                  {s.sub && <div style={css('font-size:10.5px;color:#83838C;margin-top:7px')}>{s.sub}</div>}
                 </div>
               ))}
             </div>
@@ -2582,7 +2585,7 @@ class App extends React.Component {
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#141218;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>Comm/Swap</span><span>P&amp;L</span><span>R</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#141218;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>Comm/Swap</span><span>P&amp;L</span><span>R</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span><span>SL Zone</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
@@ -2601,6 +2604,7 @@ class App extends React.Component {
                   <span title={t.retest} style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.retest === 'yes' ? '#5FC08D' : (t.retest === 'no' ? '#DC6A63' : '#5a5a63') }}>{t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—')}</span>
                   {anaCell(t.fibo, '#E2C588')}
                   {anaCell(t.entryType, '#9CD3C0')}
+                  {anaCell(t.slZone, '#E39A6A')}
                 </div>
               ))}
             </div>
@@ -3250,8 +3254,9 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>MTF condition</div><select value={V.dMtf} onChange={V.setMtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsMtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>HTF condition</div><select value={V.dHtf} onChange={V.setHtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsHtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
-            <div style={css('display:grid;grid-template-columns:.8fr 1.1fr 1.1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
+            <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>SL zone</div><select value={V.dSlZone} onChange={V.setSlZone} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSlZone.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
@@ -3297,7 +3302,7 @@ class App extends React.Component {
   }
 
   renderFieldCfgModal(V) {
-    const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 13px;color:#ECEAE3;font-size:13px;outline:none';
+    const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 12px;color:#ECEAE3;font-size:12px;outline:none';
     return (
       <div onClick={V.closeFieldCfg} style={css('position:fixed;inset:0;z-index:34;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
         <div onClick={V.stop} className="rtm-scroll" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
@@ -3306,19 +3311,19 @@ class App extends React.Component {
             <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
           </div>
           <div style={css('padding:8px 26px 24px')}>
-            <div style={css('font-size:12.5px;color:#83838C;line-height:1.6;margin:12px 0 18px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
+            <div style={css('font-size:12px;color:#83838C;line-height:1.55;margin:12px 0 16px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
             {V.fieldCfgVM.map((f) => (
-              <div key={f.key} style={css('margin-bottom:20px')}>
-                <div style={css('font-size:12px;font-weight:600;color:#E2C588;margin-bottom:9px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
-                <div style={css('display:flex;flex-direction:column;gap:6px;margin-bottom:9px')}>
+              <div key={f.key} style={css('margin-bottom:16px')}>
+                <div style={css('font-size:11px;font-weight:600;color:#E2C588;margin-bottom:7px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
+                <div style={css('display:flex;flex-direction:column;gap:5px;margin-bottom:7px')}>
                   {f.opts.length ? f.opts.map((o, oi) => (
-                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:9px;padding:5px 8px 5px 10px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
-                      <input defaultValue={o} title="Click to edit — fixes this choice on every past trade too" onBlur={(e) => V.renameFieldOpt(f.key, o, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); } }} className="hv-focus" style={css('flex:1;font-size:13px;color:#ECEAE3;background:transparent;border:1px solid transparent;border-radius:7px;padding:5px 8px;outline:none')} />
-                      <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
-                      <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
-                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:12px;padding:0 5px')}>✕</span>
+                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:8px;padding:3px 7px 3px 9px;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
+                      <input defaultValue={o} title="Click to edit — fixes this choice on every past trade too" onBlur={(e) => V.renameFieldOpt(f.key, o, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); } }} className="hv-focus" style={css('flex:1;font-size:12px;color:#ECEAE3;background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 7px;outline:none')} />
+                      <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
+                      <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
+                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:11.5px;padding:0 5px')}>✕</span>
                     </div>
-                  )) : <div style={css('font-size:12px;color:#83838C;padding:4px 2px')}>No choices yet — add one below.</div>}
+                  )) : <div style={css('font-size:11.5px;color:#83838C;padding:3px 2px')}>No choices yet — add one below.</div>}
                 </div>
                 <div style={css('display:flex;gap:8px')}>
                   <input placeholder={'Add a choice for ' + f.label + ', then Enter'} onKeyDown={(e) => { if (e.key === 'Enter') { V.addFieldOpt(f.key, e.target.value); e.target.value = ''; } }} className="hv-focus" style={css(inp)} />
