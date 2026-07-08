@@ -548,11 +548,11 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'pnl', 'status', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'portfolio', 'tags', 'notes'];
+    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'commission', 'pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.status === 'OPEN' ? '' : t.pnl), t.status, t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.commission != null ? t.commission : ''), (t.status === 'OPEN' ? '' : t.pnl), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -729,7 +729,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -1595,6 +1595,7 @@ class App extends React.Component {
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
+        commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
       };
@@ -1629,7 +1630,7 @@ class App extends React.Component {
     const logShownN = Math.min(logTotal, st.logLimit);
     const logHasMore = logTotal > logShownN;
     const filteredTrades = filteredRaw.slice(0, logShownN).map(mapTrade);
-    const filterDefs = [['all', 'All'], ['win', 'Win'], ['loss', 'Loss'], ['open', 'Open'], ['long', 'Long'], ['short', 'Short']];
+    const filterDefs = [['all', 'All'], ['win', 'Win'], ['loss', 'Loss'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
       label, click: () => this.setState({ logFilter: k, logLimit: 30 }),
       fg: lf === k ? '#1a1408' : '#9A9AA4',
@@ -2064,6 +2065,7 @@ class App extends React.Component {
         setStop: (e) => this.setD('stop', e.target.value), setTarget: (e) => this.setD('target', e.target.value),
         setRR: (e) => this.setD('rr', e.target.value), setPnl: (e) => this.setD('pnl', e.target.value),
         setLot: (e) => this.setD('lot', e.target.value),
+        dCommission: d.commission != null ? String(d.commission) : '', setCommission: (e) => this.setD('commission', e.target.value),
         dDayLabel: this._fullDateLabel(d.date),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType),
@@ -2468,8 +2470,8 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '156px 96px 58px 96px 100px 52px 96px 92px 62px 84px 156px 156px 138px 78px 156px 156px';
-    const gminw = 1900;
+    const gcols = '172px 96px 62px 96px 100px 52px 92px 80px 92px 62px 156px 156px 138px 78px 156px 156px';
+    const gminw = 1920;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -2478,9 +2480,6 @@ class App extends React.Component {
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
           <div style={css('display:flex;gap:8px')}>
-            {V.logFilters.map((f, i) => (
-              <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-family:JetBrains Mono;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
-            ))}
             <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
               <option value="week">Export: This week</option>
@@ -2509,6 +2508,11 @@ class App extends React.Component {
                 <span onClick={V.openFieldCfg} className="hv-lift" title="Add / edit the choices for each field" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Edit options</span>
               </div>
             </div>
+            <div style={css('display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px')}>
+              {V.logFilters.map((f, i) => (
+                <span key={i} onClick={f.click} style={{ ...css('font-size:12px;font-weight:600;font-family:JetBrains Mono;padding:7px 15px;border-radius:8px;cursor:pointer;transition:.14s'), color: f.fg, background: f.bg, border: f.border }}>{f.label}</span>
+              ))}
+            </div>
             <div style={css('display:flex;flex-wrap:wrap;gap:10px')}>
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:4px')}>
@@ -2520,13 +2524,12 @@ class App extends React.Component {
                 </div>
               ))}
             </div>
-            <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:15px')}>
+            <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:15px')}>
               {[
                 { l: 'Trades', v: V.logAgg.n, c: '#ECEAE3' },
                 { l: 'Win rate', v: V.logAgg.wrStr, c: V.logAgg.wrColor, sub: V.logAgg.record },
                 { l: 'Net P&L', v: V.logAgg.netStr, c: V.logAgg.netColor },
                 { l: 'Avg R', v: V.logAgg.avgRStr, c: V.logAgg.avgRColor },
-                { l: 'Closed', v: V.logAgg.closed, c: '#9A9AA4' },
               ].map((s, i) => (
                 <div key={i} style={css('padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)')}>
                   <div style={css('font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:6px')}>{s.l}</div>
@@ -2568,19 +2571,19 @@ class App extends React.Component {
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow-x:auto')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>P&amp;L</span><span>R</span><span>Status</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>Comm/Swap</span><span>P&amp;L</span><span>R</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-                  <span style={css('display:inline-flex;align-items:center;gap:6px;width:fit-content;font-family:JetBrains Mono;font-size:11px;padding:3px 8px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={css('color:#CDBE96')}>{t.dateShort}</span><span style={{ ...css('font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '26' }}>{t.dowShort}</span></span>
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
                   <span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
                   <span style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session}</span>
                   <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
                   <span title={t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
+                  <span style={css('font-family:JetBrains Mono;font-size:11.5px;color:#9A9AA4')}>{t.commStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
-                  <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
                   {anaCell(t.ltf, '#9CC2E8')}
                   {anaCell(t.mtf, '#E2C588')}
                   {anaCell(t.htf, '#B79CE8')}
@@ -3211,8 +3214,8 @@ class App extends React.Component {
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dStatusOpen ? '' : V.dPnl} onChange={V.setPnl} disabled={V.dStatusOpen} placeholder={V.dStatusOpen ? 'Trade still open' : '1240 or -680'} className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor, opacity: V.dStatusOpen ? 0.5 : 1, cursor: V.dStatusOpen ? 'not-allowed' : 'text' }} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Status</div><select value={V.dStatus} onChange={V.setStatus} className="rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="CLOSED">Closed</option><option value="OPEN">Open</option></select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap</div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
