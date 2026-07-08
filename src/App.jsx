@@ -779,6 +779,8 @@ class App extends React.Component {
 
   // ===== trade-analysis fields (LTF/MTF/HTF/retest/fibo/entry) =====
   _fieldOpts(field) { const o = this.state.tradeFieldOpts || {}; return Array.isArray(o[field]) ? o[field] : []; }
+  // options for a <select>, guaranteeing the current draft value is present even if not in the list
+  _fieldOptsWith(field, cur) { const o = this._fieldOpts(field); return (cur && !o.includes(cur)) ? [cur].concat(o) : o; }
   // set an analysis field on the draft; if it's a brand-new value, remember it as a reusable option
   setDField(field, value) {
     const v = (value || '').trim();
@@ -808,6 +810,18 @@ class App extends React.Component {
     if (i < 0 || j < 0 || j >= cur.length) return;
     cur.splice(i, 1); cur.splice(j, 0, value);
     this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur } }); this._save();
+  }
+  // rename a choice inline — also fixes every past trade + any active filter that used it,
+  // so a typo correction flows everywhere and stats stay consistent
+  renameFieldOpt(field, oldVal, newVal) {
+    newVal = (newVal || '').trim();
+    if (!newVal || newVal === oldVal) return;
+    let cur = this._fieldOpts(field);
+    // if the new name already exists, this becomes a merge — just drop the old entry
+    cur = cur.includes(newVal) ? cur.filter(x => x !== oldVal) : cur.map(x => x === oldVal ? newVal : x);
+    const trades = this.state.trades.map(t => t[field] === oldVal ? { ...t, [field]: newVal } : t);
+    const logF = { ...this.state.logF }; if (logF[field] === oldVal) logF[field] = newVal;
+    this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur }, trades, logF }); this._save();
   }
   // day-of-week helpers (Monday-first labelling everywhere)
   _DOW_SHORT() { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; }
@@ -2046,7 +2060,7 @@ class App extends React.Component {
         setLot: (e) => this.setD('lot', e.target.value),
         dDayLabel: this._fullDateLabel(d.date),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '',
-        optsLtf: this._fieldOpts('ltf'), optsMtf: this._fieldOpts('mtf'), optsHtf: this._fieldOpts('htf'), optsFibo: this._fieldOpts('fibo'), optsEntryType: this._fieldOpts('entryType'),
+        optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
         setFibo: (e) => this.setDField('fibo', e.target.value), setEntryType: (e) => this.setDField('entryType', e.target.value),
         setRetest: (v) => this.setD('retest', d.retest === v ? '' : v),
@@ -2202,7 +2216,7 @@ class App extends React.Component {
         { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
         { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
       ],
-      addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d),
+      addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
       calMonthLabel, calMonthShort, dashMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
@@ -2447,6 +2461,12 @@ class App extends React.Component {
   }
 
   renderTradeLog(V) {
+    // one wide row per order (horizontally scrollable) — full overview at a glance
+    const gcols = '156px 96px 58px 96px 100px 52px 96px 92px 62px 84px 156px 156px 138px 78px 156px 156px';
+    const gminw = 1900;
+    const anaCell = (val, color) => (
+      <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
+    );
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
@@ -2510,16 +2530,17 @@ class App extends React.Component {
               ))}
             </div>
           </div>
+          {V.logBreakdown.rows.length >= 2 && (
           <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Win rate by</div>
               <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                 {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
               </select>
-              <span style={css('font-size:11px;color:#83838C')}>· across {V.filteredCount} filtered trades</span>
+              <span style={css('font-size:11px;color:#83838C')}>· each value split out of the {V.filteredCount} filtered trades</span>
             </div>
             <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:13px;max-height:326px;overflow-y:auto;padding-right:4px')}>
-              {V.logBreakdown.rows.length ? V.logBreakdown.rows.map((r, i) => (
+              {V.logBreakdown.rows.map((r, i) => (
                 <div key={i} style={css('display:grid;grid-template-columns:1.5fr .7fr .95fr .6fr;gap:14px;align-items:center')}>
                   <div>
                     <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
@@ -2529,33 +2550,37 @@ class App extends React.Component {
                   <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#83838C')}>{r.record}</div></div>
                   <div style={css('text-align:right;font-family:JetBrains Mono;font-size:12.5px;color:#9A9AA4')}>{r.avgR}</div>
                 </div>
-              )) : <div style={css('font-size:12.5px;color:#83838C')}>No trades to break down</div>}
+              ))}
             </div>
           </div>
+          )}
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
-          <div style={css('display:grid;grid-template-columns:.9fr 1fr .5fr .8fr .7fr .42fr .72fr .85fr .5fr .72fr;gap:10px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>P&amp;L</span><span>R</span><span>Status</span></div>
-          {V.filteredTrades.map((t, i) => (
-            <div key={t.id} className="rtm-cascade" style={{ ...css('border-top:1px solid rgba(255,255,255,.05)'), animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-              <div onClick={t.open} className="hv-row" style={css('display:grid;grid-template-columns:.9fr 1fr .5fr .8fr .7fr .42fr .72fr .85fr .5fr .72fr;gap:10px;padding:' + (t.chips.length ? '12px 20px 7px' : '12px 20px') + ';font-size:12.5px;cursor:pointer;transition:.12s;align-items:center')}>
-                <span style={css('display:flex;align-items:center;gap:6px;font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateShort}</span><span style={{ ...css('font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '22' }}>{t.dowShort}</span></span>
-                <span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span>
-                <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
-                <span style={css('color:#9A9AA4')}>{t.setupName}</span>
-                <span style={{ ...css('font-size:11.5px'), color: t.sessionColor }}>{t.session}</span>
-                <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
-                <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11px')} title={t.holding}>{t.holdShort}</span>
-                <span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span>
-                <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
-                <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
-              </div>
-              {t.chips.length > 0 && (
-                <div onClick={t.open} style={css('display:flex;flex-wrap:wrap;gap:6px;padding:0 20px 11px;cursor:pointer')}>
-                  {t.chips.map((c, ci) => (<span key={ci} style={{ ...css('font-size:10.5px;padding:2px 9px;border-radius:6px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);font-family:JetBrains Mono'), color: c.color }}>{c.label}</span>))}
+          <div className="rtm-scroll" style={css('overflow-x:auto')}>
+            <div style={{ minWidth: gminw }}>
+              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;background:rgba(255,255,255,.03);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>P&amp;L</span><span>R</span><span>Status</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span></div>
+              {V.filteredTrades.map((t, i) => (
+                <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
+                  <span style={css('display:inline-flex;align-items:center;gap:6px;width:fit-content;font-family:JetBrains Mono;font-size:11px;padding:3px 8px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={css('color:#CDBE96')}>{t.dateShort}</span><span style={{ ...css('font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '26' }}>{t.dowShort}</span></span>
+                  <span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>
+                  <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
+                  <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
+                  <span style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session}</span>
+                  <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
+                  <span title={t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
+                  <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
+                  <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
+                  <span style={{ ...css('font-size:10px;padding:3px 9px;border-radius:6px;width:fit-content;text-transform:uppercase;letter-spacing:.05em'), color: t.statusColor, background: t.statusBg }}>{t.status}</span>
+                  {anaCell(t.ltf, '#9CC2E8')}
+                  {anaCell(t.mtf, '#E2C588')}
+                  {anaCell(t.htf, '#B79CE8')}
+                  <span title={t.retest} style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.retest === 'yes' ? '#5FC08D' : (t.retest === 'no' ? '#DC6A63' : '#5a5a63') }}>{t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—')}</span>
+                  {anaCell(t.fibo, '#E2C588')}
+                  {anaCell(t.entryType, '#9CD3C0')}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          </div>
           {V.filteredTrades.length === 0 && (
             <div style={css('padding:48px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05)')}>
               <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#83838C" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 6h16M4 12h16M4 18h10"/></svg>
@@ -3194,14 +3219,14 @@ class App extends React.Component {
               <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>LTF condition</div><input list="rtm-ltf" value={V.dLtf} onChange={V.setLtf} placeholder="Type or pick…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-ltf">{V.optsLtf.map(o => (<option key={o} value={o} />))}</datalist></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>MTF condition</div><input list="rtm-mtf" value={V.dMtf} onChange={V.setMtf} placeholder="Type or pick…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-mtf">{V.optsMtf.map(o => (<option key={o} value={o} />))}</datalist></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>HTF condition</div><input list="rtm-htf" value={V.dHtf} onChange={V.setHtf} placeholder="Type or pick…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-htf">{V.optsHtf.map(o => (<option key={o} value={o} />))}</datalist></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>LTF condition</div><select value={V.dLtf} onChange={V.setLtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsLtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>MTF condition</div><select value={V.dMtf} onChange={V.setMtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsMtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>HTF condition</div><select value={V.dHtf} onChange={V.setHtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsHtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:.8fr 1.1fr 1.1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest fibo M15 side</div><input list="rtm-fibo" value={V.dFibo} onChange={V.setFibo} placeholder="Type or pick…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-fibo">{V.optsFibo.map(o => (<option key={o} value={o} />))}</datalist></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — M5/M15</div><input list="rtm-entry" value={V.dEntryType} onChange={V.setEntryType} placeholder="Completed stick / Doji…" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none')} /><datalist id="rtm-entry">{V.optsEntryType.map(o => (<option key={o} value={o} />))}</datalist></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
@@ -3260,11 +3285,11 @@ class App extends React.Component {
                 <div style={css('font-size:12px;font-weight:600;color:#E2C588;margin-bottom:9px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
                 <div style={css('display:flex;flex-direction:column;gap:6px;margin-bottom:9px')}>
                   {f.opts.length ? f.opts.map((o, oi) => (
-                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
-                      <span style={css('flex:1;font-size:13px;color:#ECEAE3')}>{o}</span>
+                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:9px;padding:5px 8px 5px 10px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
+                      <input defaultValue={o} title="Click to edit — fixes this choice on every past trade too" onBlur={(e) => V.renameFieldOpt(f.key, o, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); } }} className="hv-focus" style={css('flex:1;font-size:13px;color:#ECEAE3;background:transparent;border:1px solid transparent;border-radius:7px;padding:5px 8px;outline:none')} />
                       <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
                       <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:13px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
-                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px')}>✕</span>
+                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:12px;padding:0 5px')}>✕</span>
                     </div>
                   )) : <div style={css('font-size:12px;color:#83838C;padding:4px 2px')}>No choices yet — add one below.</div>}
                 </div>
