@@ -1666,7 +1666,13 @@ class App extends React.Component {
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
     };
-    const dimKey = dimDefs[st.logDim] ? st.logDim : 'day';
+    // Only offer factors that actually VARY inside the current filter (≥2 distinct
+    // values) — so the comparison is always meaningful and never a single-row echo
+    // of the headline win rate. Keeps the panel consistent whatever you filter.
+    const dimVaries = (def) => { const s = new Set(); for (const t of filteredRaw) { s.add(def.get(t) || '—'); if (s.size >= 2) return true; } return false; };
+    const dimAvail = Object.keys(dimDefs).filter(k => dimVaries(dimDefs[k]));
+    const hasCompare = dimAvail.length > 0;
+    const dimKey = hasCompare ? (dimAvail.includes(st.logDim) ? st.logDim : dimAvail[0]) : (dimDefs[st.logDim] ? st.logDim : 'day');
     const dimDef = dimDefs[dimKey];
     const groups = {};
     filteredRaw.forEach(t => { const g = dimDef.get(t) || '—'; (groups[g] = groups[g] || []).push(t); });
@@ -1676,8 +1682,8 @@ class App extends React.Component {
     else groupKeys.sort((a, b) => groupAgg[b].net - groupAgg[a].net);
     const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(groupAgg[k].net)));
     const logBreakdown = {
-      dim: dimKey, dimLabel: dimDef.label,
-      dims: Object.keys(dimDefs).map(k => ({ v: k, label: dimDefs[k].label })),
+      dim: dimKey, dimLabel: dimDef.label, hasCompare, filteredCount: logTotal,
+      dims: dimAvail.map(k => ({ v: k, label: dimDefs[k].label })),
       rows: groupKeys.map(k => {
         const a = groupAgg[k];
         const dowI = dayFull.indexOf(k);
@@ -2530,30 +2536,34 @@ class App extends React.Component {
               ))}
             </div>
           </div>
-          {V.logBreakdown.rows.length >= 2 && (
           <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
-            <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap')}>
-              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Win rate by</div>
-              <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
-                {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
-              </select>
-              <span style={css('font-size:11px;color:#83838C')}>· each value split out of the {V.filteredCount} filtered trades</span>
+            <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
+              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare win rate by</div>
+              {V.logBreakdown.hasCompare && (
+                <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+                  {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
+                </select>
+              )}
             </div>
-            <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:13px;max-height:326px;overflow-y:auto;padding-right:4px')}>
-              {V.logBreakdown.rows.map((r, i) => (
-                <div key={i} style={css('display:grid;grid-template-columns:1.5fr .7fr .95fr .6fr;gap:14px;align-items:center')}>
-                  <div>
-                    <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
-                    <div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
+            <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>Splits the same {V.filteredCount} filtered {V.filteredCount === 1 ? 'trade' : 'trades'} by one factor — so you can see which value wins most. The headline win rate above is the whole filtered set combined.</div>
+            {V.logBreakdown.hasCompare ? (
+              <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:13px;max-height:326px;overflow-y:auto;padding-right:4px')}>
+                {V.logBreakdown.rows.map((r, i) => (
+                  <div key={i} style={css('display:grid;grid-template-columns:1.5fr .7fr .95fr .6fr;gap:14px;align-items:center')}>
+                    <div>
+                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
+                      <div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
+                    </div>
+                    <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: r.wrColor }}>{r.wr}</span><div style={css('font-size:9.5px;color:#83838C')}>win rate</div></div>
+                    <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#83838C')}>{r.record}</div></div>
+                    <div style={css('text-align:right;font-family:JetBrains Mono;font-size:12.5px;color:#9A9AA4')}>{r.avgR}</div>
                   </div>
-                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: r.wrColor }}>{r.wr}</span><div style={css('font-size:9.5px;color:#83838C')}>win rate</div></div>
-                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#83838C')}>{r.record}</div></div>
-                  <div style={css('text-align:right;font-family:JetBrains Mono;font-size:12.5px;color:#9A9AA4')}>{r.avgR}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={css('font-size:12.5px;color:#83838C;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1)')}>{V.filteredCount <= 1 ? 'Only one trade in this selection — nothing to compare yet.' : 'These trades share the same value on every factor — widen the filter to compare (e.g. clear a factor).'}</div>
+            )}
           </div>
-          )}
         </div>
         <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow-x:auto')}>
