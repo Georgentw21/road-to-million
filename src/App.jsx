@@ -549,12 +549,12 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
+    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.risk != null ? t.risk : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -709,8 +709,18 @@ class App extends React.Component {
   onGoalKey(e) { if (e.key === 'Enter') e.target.blur(); }
 
   // ===== trades =====
-  // ผลลัพธ์เป็น R: ชนะ = +|rr| (กำไรตามอัตรา R:R ที่วางไว้), แพ้ = −1R (โดนความเสี่ยง 1R เต็ม), เสมอ/ยังไม่ปิด = 0
-  _rMult(t) { const p = Number(t.pnl) || 0; if (t.status === 'OPEN') return 0; if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0; }
+  // Realized R. Best: actual result ÷ money risked (1R in $) — so a trade that comes
+  // back to breakeven is ~0R, a partial win is a fraction of the target, a full stop is −1R,
+  // and slippage past the stop can be worse than −1R. Falls back to the old approximation
+  // (win = +planned R:R, loss = −1R) only when no dollar risk was recorded.
+  // NOTE: callers pass trades whose pnl is already net of commission, so use t.pnl directly.
+  _rMult(t) {
+    if (t.status === 'OPEN') return 0;
+    const p = Number(t.pnl) || 0;
+    const risk = Math.abs(Number(t.risk) || 0);
+    if (risk > 0) return p / risk;
+    if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0;
+  }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
   _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
   // a copy of the trades with pnl already net of commission — everything downstream
@@ -736,7 +746,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -2077,7 +2087,11 @@ class App extends React.Component {
         setRR: (e) => this.setD('rr', e.target.value), setPnl: (e) => this.setD('pnl', e.target.value),
         setLot: (e) => this.setD('lot', e.target.value),
         dCommission: d.commission != null ? String(d.commission) : '', setCommission: (e) => this.setD('commission', e.target.value),
-        dNet: (() => { const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (isNaN(g)) return null; const n = g - c; return { str: this._fmtMoney(n), color: n >= 0 ? '#5FC08D' : '#DC6A63', show: !!c }; })(),
+        dRisk: d.risk != null ? String(d.risk) : '', setRisk: (e) => this.setD('risk', e.target.value),
+        // suggested 1R (price distance × lot) — click to fill; exact for $1/point instruments
+        dRiskHint: (() => { const e = parseFloat(d.entry), s = parseFloat(d.stop), l = parseFloat(d.lot); if (isNaN(e) || isNaN(s) || Math.abs(e - s) <= 0) return null; const v = Math.abs(e - s) * (isNaN(l) || l <= 0 ? 1 : l); return { val: Math.round(v * 100) / 100, fill: () => this.setD('risk', String(Math.round(v * 100) / 100)) }; })(),
+        // realized R preview from the entered risk
+        dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
         dDayLabel: this._fullDateLabel(d.date),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
@@ -3227,13 +3241,17 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Target</div><input value={V.dTarget} onChange={V.setTarget} placeholder="2435.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Lot / Size</div><input value={V.dLot} onChange={V.setLot} placeholder="1.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
             </div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
+            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:7px')}><span style={css('font-size:11px;color:#9A9AA4')}>Risk $ <span style={css('color:#83838C')}>(1R)</span></span>{V.dRiskHint && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('font-size:10px;color:#C9A65F;cursor:pointer;font-family:JetBrains Mono')} title="Fill from |entry−stop| × lot (exact for $1/point)">≈{V.dRiskHint.val}</span>}</div><input value={V.dRisk} onChange={V.setRisk} placeholder="65" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap</div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD) <span style={css('color:#83838C')}>before cost</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
-            {V.dNet && V.dNet.show && (
-              <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:-6px;font-size:12px;color:#9A9AA4')}>Net P&amp;L after commission/swap <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dNet.color }}>{V.dNet.str}</span></div>
+            {(V.dR || (V.dNet && V.dNet.show)) && (
+              <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-top:-6px;font-size:12px;color:#9A9AA4')}>
+                {V.dNet && V.dNet.show && <span>Net after cost <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dNet.color }}>{V.dNet.str}</span></span>}
+                {V.dR && <span>Realized R <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dR.color }}>{V.dR.str}</span></span>}
+              </div>
             )}
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
