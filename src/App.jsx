@@ -467,7 +467,7 @@ class App extends React.Component {
     const portfolios = this.state.portfolios.map(p => {
       const mine = arch.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       if (!mine.length) return p;
-      const addPnl = mine.reduce((a, t) => a + (Number(t.pnl) || 0), 0);
+      const addPnl = mine.reduce((a, t) => a + this._netPnl(t), 0);
       return { ...p, archivedPnl: (Number(p.archivedPnl) || 0) + addPnl, archivedCount: (Number(p.archivedCount) || 0) + mine.length, archivedUntil: cutoff };
     });
     const images = { ...this.state.images }; const paths = [];
@@ -548,11 +548,12 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'commission', 'pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'portfolio', 'tags', 'notes'];
+    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.commission != null ? t.commission : ''), (t.status === 'OPEN' ? '' : t.pnl), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      const closed = t.status !== 'OPEN';
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -709,6 +710,11 @@ class App extends React.Component {
   // ===== trades =====
   // ผลลัพธ์เป็น R: ชนะ = +|rr| (กำไรตามอัตรา R:R ที่วางไว้), แพ้ = −1R (โดนความเสี่ยง 1R เต็ม), เสมอ/ยังไม่ปิด = 0
   _rMult(t) { const p = Number(t.pnl) || 0; if (t.status === 'OPEN') return 0; if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0; }
+  // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
+  _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
+  // a copy of the trades with pnl already net of commission — everything downstream
+  // (equity, calendar, analytics, win-rate) then works off the true net figure
+  _withNet(list) { return (list || []).map(t => (Number(t.commission) || 0) ? { ...t, pnl: this._netPnl(t) } : t); }
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
@@ -1512,13 +1518,15 @@ class App extends React.Component {
     const setups = st.setups;
     const cpId = st.currentPortfolioId;
     const firstPf = st.portfolios[0] ? st.portfolios[0].id : null;
+    // fold commission/swap into P&L once, up front — every calculation below is net
+    const netAll = this._withNet(st.trades);
     const trades = (cpId === 'all')
-      ? st.trades
-      : st.trades.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
+      ? netAll
+      : netAll.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
 
     // ---- per-portfolio stats (Account page) ----
     const portfolioStats = st.portfolios.map(p => {
-      const ts = st.trades.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
+      const ts = netAll.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
       ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += this._rMult(t); rrN++; } });
       net += (Number(p.archivedPnl) || 0); // รวมกำไรที่เก็บถาวรแล้ว
@@ -1630,9 +1638,10 @@ class App extends React.Component {
     const logShownN = Math.min(logTotal, st.logLimit);
     const logHasMore = logTotal > logShownN;
     const filteredTrades = filteredRaw.slice(0, logShownN).map(mapTrade);
-    const filterDefs = [['all', 'All'], ['win', 'Win'], ['loss', 'Loss'], ['long', 'Long'], ['short', 'Short']];
+    // no "All" button — it's just the un-selected state; clicking an active one toggles back to all
+    const filterDefs = [['win', 'Win'], ['loss', 'Loss'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
-      label, click: () => this.setState({ logFilter: k, logLimit: 30 }),
+      label, click: () => this.setState({ logFilter: lf === k ? 'all' : k, logLimit: 30 }),
       fg: lf === k ? '#1a1408' : '#9A9AA4',
       bg: lf === k ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'rgba(255,255,255,.03)',
       border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
@@ -2066,6 +2075,7 @@ class App extends React.Component {
         setRR: (e) => this.setD('rr', e.target.value), setPnl: (e) => this.setD('pnl', e.target.value),
         setLot: (e) => this.setD('lot', e.target.value),
         dCommission: d.commission != null ? String(d.commission) : '', setCommission: (e) => this.setD('commission', e.target.value),
+        dNet: (() => { const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (isNaN(g)) return null; const n = g - c; return { str: this._fmtMoney(n), color: n >= 0 ? '#5FC08D' : '#DC6A63', show: !!c }; })(),
         dDayLabel: this._fullDateLabel(d.date),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType),
@@ -2108,7 +2118,7 @@ class App extends React.Component {
         accentChoices: choices.map(c => ({ color: c, pick: () => this.setS('accent', c), border: sd.accent === c ? '2px solid #fff' : '2px solid transparent' })),
         canDeleteSetup: !st.setupIsNew,
         setupStats: (() => {
-          const sts = st.trades.filter(t => t.setupId === sd.id && t.status !== 'OPEN');
+          const sts = netAll.filter(t => t.setupId === sd.id && t.status !== 'OPEN');
           const sp = sts.reduce((a, t) => a + (t.pnl || 0), 0);
           const sw = sts.filter(t => t.pnl > 0).length;
           const sr = sts.length ? sts.reduce((a, t) => a + (t.rr || 0), 0) / sts.length : 0;
@@ -2179,9 +2189,9 @@ class App extends React.Component {
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
       portfolioStats, newPortName: st.newPortName, setNewPortName: (e) => this.setNewPortName(e.target.value),
-      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
-      acctTotalNet: this._fmtMoney(st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
-      acctTotalNetColor: pc(st.trades.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
+      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
+      acctTotalNet: this._fmtMoney(netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
+      acctTotalNetColor: pc(netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
       calToday: () => { const n = new Date(); this.setState({ calYear: n.getFullYear(), calMonth: n.getMonth() }); },
       addPortfolioNamed: () => this.addPortfolioNamed(), addPortKey: (e) => { if (e.key === 'Enter') this.addPortfolioNamed(); },
       showUserMenu: st.showUserMenu, toggleUserMenu: () => { const open = !st.showUserMenu; this.setState({ showUserMenu: open, showPortMenu: false }); if (open) this._loadStorageUsage(); },
@@ -3215,8 +3225,11 @@ class App extends React.Component {
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap</div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD)</div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD) <span style={css('color:#83838C')}>before cost</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
+            {V.dNet && V.dNet.show && (
+              <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:-6px;font-size:12px;color:#9A9AA4')}>Net P&amp;L after commission/swap <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dNet.color }}>{V.dNet.str}</span></div>
+            )}
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Exit — closed</div><input type="datetime-local" value={V.dExitTime} onChange={V.setExitTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
