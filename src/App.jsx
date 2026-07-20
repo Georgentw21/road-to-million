@@ -3506,9 +3506,14 @@ class App extends React.Component {
 
   render() {
     const V = this.renderVals();
-    const navIcon = (style, onClick, title, path) => (
-      <div onClick={onClick} title={title} className="hv-nav" style={css(style)}>{path}</div>
-    );
+    // top-bar nav: labelled links, hero-navbar style (active = lit glass pill)
+    const NAV_LINKS = [
+      ['vision', 'Vision Board', V.goVision], ['dashboard', 'Dashboard', V.goDash],
+      ['playbook', 'Playbook', V.goPlay], ['checklist', 'Habits', V.goCheck],
+      ['calendar', 'Calendar', V.goCal], ['log', 'Trade Log', V.goLog],
+      ['analytics', 'Analytics', V.goAna], ['setups', 'Setups', V.goSet],
+    ];
+    const curView = this.state.view;
     return (
       <div style={css('position:fixed;inset:0;display:flex;background:#000')}>
 
@@ -3518,41 +3523,30 @@ class App extends React.Component {
           <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.028),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
         </div>
 
-        {/* ICON RAIL */}
-        <div style={css('position:relative;z-index:2;width:72px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0;border-right:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.01);backdrop-filter:blur(8px)')}>
-          <div className="rtm-logo" style={css('width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center;margin-bottom:10px')}><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-          {navIcon(V.navVision, V.goVision, 'Vision Board', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>)}
-          {navIcon(V.navDash, V.goDash, 'Dashboard', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>)}
-          {navIcon(V.navPlay, V.goPlay, 'Playbook', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 4h11a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2"/></svg>)}
-          {navIcon(V.navCheck, V.goCheck, 'Habits', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><path d="M14 17.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>)}
-          {navIcon(V.navCal, V.goCal, 'Calendar', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>)}
-          {navIcon(V.navLog, V.goLog, 'Trade Log', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg>)}
-          {navIcon(V.navAna, V.goAna, 'Analytics', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 19V5M4 19h16M8 16v-5M13 16V8M18 16v-8" strokeLinecap="round"/></svg>)}
-          {navIcon(V.navSet, V.goSet, 'Setups', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l2.4 5.8L20 9l-4.5 3.9L17 19l-5-3-5 3 1.5-6.1L4 9l5.6-1.2z" strokeLinejoin="round"/></svg>)}
-          <div onClick={V.openNew} title="Log a trade" className="hv-addbtn" style={css('margin-top:auto;width:44px;height:44px;border-radius:13px;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 10px 24px -10px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-        </div>
-
         {/* MAIN COLUMN */}
         <div style={css('position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column')}>
 
-          {/* TOPBAR */}
-          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.012);backdrop-filter:blur(14px)')}>
-            <div style={css('display:flex;align-items:baseline;gap:16px;min-width:0')}>
+          {/* TOPBAR — hero-style navbar: logo · name · page links · clock · actions */}
+          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:11px 24px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.012);backdrop-filter:blur(14px)')}>
+            <div style={css('display:flex;align-items:center;gap:14px;min-width:0')}>
+              <div className="rtm-logo" style={css('width:32px;height:32px;border-radius:10px;flex:none;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               {V.editName ? (
-                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:21px;font-weight:500;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:220px')} />
+                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:190px')} />
               ) : (
-                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:21px;font-weight:500;color:#ECEAE3;letter-spacing:-.01em')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:7px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;letter-spacing:-.01em;white-space:nowrap')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
-              <div style={css('display:flex;align-items:center;gap:10px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:11px;padding:6px 13px')}>
-                <span style={{ ...css('width:7px;height:7px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
-                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:17px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
-                <span style={css('display:flex;flex-direction:column;gap:1px')}>
-                  <span style={css('font-size:11px;font-weight:600;color:#ECEAE3;line-height:1.1')}>{V.todayLabel}</span>
-                  <span style={css('font-family:\'JetBrains Mono\',monospace;font-size:10.5px;letter-spacing:.06em;color:#83838C;line-height:1')}>{V.tzAbbr}</span>
-                </span>
-              </div>
+            </div>
+            <div className="liquid-glass" style={css('display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;flex-wrap:wrap;justify-content:center')}>
+              {NAV_LINKS.map(([k, label, go]) => (
+                <span key={k} onClick={go} className="hv-navlink" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: curView === k ? '#fff' : 'rgba(255,255,255,.55)', background: curView === k ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
+              ))}
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
+              <div title={V.todayLabel + ' · ' + V.tzAbbr} style={css('display:flex;align-items:center;gap:8px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:999px;padding:6px 13px')}>
+                <span style={{ ...css('width:6px;height:6px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
+                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
+              </div>
+              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
