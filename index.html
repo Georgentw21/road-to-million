@@ -14,11 +14,14 @@
 <meta name="apple-mobile-web-app-title" content="RTM Journal">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{height:100%}
-body{background:#08080B;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#ECEAE3;overflow:hidden}
+body{background:#000;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#ECEAE3;overflow:hidden}
+/* ===== liquid glass (Apple-style frosted surface with a top/bottom light rim) ===== */
+.liquid-glass{background:rgba(255,255,255,.01);background-blend-mode:luminosity;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);box-shadow:inset 0 1px 1px rgba(255,255,255,.1);position:relative}
+.liquid-glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(180deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,.15) 20%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,.15) 80%,rgba(255,255,255,.45) 100%);opacity:.5;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 @keyframes rise{from{transform:translateY(16px)}to{transform:none}}
 @keyframes fade{from{transform:translateY(10px)}to{transform:none}}
 @keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-36px) scale(1.1)}}
@@ -32,7 +35,7 @@ body{background:#08080B;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-
 .rtm-scroll::-webkit-scrollbar-thumb{background:linear-gradient(#C9A65F,rgba(201,166,95,.35));border-radius:99px;border:2px solid transparent;background-clip:padding-box}
 .rtm-scroll::-webkit-scrollbar-track{background:transparent}
 input,textarea,select{font-family:inherit}
-select option{background:#15151c;color:#ECEAE3}
+select option{background:#0c0c0e;color:#ECEAE3}
 
 /* hover / focus states */
 .hv-nav:hover{color:#ECEAE3!important;background:rgba(255,255,255,.05)!important}

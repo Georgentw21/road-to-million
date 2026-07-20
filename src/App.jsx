@@ -2297,17 +2297,17 @@ class App extends React.Component {
     const VAL = css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600');
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
 
         <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Spectral',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
           <div style={{ flex: 1, minWidth: 0 }}><div style={css('font-size:15px;color:#ECEAE3;font-weight:600')}>{V.accountName}</div><div style={css('font-size:12.5px;color:#9A9AA4')}>{V.userEmail || '—'}</div></div>
           <div onClick={V.signOut} className="hv-deloutline" style={css('padding:10px 16px;border-radius:10px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:13px;font-weight:600;cursor:pointer;transition:.14s')}>Sign out</div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;animation:rise .5s .06s both')}>
-          <div style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #E2C588')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}>{V.acctTotalEquity}</div></div>
-          <div style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.acctTotalNetColor }}>{V.acctTotalNet}</div></div>
+          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #E2C588')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}>{V.acctTotalEquity}</div></div>
+          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.acctTotalNetColor }}>{V.acctTotalNet}</div></div>
         </div>
 
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>Add portfolio</div>
@@ -2319,14 +2319,14 @@ class App extends React.Component {
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:12px')}>All portfolios · click to view</div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
           {V.portfolioStats.map((p) => (
-            <div key={p.id} onClick={p.select} className="hv-card" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.07)') }}>
+            <div key={p.id} onClick={p.select} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.07)') }}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px')}>
-                <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="Click to rename" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Spectral\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:4px 8px;outline:none')} />
+                <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="Click to rename" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:4px 8px;outline:none')} />
                 {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>Viewing</span>}
                 <span onClick={p.del} title="Delete portfolio" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;cursor:pointer;transition:.14s;flex:none')}>✕</span>
               </div>
               {/* ===== การจัดการเงิน (ฝาก/ถอน) ===== */}
-              <div style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);padding:14px 15px;margin-bottom:14px')}>
+              <div className="liquid-glass" style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);padding:14px 15px;margin-bottom:14px')}>
                 <div style={css('display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px')}>
                   <div><div style={LBL}>Starting capital ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:110px;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;outline:none')} /></div>
                   <div style={css('text-align:right')}><div style={LBL}>Current equity</div><div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div></div>
@@ -2364,9 +2364,9 @@ class App extends React.Component {
         </div>
 
         {/* ===== สำรองข้อมูล & จัดการพื้นที่ ===== */}
-        <div style={css('margin-top:22px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .12s both')}>
+        <div className="liquid-glass" style={css('margin-top:22px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .12s both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:6px')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Backup &amp; storage</div>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Backup &amp; storage</div>
             <span style={css('font-size:11px;color:#83838C;font-family:JetBrains Mono')}>Last backup: {V.lastBackupStr}</span>
           </div>
           <div style={css('font-size:12.5px;color:#9A9AA4;line-height:1.6;margin-bottom:16px')}>Download all your data to keep safe (restorable) · when storage runs low, “archive old trades” to free image space — their P&amp;L is folded in so <b style={css('color:#E2C588')}>the milestone and Growth curve stay continuous, never reset</b></div>
@@ -2389,22 +2389,22 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s both')}>
           <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F')}><span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span></div>
-          <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
+          <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
           <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
-          <div className="hv-k-green" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
-          <div className="hv-k-green" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
-          <div className="hv-k-blue" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
-          <div className="hv-k-purple" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(155,140,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
-          <div className="hv-k-red" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(220,106,99,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
+          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
+          <div className="hv-k-green liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
+          <div className="hv-k-green liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
+          <div className="hv-k-blue liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
+          <div className="hv-k-purple liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(155,140,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
+          <div className="hv-k-red liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(220,106,99,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#83838C;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#83838C;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
               {['ALL', '3M', '1M'].map((rg) => (
                 <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
               ))}
@@ -2422,8 +2422,8 @@ class App extends React.Component {
               <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:10px;color:#83838C;letter-spacing:.1em')}>WIN RATE</span></div></div>
               <div><div style={css('font-size:11px;color:#83838C;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div>{V.archNote ? <div style={css('font-size:10.5px;color:#7BA7D9;margin-top:7px;line-height:1.4')}>{V.archNote}</div> : null}</div>
             </div>
-            <div className="hv-brd-gold" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#83838C')}>net P&amp;L</span></div>
+            <div className="hv-brd-gold liquid-glass" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#83838C')}>net P&amp;L</span></div>
               <div style={css('display:flex;flex-direction:column;gap:11px')}>
                 {V.setupBars.map((s, i) => (
                   <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
@@ -2434,8 +2434,8 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
-          <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;animation:rise .55s .4s both;background:rgba(255,255,255,.02)')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>View all →</span></div>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;animation:rise .55s .4s both;background:rgba(255,255,255,.02)')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>View all →</span></div>
             <div style={css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:10px 20px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>P&amp;L</span><span>R</span></div>
             {V.recent.map((t, i) => (
               <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (0.45 + i * 0.05) + 's' }}><span style={css('display:flex;align-items:center;gap:7px;font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateLong}</span><span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '22' }}>{t.dowShort}</span></span><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
@@ -2444,8 +2444,8 @@ class App extends React.Component {
               <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#83838C')}>No trades yet — press N to start logging</div>
             )}
           </div>
-          <div style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
+          <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
               {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
             </div>
@@ -2464,13 +2464,13 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#83838C;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 240px;gap:16px;animation:rise .5s .08s both')}>
-          <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);padding:16px')}>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);padding:16px')}>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:10px')}>
               {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
             </div>
@@ -2486,7 +2486,7 @@ class App extends React.Component {
           <div style={css('display:flex;flex-direction:column;gap:10px')}>
             <div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>Weekly</div>
             {V.weeks.map((w, i) => (
-              <div key={i} className="hv-brd-gold" style={css('padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);transition:.16s')}><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:5px')}>{w.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:18px;font-weight:600'), color: w.color }}>{w.pnl}</div><div style={css('font-size:10.5px;color:#83838C;margin-top:3px')}>{w.meta}</div></div>
+              <div key={i} className="hv-brd-gold liquid-glass" style={css('padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);transition:.16s')}><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:5px')}>{w.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:18px;font-weight:600'), color: w.color }}>{w.pnl}</div><div style={css('font-size:10.5px;color:#83838C;margin-top:3px')}>{w.meta}</div></div>
             ))}
           </div>
         </div>
@@ -2505,7 +2505,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
           <div style={css('display:flex;gap:8px')}>
             <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
@@ -2527,7 +2527,7 @@ class App extends React.Component {
           </select>
         </div>
         <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:14px;animation:rise .5s .06s both')}>
-          <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
+          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Filter &amp; analyse</div>
               <div style={css('display:flex;align-items:center;gap:8px')}>
@@ -2558,7 +2558,7 @@ class App extends React.Component {
                 { l: 'Net P&L', v: V.logAgg.netStr, c: V.logAgg.netColor, sub: 'after commission' },
                 { l: 'Avg R', v: V.logAgg.avgRStr, c: V.logAgg.avgRColor, sub: 'per trade' },
               ].map((s, i) => (
-                <div key={i} style={css('padding:13px 16px;border-radius:13px;background:linear-gradient(180deg,' + s.c + '14,rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + s.c)}>
+                <div key={i} className="liquid-glass" style={css('padding:13px 16px;border-radius:13px;background:linear-gradient(180deg,' + s.c + '14,rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + s.c)}>
                   <div style={css('font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#83838C;margin-bottom:8px')}>{s.l}</div>
                   <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: s.c }}>{s.v}</div>
                   {s.sub && <div style={css('font-size:10.5px;color:#83838C;margin-top:7px')}>{s.sub}</div>}
@@ -2566,7 +2566,7 @@ class App extends React.Component {
               ))}
             </div>
           </div>
-          <div style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
+          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare win rate by</div>
               {V.logBreakdown.hasCompare && (
@@ -2596,7 +2596,7 @@ class App extends React.Component {
             )}
           </div>
         </div>
-        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
+        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
               <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#141218;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>Comm/Swap</span><span>P&amp;L</span><span>R</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span><span>SL Zone</span></div>
@@ -2645,7 +2645,7 @@ class App extends React.Component {
   renderAnalytics(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
         <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
             { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588' },
@@ -2654,20 +2654,20 @@ class App extends React.Component {
             { l: 'Green days', v: V.consistencyStr, c: '#5FC08D' },
             { l: 'Current streak', v: V.curStreakStr, c: V.curStreakColor },
           ].map((m, i) => (
-            <div key={i} className="hv-k-gold" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.v}</div></div>
+            <div key={i} className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.v}</div></div>
           ))}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .06s both;transition:.18s')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L by day of week</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .06s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L by day of week</div>
             <div style={css('display:flex;align-items:flex-end;gap:14px;height:150px')}>
               {V.dowBars.map((b, i) => (
                 <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, animationDelay: (i * 0.07) + 's' }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
               ))}
             </div>
           </div>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .1s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by session</div><span style={css('font-size:11px;color:#83838C')}>coloured by market</span></div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .1s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by session</div><span style={css('font-size:11px;color:#83838C')}>coloured by market</span></div>
             <div style={css('display:flex;align-items:flex-end;gap:18px;height:150px')}>
               {V.sessionBars.map((b, i) => (
                 <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow, animationDelay: (i * 0.09) + 's' }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
@@ -2676,16 +2676,16 @@ class App extends React.Component {
           </div>
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .14s both;transition:.18s')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>R-multiple distribution</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .14s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>R-multiple distribution</div>
             <div style={css('display:flex;align-items:flex-end;gap:8px;height:140px')}>
               {V.rDist.map((b, i) => (
                 <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h, animationDelay: (i * 0.05) + 's' }}></div><span style={css('font-size:10px;color:#83838C;font-family:JetBrains Mono')}>{b.label}</span></div>
               ))}
             </div>
           </div>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .18s both;transition:.18s')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:16px')}>Key stats</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .18s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:16px')}>Key stats</div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               {V.anaStats.map((s, i) => (
                 <div key={i} style={css('padding:15px 17px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06)')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{s.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: s.color }}>{s.val}</div></div>
@@ -2695,8 +2695,8 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px')}>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#83838C')}>deeper = further from peak</span></div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#83838C')}>deeper = further from peak</span></div>
             <svg viewBox="0 0 640 120" preserveAspectRatio="none" style={css('width:100%;height:120px;display:block')}>
               <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#DC6A63" stopOpacity="0"/><stop offset="100%" stopColor="#DC6A63" stopOpacity=".4"/></linearGradient></defs>
               <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(255,255,255,.1)"/>
@@ -2704,8 +2704,8 @@ class App extends React.Component {
               <path className="eq-line" d={V.ddLine} fill="none" stroke="#DC6A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div className="hv-brd-gold" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .26s both;transition:.18s')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;margin-bottom:14px')}>P&amp;L by symbol</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .26s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:14px')}>P&amp;L by symbol</div>
             <div style={css('display:flex;flex-direction:column;gap:11px')}>
               {V.symbolBars.length ? V.symbolBars.map((s, i) => (
                 <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
@@ -2715,8 +2715,8 @@ class App extends React.Component {
           </div>
         </div>
 
-        <div className="hv-brd-gold" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by tag / emotion <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— which tag costs you</span></div></div>
+        <div className="hv-brd-gold liquid-glass" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by tag / emotion <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— which tag costs you</span></div></div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:11px 24px')}>
             {V.tagStats.length ? V.tagStats.map((s, i) => (
               <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
@@ -2732,14 +2732,14 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
           <span onClick={V.openNewSetup} className="hv-setbtn" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
           {V.setupCards.map((s) => (
-            <div key={s.id} onClick={s.open} className="hv-card" style={{ ...css('position:relative;padding:22px 24px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:pop .3s both;cursor:pointer;transition:.18s'), borderLeft: '3px solid ' + s.accent }}>
+            <div key={s.id} onClick={s.open} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:22px 24px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:pop .3s both;cursor:pointer;transition:.18s'), borderLeft: '3px solid ' + s.accent }}>
               <div onClick={s.del} title="Delete setup" className="hv-del" style={css('position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;transition:.14s;z-index:2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Spectral\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0')}><div style={css('font-family:\'Spectral\',serif;font-size:20px;color:#ECEAE3')}>{s.name}</div><div style={css('font-size:12px;color:#9A9AA4;margin-top:2px')}>{s.desc}</div></div></div>
+              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Instrument Serif\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:20px;color:#ECEAE3')}>{s.name}</div><div style={css('font-size:12px;color:#9A9AA4;margin-top:2px')}>{s.desc}</div></div></div>
               <div style={css('display:flex;gap:24px;margin-bottom:16px')}>
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.wrStr}</div></div>
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Trades</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.tradesStr}</div></div>
@@ -2911,7 +2911,7 @@ class App extends React.Component {
       <div onClick={m.close} style={css('position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(4px);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s both')}>
         <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(201,166,95,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
           <div style={css('padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
-            <div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
             <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#9A9AA4;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
           </div>
           <div style={css('padding:20px 22px;display:flex;flex-direction:column;gap:16px')}>
@@ -2968,15 +2968,15 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
           <span onClick={V.addHabit} className="hv-setbtn" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
         </div>
 
         {/* daily grid */}
-        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden;animation:rise .5s .05s both')}>
+        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden;animation:rise .5s .05s both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.06);gap:14px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:baseline;gap:12px')}>
-              <div style={css('font-family:\'Spectral\',serif;font-size:19px;color:#ECEAE3')}>{V.gridRangeLabel}</div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3')}>{V.gridRangeLabel}</div>
               <div style={css('font-size:12px;color:#7d7d86')}>Tap a box to log · number cells: tap to type an amount · drag to reorder</div>
             </div>
             <div style={css('display:flex;align-items:center;gap:8px')}>
@@ -3066,7 +3066,7 @@ class App extends React.Component {
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);gap:12px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:center;gap:11px')}>
               <span style={css('font-size:17px')}>🎯</span>
-              <div style={css('font-family:\'Spectral\',serif;font-size:18px;color:#ECEAE3')}>Yearly goals</div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Yearly goals</div>
               <span style={css('font-size:12px;color:#8a8a92')}>the dreams your daily discipline serves</span>
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
@@ -3095,7 +3095,7 @@ class App extends React.Component {
 
         <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .2s both')}>
           <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
-          <span style={{ ...css('font-family:\'Spectral\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
+          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
           <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
           <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
@@ -3108,17 +3108,17 @@ class App extends React.Component {
   renderPlaybook(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
 
         <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
           <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Trader affirmation</div>
           <div style={css('display:flex;align-items:flex-start;gap:14px;margin-bottom:18px')}>
             {V.editAffirm ? (
-              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Spectral\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 12px;outline:none')} />
+              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 12px;outline:none')} />
             ) : (
               <Fragment>
-                <div onClick={V.startAffirm} title="Click to edit" style={css('flex:1;font-family:\'Spectral\',serif;font-style:italic;font-size:22px;line-height:1.4;color:#F3E9D2;cursor:text')}>{V.affirmation}</div>
+                <div onClick={V.startAffirm} title="Click to edit" style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;line-height:1.4;color:#F3E9D2;cursor:text')}>{V.affirmation}</div>
                 <div onClick={V.startAffirm} className="hv-op" style={css('flex:none;color:#C9A65F;cursor:pointer;opacity:.7')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               </Fragment>
             )}
@@ -3142,8 +3142,8 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;animation:rise .5s .1s both')}>
-          <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden')}>
-            <div style={css('padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Spectral\',serif;font-size:17px;color:#ECEAE3')}>Pre-trade checklist <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>Daily</span></div><span style={css('font-size:11px;color:#83838C')}>Resets daily</span></div>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden')}>
+            <div style={css('padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:17px;color:#ECEAE3')}>Pre-trade checklist <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>Daily</span></div><span style={css('font-size:11px;color:#83838C')}>Resets daily</span></div>
             {V.preItems.map((c, i) => this._renderCheckRow(c, i))}
             <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
               <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
@@ -3160,15 +3160,15 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Spectral\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
           <span onClick={V.addVision} className="hv-setbtn" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
         </div>
 
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· cumulative P&amp;L</span></div><div className="rtm-goldshine" style={css('font-family:\'Spectral\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
-              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Spectral',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· cumulative P&amp;L</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
               <span onClick={V.startGoal} title="Click to edit goal" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
             )}</div></div>
@@ -3181,14 +3181,14 @@ class App extends React.Component {
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin:22px 0 12px')}>Your dreams · drop images into the frames</div>
         <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:16px;animation:rise .5s .12s both')}>
           {V.visionItems.map((v) => (
-            <div key={v.id} className="hv-card" style={css('position:relative;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);overflow:hidden;transition:.18s')}>
+            <div key={v.id} className="hv-card liquid-glass" style={css('position:relative;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);overflow:hidden;transition:.18s')}>
               <div onClick={v.del} title="Delete" className="hv-visdel" style={css('position:absolute;top:10px;right:10px;z-index:3;width:28px;height:28px;border-radius:8px;background:rgba(8,8,11,.7);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#ECEAE3;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
               <ImageSlot slotId={'vision-' + v.id} value={this.state.images['vision-' + v.id]} onChange={(p) => this.setImage('vision-' + v.id, p)} placeholder="Drop a dream image" style={{ width: '100%', height: '190px' }} />
               <div style={css('padding:14px 16px')}>
                 {v.editing ? (
-                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
                 ) : (
-                  <div onClick={v.edit} style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Spectral\',serif;font-size:16px;color:#ECEAE3')}>{v.title}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                  <div onClick={v.edit} style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{v.title}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 )}
               </div>
             </div>
@@ -3202,8 +3202,8 @@ class App extends React.Component {
   renderDayModal(V) {
     return (
       <div onClick={V.closeDay} style={css('position:fixed;inset:0;z-index:28;background:rgba(4,4,7,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:18px 22px;display:flex;flex-direction:column;gap:10px')}>
             <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#9A9AA4')}><span>{V.dayCount} trades</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
             {V.dayTrades.map((t) => (
@@ -3223,8 +3223,8 @@ class App extends React.Component {
     const fieldInput = (style) => ({ ...css(style), });
     return (
       <div onClick={V.closeTrade} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
@@ -3323,9 +3323,9 @@ class App extends React.Component {
     const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 12px;color:#ECEAE3;font-size:12px;outline:none';
     return (
       <div onClick={V.closeFieldCfg} style={css('position:fixed;inset:0;z-index:34;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px);z-index:2')}>
-            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Spectral\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
+            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
             <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
           </div>
           <div style={css('padding:8px 26px 24px')}>
@@ -3360,13 +3360,13 @@ class App extends React.Component {
   renderPlanModal(V) {
     return (
       <div onClick={V.planClose} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08))')}>
             <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
               <div>
                 <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F')}>{V.planTag}</span></div>
-                <div style={css('font-family:\'Spectral\',serif;font-size:23px;color:#ECEAE3')}>{V.planTitle}</div>
+                <div style={css('font-family:\'Instrument Serif\',serif;font-size:23px;color:#ECEAE3')}>{V.planTitle}</div>
                 <div style={css('font-size:12.5px;color:#9A9AA4;margin-top:4px')}>Prepare before the new period starts · <span style={css('color:#E2C588')}>{V.planLabel}</span></div>
               </div>
               <div onClick={V.planClose} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
@@ -3405,10 +3405,10 @@ class App extends React.Component {
     const p = V.txnModal;
     return (
       <div onClick={V.closeTxns} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('position:sticky;top:0;z-index:2;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(18,18,24,.92);backdrop-filter:blur(8px)')}>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
-              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
+              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
               <div onClick={V.closeTxns} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px')}>
@@ -3449,7 +3449,7 @@ class App extends React.Component {
           <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
-          <div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3;margin-bottom:10px')}>Reset all data?</div>
+          <div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3;margin-bottom:10px')}>Reset all data?</div>
           <div style={css('font-size:13.5px;color:#9A9AA4;line-height:1.6;margin-bottom:22px')}>Trades, portfolios, habits and referenced images will be deleted and reset to defaults. <b style={css('color:#DC6A63')}>This cannot be undone.</b></div>
           <div style={css('display:flex;gap:12px')}>
             <div onClick={V.closeReset} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.14);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>Cancel</div>
@@ -3463,8 +3463,8 @@ class App extends React.Component {
   renderSetupModal(V) {
     return (
       <div onClick={V.closeSetup} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:linear-gradient(180deg,#15151c,#0e0e13);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Spectral\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup name</div><input value={V.sName} onChange={V.setSName} placeholder="e.g. Rally" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
@@ -3510,16 +3510,16 @@ class App extends React.Component {
       <div onClick={onClick} title={title} className="hv-nav" style={css(style)}>{path}</div>
     );
     return (
-      <div style={css('position:fixed;inset:0;display:flex;background:#08080B')}>
+      <div style={css('position:fixed;inset:0;display:flex;background:#000')}>
 
         <div style={css('position:absolute;inset:0;pointer-events:none;overflow:hidden')}>
-          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(201,166,95,.13),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(123,167,217,.09),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(155,140,255,.07),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(255,255,255,.05),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(255,255,255,.035),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.028),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
         </div>
 
         {/* ICON RAIL */}
-        <div style={css('position:relative;z-index:2;width:72px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0;border-right:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.32);backdrop-filter:blur(8px)')}>
+        <div style={css('position:relative;z-index:2;width:72px;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0;border-right:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.01);backdrop-filter:blur(8px)')}>
           <div className="rtm-logo" style={css('width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center;margin-bottom:10px')}><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
           {navIcon(V.navVision, V.goVision, 'Vision Board', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>)}
           {navIcon(V.navDash, V.goDash, 'Dashboard', <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>)}
@@ -3536,12 +3536,12 @@ class App extends React.Component {
         <div style={css('position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column')}>
 
           {/* TOPBAR */}
-          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(10,10,13,.55);backdrop-filter:blur(14px)')}>
+          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 28px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.012);backdrop-filter:blur(14px)')}>
             <div style={css('display:flex;align-items:baseline;gap:16px;min-width:0')}>
               {V.editName ? (
-                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Spectral\',serif;font-size:21px;font-weight:500;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:220px')} />
+                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:21px;font-weight:500;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:220px')} />
               ) : (
-                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Spectral\',serif;font-size:21px;font-weight:500;color:#ECEAE3;letter-spacing:-.01em')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:21px;font-weight:500;color:#ECEAE3;letter-spacing:-.01em')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
               <div style={css('display:flex;align-items:center;gap:10px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:11px;padding:6px 13px')}>
                 <span style={{ ...css('width:7px;height:7px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
@@ -3554,9 +3554,9 @@ class App extends React.Component {
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
-                <div onClick={V.togglePortMenu} className="hv-port" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
+                <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
-                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>All portfolio</div>
                     {V.portfolios.map((p) => (
                       <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
@@ -3569,9 +3569,9 @@ class App extends React.Component {
                 )}
               </div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
-                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Spectral',serif", transition: '.15s' }}>{V.avatarLetter}</div>
+                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
-                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'linear-gradient(180deg,#15151c,#0e0e13)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'My account'}</div>
                     {/* มาตรวัดพื้นที่ใช้งาน */}
                     <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4 }}>
