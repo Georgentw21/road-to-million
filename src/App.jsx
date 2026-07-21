@@ -196,8 +196,9 @@ class App extends React.Component {
       feelEntry: ['On plan · calm', 'Confident', 'Hesitant', 'Rushed / FOMO', 'Revenge'],
       feelSL: ['Comfortable', 'Too tight', 'Too wide', 'Moved it (bad)'],
       feelTP: ['Held to target', 'Cut early (fear)', 'Let it run', 'Greedy / gave back'],
-      // ----- multi-leg "เบิ้ล" (scaling-in) editable options -----
-      legTrigger: ['First entry', 'Pullback / เบิ้ล', 'Retest zone', 'Break confirm', 'All-in'],
+      // ----- multi-leg "เบิ้ล" editable options -----
+      // legTrigger = "จุดเข้า" ของแต่ละไม้ (ย้ายมาจาก Entry — M5/M15 เดิม) แก้ตัวเลือกเองได้
+      legTrigger: ['M15 Completed Stick', 'M5 Completed Stick', 'M15 Doji', 'M5 Doji', 'Break confirm', 'Retest zone'],
       legSL: ['Dow / structure', 'รวมแท่ง (group candle)', 'ใต้แท่ง (under candle)', 'Fixed pips', 'Breakeven'],
       // ----- round metadata options -----
       sotType: ['Saucer', 'H&S', 'V-shape (ไหล่ขวาเสร็จ)', 'V-shape → ข้าม', 'Double top/bottom'],
@@ -550,7 +551,7 @@ class App extends React.Component {
           rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
-          ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: t.entryType, slZone: t.slZone,
+          ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: this._entryModel(t), slZone: t.slZone,
           sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {}, tfImages,
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
@@ -751,6 +752,8 @@ class App extends React.Component {
   }
   // the position's 1R in $ — sum of each leg's risk when scaled in, else the single risk field
   _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(Number(t.risk) || 0); }
+  // entry model — now lives on the first real leg's "trigger"; falls back to the old per-trade entryType
+  _entryModel(t) { const legs = this._legs(t); const first = legs.find(l => (l.trigger || '').trim()); return (first && first.trigger) || t.entryType || ''; }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
   _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
   // a copy of the trades with pnl already net of commission — everything downstream
@@ -816,7 +819,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: 'First entry', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -847,8 +850,8 @@ class App extends React.Component {
   addLeg() {
     const d = this.state.draft; const legs = Array.isArray(d.legs) ? d.legs.slice() : [];
     const first = legs.length === 0 && (d.entry || d.lot)
-      ? { trigger: 'First entry', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', risk: d.risk || '', dd: '' }
-      : { trigger: legs.length === 0 ? 'First entry' : 'Pullback / เบิ้ล', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' };
+      ? { trigger: d.entryType || '', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', risk: d.risk || '', dd: '' }
+      : { trigger: '', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' };
     legs.push(first); this._patchDraft({ ...d, legs });
   }
   removeLeg(i) { const d = this.state.draft; const legs = (d.legs || []).slice(); legs.splice(i, 1); this._patchDraft({ ...d, legs }); }
@@ -1763,7 +1766,8 @@ class App extends React.Component {
       if (LF.align && LF.align !== 'all' && String(this._alignN(t)) !== LF.align) return false;
       if (LF.session && LF.session !== 'all' && (t.session || '') !== LF.session) return false;
       if (LF.setup && LF.setup !== 'all' && this._setupById(t.setupId).name !== LF.setup) return false;
-      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'entryType') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType') || !fieldMatch(t, 'entryKind')) return false;
+      if (LF.entryType && LF.entryType !== 'all' && this._entryModel(t) !== LF.entryType) return false;
+      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType') || !fieldMatch(t, 'entryKind')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
@@ -1789,6 +1793,8 @@ class App extends React.Component {
     const dayFull = this._DOW_FULL();
     const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['slZone', 'SL zone'], ['sotType', 'SOT'], ['entryKind', 'Entry kind']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
+    // entry model now lives on the legs (leg "trigger"); build its option list from there
+    const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
     const distinctSess = Array.from(new Set(trades.map(t => (t.session || '').trim()).filter(Boolean)));
     const distinctSetup = Array.from(new Set(trades.map(t => this._setupById(t.setupId).name).filter(Boolean)));
     const logFieldFilters = [{ key: 'day', label: 'Day', value: LF.day || 'all', options: [1, 2, 3, 4, 5, 6, 0].map(i => ({ v: dayFull[i], label: dayFull[i] })) }]
@@ -1798,7 +1804,7 @@ class App extends React.Component {
       .concat([{ key: 'session', label: 'Session', value: LF.session || 'all', options: distinctSess.map(v => ({ v, label: v })) }])
       .concat(ANA_FIELDS.map(([key, label]) => ({
         key, label, value: LF[key] || 'all',
-        options: key === 'retest' ? [{ v: 'yes', label: 'Yes' }, { v: 'no', label: 'No' }] : distinctFor(key).map(v => ({ v, label: v })),
+        options: key === 'retest' ? [{ v: 'yes', label: 'Yes' }, { v: 'no', label: 'No' }] : (key === 'entryType' ? distinctEntry : distinctFor(key)).map(v => ({ v, label: v })),
       })));
     const anyLogF = Object.keys(LF).some(k => LF[k] && LF[k] !== 'all');
     const logAggRaw = this._aggStats(filteredRaw);
@@ -1817,7 +1823,7 @@ class App extends React.Component {
       htf: { label: 'HTF condition', get: t => (t.htf || '').trim() || '—' },
       retest: { label: 'Retest', get: t => t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—'), order: ['Yes', 'No', '—'] },
       fibo: { label: 'Fibo M15 side', get: t => (t.fibo || '').trim() || '—' },
-      entryType: { label: 'Entry model', get: t => (t.entryType || '').trim() || '—' },
+      entryType: { label: 'Entry model', get: t => (this._entryModel(t) || '').trim() || '—' },
       slZone: { label: 'SL zone', get: t => (t.slZone || '').trim() || '—' },
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
@@ -2487,7 +2493,7 @@ class App extends React.Component {
         { key: 'mtf', label: 'MTF condition', opts: this._fieldOpts('mtf') },
         { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
         { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
-        { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
+        { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
         { key: 'slZone', label: 'SL zone', opts: this._fieldOpts('slZone') },
         { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
         { key: 'entryKind', label: 'ประเภทจุดเข้า', opts: this._fieldOpts('entryKind') },
@@ -3539,13 +3545,14 @@ class App extends React.Component {
             {V.dLegs.count > 0 ? (
               <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
                 <div style={css('overflow-x:auto')}>
-                <div style={css('min-width:720px')}>
-                <div style={css('display:grid;grid-template-columns:20px 1fr .7fr .62fr 1.2fr .78fr .62fr 22px;gap:9px;padding:0 2px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
-                  <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>DD</span><span></span>
+                <div style={css('min-width:820px')}>
+                <div style={css('display:grid;grid-template-columns:20px 1.35fr .78fr .56fr .5fr 1.05fr .68fr .5fr 22px;gap:9px;padding:0 2px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
+                  <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>จุดเข้า</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>DD</span><span></span>
                 </div>
                 {V.dLegs.rows.map((r) => (
-                  <div key={r.i} style={css('display:grid;grid-template-columns:20px 1fr .7fr .62fr 1.2fr .78fr .62fr 22px;gap:9px;align-items:center;padding:4px 2px')}>
+                  <div key={r.i} style={css('display:grid;grid-template-columns:20px 1.35fr .78fr .56fr .5fr 1.05fr .68fr .5fr 22px;gap:9px;align-items:center;padding:4px 2px')}>
                     <span title={r.i === 0 ? 'ไม้แรก' : 'ไม้เบิ้ลที่ ' + (r.i + 1)} style={css('font-family:JetBrains Mono;font-size:12px;font-weight:600;color:#B7A981;text-align:center')}>{r.i + 1}</span>
+                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
                     <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
                     <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
                     <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
@@ -3576,12 +3583,11 @@ class App extends React.Component {
                 + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#E2C588')}>avg entry</b> และ <b style={css('color:#E2C588')}>Max DD</b> ให้อัตโนมัติ
               </div>
             )}
-            {/* ④ Execution detail */}
-            <div style={css('font-size:12px;color:#9A9AA4;margin:6px 0 2px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo / entry model <span style={css('color:#6f6a5c;font-size:11px')}>(SL อยู่ที่ SL basis ของแต่ละไม้แล้ว)</span></div>
-            <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr;gap:16px')}>
+            {/* ④ Execution detail — จุดเข้าย้ายไปอยู่ในตารางไม้ (คอลัมน์ "จุดเข้า") แล้ว */}
+            <div style={css('font-size:12px;color:#9A9AA4;margin:6px 0 2px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo <span style={css('color:#6f6a5c;font-size:11px')}>(จุดเข้าอยู่ในตารางไม้ · SL อยู่ที่ SL basis ของแต่ละไม้)</span></div>
+            <div style={css('display:grid;grid-template-columns:.7fr 1fr;gap:16px')}>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
 
             {/* Feeling on Entry / SL / TP */}
