@@ -193,6 +193,9 @@ class App extends React.Component {
       fibo: ['Premium (0.5–0.79)', 'Discount (0.5–0.79)', 'OTE (0.62–0.79)', 'Equilibrium (0.5)', 'Below 0.79'],
       entryType: ['M5 Completed Stick', 'M15 Completed Stick', 'M5 Doji', 'M15 Doji'],
       slZone: [], // SL zone — add your own choices in "Edit options"
+      feelEntry: ['On plan · calm', 'Confident', 'Hesitant', 'Rushed / FOMO', 'Revenge'],
+      feelSL: ['Comfortable', 'Too tight', 'Too wide', 'Moved it (bad)'],
+      feelTP: ['Held to target', 'Cut early (fear)', 'Let it run', 'Greedy / gave back'],
     },
     // trade-log analysis filters + breakdown lens
     logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' },
@@ -529,10 +532,23 @@ class App extends React.Component {
       .map(t => {
         const urls = [];
         for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
+        const closed = t.status !== 'OPEN';
+        const heatR = this._maeR(t), cap = this._captureP(t);
         return {
-          date: t.date, sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
+          date: t.date, weekday: this._dowFull(t.date), sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
           session: t.session, lot: (t.lot != null && t.lot !== '') ? String(t.lot) : '', portfolioName: this._portfolioName(t.portfolioId),
-          pnlNum: t.status === 'OPEN' ? 0 : (t.pnl || 0), rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
+          pnlNum: closed ? (t.pnl || 0) : 0, commission: Number(t.commission) || 0, netPnl: closed ? this._netPnl(t) : 0,
+          rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
+          entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
+          hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
+          ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: t.entryType, slZone: t.slZone,
+          feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
+          mae: this._maeUsd(t), mfe: this._mfeUsd(t),
+          heatStr: heatR != null ? heatR.toFixed(1) + 'R' : (this._maeUsd(t) > 0 ? '$' + Math.round(this._maeUsd(t)) : ''),
+          captureStr: cap != null && this._netPnl(t) > 0 ? cap + '%' : '',
+          pigUsd: this._pigUsd(t), alignN: this._alignN(t),
+          alignStr: [t.alignHTF && 'HTF', t.alignMTF && 'MTF', t.alignLTF && 'LTF'].filter(Boolean).join(' · '),
+          tags: Array.isArray(t.tags) ? t.tags : [],
         };
       });
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
@@ -726,6 +742,18 @@ class App extends React.Component {
   // a copy of the trades with pnl already net of commission — everything downstream
   // (equity, calendar, analytics, win-rate) then works off the true net figure
   _withNet(list) { return (list || []).map(t => (Number(t.commission) || 0) ? { ...t, pnl: this._netPnl(t) } : t); }
+  // ----- excursion (MAE/MFE) & timeframe alignment -----
+  // MAE = worst heat this position took ($), MFE = best unrealised profit ($). Both magnitudes.
+  _maeUsd(t) { return Math.abs(Number(t.mae) || 0); }
+  _mfeUsd(t) { return Math.abs(Number(t.mfe) || 0); }
+  // heat in R (how deep the position's drawdown ran vs the $ risked) — the "Max DD of this position"
+  _maeR(t) { const r = Math.abs(Number(t.risk) || 0); return r > 0 ? this._maeUsd(t) / r : null; }
+  _mfeR(t) { const r = Math.abs(Number(t.risk) || 0); return r > 0 ? this._mfeUsd(t) / r : null; }
+  // how much of the best move you actually kept (0–100%). The rest is the "pig" left on the table.
+  _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round(this._netPnl(t) / mfe * 100))); }
+  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - this._netPnl(t)); }
+  // how many of the 3 timeframes were aligned with the trade
+  _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
@@ -746,7 +774,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -1615,12 +1643,37 @@ class App extends React.Component {
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
+        // excursion + alignment for the log's "important entry details"
+        heatStr: (() => { const r = this._maeR(t); if (r != null) return r.toFixed(1) + 'R'; const m = this._maeUsd(t); return m > 0 ? '$' + Math.round(m) : '—'; })(),
+        heatColor: (() => { const r = this._maeR(t); return r == null ? '#9A9AA4' : (r >= 1 ? '#DC6A63' : (r >= 0.6 ? '#E2C588' : '#9CD3C0')); })(),
+        captureStr: (() => { const c = this._captureP(t); return c == null ? '—' : c + '%'; })(),
+        captureColor: (() => { const c = this._captureP(t); return c == null ? '#9A9AA4' : (c >= 80 ? '#5FC08D' : (c >= 55 ? '#E2C588' : '#DC6A63')); })(),
+        alignN: this._alignN(t), alignStr: this._alignN(t) + '/3',
+        alignColor: this._alignN(t) >= 3 ? '#5FC08D' : (this._alignN(t) === 2 ? '#E2C588' : '#9A9AA4'),
+        feelEntry: t.feelEntry || '', feelSL: t.feelSL || '', feelTP: t.feelTP || '',
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
       };
     };
     const sortedTrades = trades.slice().sort((a, b) => b.date.localeCompare(a.date));
     const recent = sortedTrades.slice(0, 6).map(mapTrade);
+    // ---- edge snapshot (dashboard) — avg heat & capture across the system, not per-trade rows ----
+    let _heatSum = 0, _heatN = 0, _capSum = 0, _capN = 0, _alignSum = 0, _alignN = 0;
+    trades.forEach(t => {
+      if (t.status === 'OPEN') return;
+      const hr = this._maeR(t); if (hr != null) { _heatSum += hr; _heatN++; }
+      // "captured of the best move" only makes sense for winners — it's the "sold the pig" (TP-too-early) lens
+      if (this._netPnl(t) > 0) { const cp = this._captureP(t); if (cp != null) { _capSum += cp; _capN++; } }
+      _alignSum += this._alignN(t); _alignN++;
+    });
+    const edge = {
+      avgHeat: _heatN ? (_heatSum / _heatN).toFixed(2) + 'R' : '—',
+      avgHeatColor: _heatN ? ((_heatSum / _heatN) >= 1 ? RED : ((_heatSum / _heatN) >= 0.6 ? GOLD : GREEN)) : '#9A9AA4',
+      avgCapture: _capN ? Math.round(_capSum / _capN) + '%' : '—',
+      avgCaptureColor: _capN ? (Math.round(_capSum / _capN) >= 70 ? GREEN : (Math.round(_capSum / _capN) >= 50 ? GOLD : RED)) : '#9A9AA4',
+      avgAlign: _alignN ? (_alignSum / _alignN).toFixed(1) + '/3' : '—',
+      heatReady: _heatN > 0, capReady: _capN > 0,
+    };
 
     // log filter — กรอง/เรียงบนข้อมูลดิบก่อน แล้วค่อย map เฉพาะแถวที่โชว์จริง (เร็วแม้มีหลายหมื่นไม้)
     const lf = st.logFilter;
@@ -2093,6 +2146,35 @@ class App extends React.Component {
         // realized R preview from the entered risk
         dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
         dDayLabel: this._fullDateLabel(d.date),
+        // ----- excursion (MAE/MFE): 2 new $ inputs → plain-language heat & capture -----
+        dMae: d.mae != null ? String(d.mae) : '', setMae: (e) => this.setD('mae', e.target.value),
+        dMfe: d.mfe != null ? String(d.mfe) : '', setMfe: (e) => this.setD('mfe', e.target.value),
+        dExc: (() => {
+          const mae = Math.abs(parseFloat(d.mae) || 0), mfe = Math.abs(parseFloat(d.mfe) || 0);
+          const risk = Math.abs(parseFloat(d.risk) || 0);
+          const net = (parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0);
+          if (!mae && !mfe) return null;
+          const heatR = risk ? mae / risk : null;
+          const cap = mfe > 0 ? Math.max(-100, Math.min(100, Math.round(net / mfe * 100))) : null;
+          const pig = mfe > 0 ? Math.max(0, mfe - net) : 0;
+          // bar geometry: entry at 0, MAE to the left, MFE to the right, exit marker at net
+          const span = (mae + mfe) || 1; const zero = mae / span * 100;
+          let exit = zero + (net / span * 100); exit = Math.max(0, Math.min(100, exit));
+          let cls = 'good', msg = '';
+          if (cap == null) msg = 'Heat ' + (heatR != null ? heatR.toFixed(1) + 'R' : '$' + Math.round(mae)) + ' — add MFE to see how much you captured.';
+          else if (net <= 0) { cls = 'bad'; msg = 'Loss — max heat was ' + (heatR != null ? heatR.toFixed(1) + 'R' : '$' + Math.round(mae)) + '. Review where the plan broke.'; }
+          else if (cap >= 80) { cls = 'good'; msg = 'Captured ' + cap + '% of the best move — clean exit, barely any pig.'; }
+          else if (cap >= 55) { cls = 'warn'; msg = 'Captured ' + cap + '% — left $' + Math.round(pig) + ' on the table. Consider trailing instead of a fixed TP.'; }
+          else { cls = 'bad'; msg = 'Sold the pig — only ' + cap + '% kept, $' + Math.round(pig) + ' left behind. TP was too early for this run.'; }
+          return { heatR, heatStr: heatR != null ? heatR.toFixed(1) + 'R' : '$' + Math.round(mae), cap, capStr: cap != null ? cap + '%' : '—', pig: Math.round(pig), zero, exit, maeStr: '−$' + Math.round(mae), mfeStr: '+$' + Math.round(mfe), cls, msg, maeReady: mae > 0, mfeReady: mfe > 0 };
+        })(),
+        // ----- timeframe alignment (HTF/MTF/LTF each aligned with the trade?) -----
+        dAlignHTF: !!d.alignHTF, dAlignMTF: !!d.alignMTF, dAlignLTF: !!d.alignLTF, dAlignN: (d.alignHTF ? 1 : 0) + (d.alignMTF ? 1 : 0) + (d.alignLTF ? 1 : 0),
+        toggleAlign: (k) => this.setD(k, !d[k]),
+        // ----- feeling on entry / SL / TP (editable-option selects) -----
+        dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
+        optsFeelEntry: this._fieldOptsWith('feelEntry', d.feelEntry), optsFeelSL: this._fieldOptsWith('feelSL', d.feelSL), optsFeelTP: this._fieldOptsWith('feelTP', d.feelTP),
+        setFeelEntry: (e) => this.setDField('feelEntry', e.target.value), setFeelSL: (e) => this.setDField('feelSL', e.target.value), setFeelTP: (e) => this.setDField('feelTP', e.target.value),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
@@ -2232,7 +2314,7 @@ class App extends React.Component {
       milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
       goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
-      setupBars, recent, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: logTotal,
+      setupBars, recent, edge, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: logTotal,
       logShownN, logHasMore, logRemaining: logTotal - logShownN,
       loadMoreLog: () => this.setState({ logLimit: st.logLimit + 50 }),
       showAllLog: () => this.setState({ logLimit: logTotal }),
@@ -2250,6 +2332,9 @@ class App extends React.Component {
         { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
         { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
         { key: 'slZone', label: 'SL zone', opts: this._fieldOpts('slZone') },
+        { key: 'feelEntry', label: 'Feeling · Entry', opts: this._fieldOpts('feelEntry') },
+        { key: 'feelSL', label: 'Feeling · SL', opts: this._fieldOpts('feelSL') },
+        { key: 'feelTP', label: 'Feeling · TP', opts: this._fieldOpts('feelTP') },
       ],
       addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
@@ -2313,7 +2398,7 @@ class App extends React.Component {
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>Add portfolio</div>
         <div style={css('display:flex;gap:10px;margin-bottom:20px;animation:rise .5s .08s both')}>
           <input value={V.newPortName} onChange={V.setNewPortName} onKeyDown={V.addPortKey} placeholder="Portfolio name, e.g. FTMO Challenge, Live, Demo" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#ECEAE3;font-size:14px;outline:none')} />
-          <div onClick={V.addPortfolioNamed} className="hv-save" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
+          <div onClick={V.addPortfolioNamed} className="hv-save rtm-press" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
         </div>
 
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:12px')}>All portfolios · click to view</div>
@@ -2434,15 +2519,25 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
-          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;animation:rise .55s .4s both;background:rgba(255,255,255,.02)')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06)')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Recent trades</div><span onClick={V.goLog} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>View all →</span></div>
-            <div style={css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:10px 20px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;font-weight:600')}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>P&amp;L</span><span>R</span></div>
-            {V.recent.map((t, i) => (
-              <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:1.35fr 1fr .6fr .85fr .85fr .55fr;gap:10px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), animationDelay: (0.45 + i * 0.05) + 's' }}><span style={css('display:flex;align-items:center;gap:7px;font-family:JetBrains Mono;font-size:11.5px')}><span style={css('color:#9A9AA4')}>{t.dateLong}</span><span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;letter-spacing:.03em'), color: t.dowColor, background: t.dowColor + '22' }}>{t.dowShort}</span></span><span style={css('color:#ECEAE3;font-weight:600')}>{t.sym}</span><span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span><span style={css('color:#9A9AA4')}>{t.setupName}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.pnlColor }}>{t.pnlStr}</span><span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span></div>
-            ))}
-            {V.recent.length === 0 && (
-              <div style={css('padding:34px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;color:#83838C')}>No trades yet — press N to start logging</div>
-            )}
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);animation:rise .55s .4s both;background:rgba(255,255,255,.02);padding:20px 22px')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Edge snapshot <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Analytics →</span></div>
+            <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
+              {[
+                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588', s: 'avg $ per trade' },
+                { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9', s: 'gross win ÷ loss' },
+                { l: 'Green days', v: V.consistencyStr, c: '#5FC08D', s: 'days in profit' },
+                { l: 'Avg heat / DD', v: V.edge.avgHeat, c: V.edge.avgHeatColor, s: 'how deep it runs against you' },
+                { l: 'Avg captured', v: V.edge.avgCapture, c: V.edge.avgCaptureColor, s: 'of the best move, on winners' },
+                { l: 'Avg TF aligned', v: V.edge.avgAlign, c: '#B79CE8', s: 'timeframes in agreement' },
+              ].map((m, i) => (
+                <div key={i} className="liquid-glass" style={css('padding:14px 15px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '12,rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06);border-top:2px solid ' + m.c)}>
+                  <div style={css('font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:8px')}>{m.l}</div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: m.c }}>{m.v}</div>
+                  <div style={css('font-size:10px;color:#6a6a72;margin-top:7px;line-height:1.35')}>{m.s}</div>
+                </div>
+              ))}
+            </div>
+            {(!V.edge.heatReady && !V.edge.capReady) && <div style={css('font-size:11.5px;color:#6a6a72;margin-top:14px;line-height:1.5')}>Fill <b style={css('color:#9A9AA4')}>Max heat</b> and <b style={css('color:#9A9AA4')}>Best unrealised</b> on your trades (in the log modal) to unlock the heat &amp; capture edge metrics.</div>}
           </div>
           <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
@@ -2497,8 +2592,8 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '172px 96px 62px 96px 100px 52px 92px 80px 92px 62px 150px 150px 132px 74px 150px 150px 140px';
-    const gminw = 2050;
+    const gcols = '172px 104px 60px 120px 92px 66px 90px 96px 66px 104px';
+    const gminw = 1140;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -2599,26 +2694,19 @@ class App extends React.Component {
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:12px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#141218;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Session</span><span>Lot</span><span>Hold</span><span>Comm/Swap</span><span>P&amp;L</span><span>R</span><span>LTF</span><span>MTF</span><span>HTF</span><span>Retest</span><span>Fibo M15</span><span>Entry</span><span>SL Zone</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max heat / drawdown of the position">Max DD</span><span title="Share of the best move kept">Captured</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
-                <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:11px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
+                <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
                   <span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
-                  <span style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session}</span>
-                  <span style={css('color:#9A9AA4;font-family:JetBrains Mono;font-size:11.5px')}>{t.lotStr}</span>
-                  <span title={t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
-                  <span style={css('font-family:JetBrains Mono;font-size:11.5px;color:#9A9AA4')}>{t.commStr}</span>
+                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
+                  <span title={t.alignN + ' of 3 timeframes aligned'} style={{ ...css('font-family:JetBrains Mono;font-size:12.5px;font-weight:600'), color: t.alignColor }}>{t.alignStr}</span>
+                  <span title="Max heat / drawdown the position took" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
+                  <span title="How much of the best move you kept" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.captureColor }}>{t.captureStr}</span>
+                  <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.rColor }}>{t.rStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
-                  <span style={{ ...css('font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</span>
-                  {anaCell(t.ltf, '#9CC2E8')}
-                  {anaCell(t.mtf, '#E2C588')}
-                  {anaCell(t.htf, '#B79CE8')}
-                  <span title={t.retest} style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.retest === 'yes' ? '#5FC08D' : (t.retest === 'no' ? '#DC6A63' : '#5a5a63') }}>{t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—')}</span>
-                  {anaCell(t.fibo, '#E2C588')}
-                  {anaCell(t.entryType, '#9CD3C0')}
-                  {anaCell(t.slZone, '#E39A6A')}
                 </div>
               ))}
             </div>
@@ -2733,7 +2821,7 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
-          <span onClick={V.openNewSetup} className="hv-setbtn" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
+          <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
           {V.setupCards.map((s) => (
@@ -2969,7 +3057,7 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
-          <span onClick={V.addHabit} className="hv-setbtn" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
+          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
         </div>
 
         {/* daily grid */}
@@ -3161,7 +3249,7 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
-          <span onClick={V.addVision} className="hv-setbtn" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
+          <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
         </div>
 
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
@@ -3232,7 +3320,7 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup</div><select value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} style={css(V.sellStyle)}>SELL / Short</div></div></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
@@ -3272,12 +3360,51 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>MTF condition</div><select value={V.dMtf} onChange={V.setMtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsMtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>HTF condition</div><select value={V.dHtf} onChange={V.setHtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsHtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
+            <div style={css('display:flex;align-items:center;gap:10px;flex-wrap:wrap')}>
+              <span style={css('font-size:11px;color:#9A9AA4')}>Timeframes aligned with the trade?</span>
+              {[['alignHTF', 'HTF', V.dAlignHTF], ['alignMTF', 'MTF', V.dAlignMTF], ['alignLTF', 'LTF', V.dAlignLTF]].map(([k, lab, on]) => (
+                <span key={k} onClick={() => V.toggleAlign(k)} className="rtm-press" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;transition:.14s;' + (on ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);color:#9A9AA4'))}><span style={css('width:6px;height:6px;border-radius:50%;background:currentColor')}></span>{lab}</span>
+              ))}
+              <span style={css('margin-left:auto;font-family:JetBrains Mono;font-size:12.5px;color:#E2C588')}>{V.dAlignN}/3 aligned</span>
+            </div>
             <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>SL zone</div><select value={V.dSlZone} onChange={V.setSlZone} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSlZone.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
+
+            {/* Feeling on Entry / SL / TP */}
+            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · Entry</div><select value={V.dFeelEntry} onChange={V.setFeelEntry} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelEntry.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · SL</div><select value={V.dFeelSL} onChange={V.setFeelSL} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelSL.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · TP</div><select value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+            </div>
+
+            {/* Excursion — how much heat did the position take (Max DD) and how much of the best move did we keep */}
+            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
+            <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 12h4l3-8 4 16 3-8h4" strokeLinecap="round" strokeLinejoin="round"/></svg>Heat &amp; capture <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:10.5px')}>· did the trade run against you, and did you sell the pig?</span></div>
+            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Max heat / DD ($) <span style={css('color:#83838C')}>MAE — worst point</span></div><input value={V.dMae} onChange={V.setMae} placeholder="e.g. 45" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Best unrealised ($) <span style={css('color:#83838C')}>MFE — peak profit</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+            </div>
+            {V.dExc && (
+              <div>
+                <div style={css('position:relative;height:30px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);overflow:hidden')}>
+                  <div style={{ ...css('position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,rgba(220,106,99,.12),rgba(220,106,99,.4))'), width: V.dExc.zero + '%' }}></div>
+                  <div style={{ ...css('position:absolute;top:0;bottom:0;background:linear-gradient(90deg,rgba(95,192,141,.4),rgba(95,192,141,.12))'), left: V.dExc.zero + '%', right: 0 }}></div>
+                  <div style={{ ...css('position:absolute;top:-3px;bottom:-3px;width:2px;background:#9A9AA4;z-index:2'), left: V.dExc.zero + '%' }}></div>
+                  <div title="exit" style={{ ...css('position:absolute;top:-4px;bottom:-4px;width:3px;background:#fff;z-index:3;box-shadow:0 0 0 1px #000'), left: V.dExc.exit + '%' }}></div>
+                </div>
+                <div style={css('display:flex;justify-content:space-between;margin-top:6px;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#DC6A63')}>{V.dExc.maeStr}</span><span style={css('color:#83838C')}>entry</span><span style={css('color:#5FC08D')}>{V.dExc.mfeStr}</span></div>
+                <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px')}>
+                  <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Max DD (heat)</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#DC6A63')}>{V.dExc.heatStr}</div></div>
+                  <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Captured of best</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#5FC08D')}>{V.dExc.capStr}</div></div>
+                  <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Pig left</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#E2C588')}>${V.dExc.pig}</div></div>
+                </div>
+                <div style={{ ...css('margin-top:12px;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.5'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.1)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.35)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
+              </div>
+            )}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
             <div>
@@ -3311,7 +3438,7 @@ class App extends React.Component {
                 <div onClick={V.duplicateTrade} className="hv-lift" title="Duplicate as new trade" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(201,166,95,.35);color:#E2C588;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Duplicate</div>
               )}
               <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveTrade} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.saveTrade} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -3350,7 +3477,7 @@ class App extends React.Component {
             ))}
           </div>
           <div style={css('display:flex;justify-content:flex-end;gap:12px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.07);position:sticky;bottom:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px)')}>
-            <div onClick={V.closeFieldCfg} className="hv-save" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+            <div onClick={V.closeFieldCfg} className="hv-save rtm-press" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -3394,7 +3521,7 @@ class App extends React.Component {
           </div>
           <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)')}>
             <span style={css('font-size:12px;color:#83838C;font-family:JetBrains Mono')}>Done {V.planFrac}</span>
-            <div onClick={V.planClose} className="hv-save" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+            <div onClick={V.planClose} className="hv-save rtm-press" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -3496,7 +3623,7 @@ class App extends React.Component {
                 <div onClick={V.deleteSetup} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
               )}
               <div onClick={V.cancelSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.setupIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveSetup} className="hv-save" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.saveSetup} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -3538,7 +3665,7 @@ class App extends React.Component {
             </div>
             <div className="liquid-glass" style={css('display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;flex-wrap:wrap;justify-content:center')}>
               {NAV_LINKS.map(([k, label, go]) => (
-                <span key={k} onClick={go} className="hv-navlink" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: curView === k ? '#fff' : 'rgba(255,255,255,.55)', background: curView === k ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
+                <span key={k} onClick={go} className="hv-navlink rtm-press" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: curView === k ? '#fff' : 'rgba(255,255,255,.55)', background: curView === k ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
               ))}
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
@@ -3546,7 +3673,7 @@ class App extends React.Component {
                 <span style={{ ...css('width:6px;height:6px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
                 <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
               </div>
-              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
