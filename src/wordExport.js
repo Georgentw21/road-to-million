@@ -114,15 +114,18 @@ export async function exportWeeklyWord(rows, accountName) {
     // Entry legs (multi-leg "เบิ้ล") — only when the trade was scaled in
     if (r.legMulti && r.legs && r.legs.length) {
       h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">ไม้ที่เบิ้ล · Entry legs</div>`;
-      h += `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-family:Arial;font-size:11px;border-color:${LINE}">`;
-      h += `<tr style="background:#fff">` + ['#', 'Trigger', 'ราคาเข้า', 'Lot', 'สะสม', 'SL basis', 'DD (pip)']
-        .map((c, i) => `<th align="${i >= 3 && i !== 5 ? 'right' : 'left'}" style="color:${SUB};font-weight:normal;font-size:9px;text-transform:uppercase">${c}</th>`).join('') + `</tr>`;
+      h += `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-family:Arial;font-size:10.5px;border-color:${LINE}">`;
+      const cols = ['#', 'จุดเข้า', 'ราคาเข้า', 'Lot', 'สะสม', 'SL basis', 'Risk $', 'Retest', 'Fibo M15', 'DD'];
+      const rightCol = (i) => (i === 3 || i === 4 || i === 6 || i === 9);
+      h += `<tr style="background:#fff">` + cols
+        .map((c, i) => `<th align="${rightCol(i) ? 'right' : 'left'}" style="color:${SUB};font-weight:normal;font-size:9px;text-transform:uppercase">${c}</th>`).join('') + `</tr>`;
       r.legs.forEach((l, i) => {
         const under = /under|ใต้แท่ง/i.test(l.slBasis || '');
         h += `<tr>` + [
           String(i + 1), esc(l.trigger || '—'), esc(l.price || '—'), esc(l.lot || '—'), l.cum,
-          `<span style="color:${under ? RED : INK}">${esc(l.slBasis || '—')}</span>`, esc(l.dd || '—'),
-        ].map((c, j) => `<td valign="top" align="${j >= 3 && j !== 5 ? 'right' : 'left'}">${c}</td>`).join('') + `</tr>`;
+          `<span style="color:${under ? RED : INK}">${esc(l.slBasis || '—')}</span>`,
+          l.risk ? '$' + esc(l.risk) : '—', (l.retest === 'yes' ? 'Yes' : (l.retest === 'no' ? 'No' : '—')), esc(l.fibo || '—'), esc(l.dd || '—'),
+        ].map((c, j) => `<td valign="top" align="${rightCol(j) ? 'right' : 'left'}">${c}</td>`).join('') + `</tr>`;
       });
       h += `</table>`;
       h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-top:4px">`;

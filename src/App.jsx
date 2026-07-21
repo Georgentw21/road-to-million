@@ -202,10 +202,9 @@ class App extends React.Component {
       legSL: ['Dow / structure', 'รวมแท่ง (group candle)', 'ใต้แท่ง (under candle)', 'Fixed pips', 'Breakeven'],
       // ----- round metadata options -----
       sotType: ['Saucer', 'H&S', 'V-shape (ไหล่ขวาเสร็จ)', 'V-shape → ข้าม', 'Double top/bottom'],
-      entryKind: ['ปรสิตธรรมดา', 'ปรสิตลักไก่', 'คืน Zone เต็ม', 'คืน Zone ครึ่ง', 'Bet break'],
     },
     // trade-log analysis filters + breakdown lens
-    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', slZone: 'all', sotType: 'all', entryKind: 'all' },
+    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
@@ -551,7 +550,7 @@ class App extends React.Component {
           rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
-          ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: this._entryModel(t), slZone: t.slZone,
+          ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: this._legRetest(t), fibo: this._legFibo(t), entryType: this._entryModel(t), slZone: t.slZone,
           sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {}, tfImages,
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
@@ -560,7 +559,7 @@ class App extends React.Component {
           pigUsd: this._pigUsd(t), alignN: this._alignN(t),
           alignStr: [t.alignHTF && 'HTF', t.alignMTF && 'MTF', t.alignLTF && 'LTF'].filter(Boolean).join(' · '),
           tags: Array.isArray(t.tags) ? t.tags : [],
-          legs: this._legs(t).map((l, idx) => { const cum = this._legs(t).slice(0, idx + 1).reduce((s, x) => s + (Math.abs(Number(x.lot) || 0)), 0); return { trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', cum: cum.toFixed(2), slBasis: l.slBasis || '', dd: l.dd || '' }; }),
+          legs: this._legs(t).map((l, idx) => { const cum = this._legs(t).slice(0, idx + 1).reduce((s, x) => s + (Math.abs(Number(x.lot) || 0)), 0); return { trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', cum: cum.toFixed(2), slBasis: l.slBasis || '', risk: l.risk || '', retest: l.retest || '', fibo: l.fibo || '', dd: l.dd || '' }; }),
           ...(() => { const ls = this._legStats(t); return { legMaxLot: ls.maxLot ? ls.maxLot.toFixed(2) : '', legAvgEntry: ls.avgEntry != null ? this._fmtPrice(ls.avgEntry) : '', legMaxDD: ls.maxDD || 0, legMulti: ls.isMulti }; })(),
         };
       });
@@ -583,7 +582,7 @@ class App extends React.Component {
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.risk != null ? t.risk : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '')), t.fibo, t.entryType, t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.risk != null ? t.risk : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -754,6 +753,9 @@ class App extends React.Component {
   _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(Number(t.risk) || 0); }
   // entry model — now lives on the first real leg's "trigger"; falls back to the old per-trade entryType
   _entryModel(t) { const legs = this._legs(t); const first = legs.find(l => (l.trigger || '').trim()); return (first && first.trigger) || t.entryType || ''; }
+  // retest / fibo now live per-leg too — derive a trade-level read (first leg that has it, else the old field)
+  _legRetest(t) { const l = this._legs(t).find(x => x.retest === 'yes' || x.retest === 'no'); return (l && l.retest) || t.retest || ''; }
+  _legFibo(t) { const l = this._legs(t).find(x => (x.fibo || '').trim()); return (l && l.fibo) || t.fibo || ''; }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
   _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
   // a copy of the trades with pnl already net of commission — everything downstream
@@ -894,7 +896,9 @@ class App extends React.Component {
   duplicateTrade() { const d = this.state.draft; if (!d) return; this.setState({ draft: { ...d, id: 't' + Date.now() }, draftIsNew: true }); }
 
   // ===== trade-analysis fields (LTF/MTF/HTF/retest/fibo/entry) =====
-  _fieldOpts(field) { const o = this.state.tradeFieldOpts || {}; return Array.isArray(o[field]) ? o[field] : []; }
+  // options for an editable-choice field. Filter out blank / dash values so a stray "—"
+  // can never linger as an un-removable option in the dropdowns or Edit-choices.
+  _fieldOpts(field) { const o = this.state.tradeFieldOpts || {}; const a = Array.isArray(o[field]) ? o[field] : []; return a.filter(v => { const s = String(v == null ? '' : v).trim(); return s && s !== '—' && s !== '-' && s !== '–'; }); }
   // options for a <select>, guaranteeing the current draft value is present even if not in the list
   _fieldOptsWith(field, cur) { const o = this._fieldOpts(field); return (cur && !o.includes(cur)) ? [cur].concat(o) : o; }
   // set an analysis field on the draft; if it's a brand-new value, remember it as a reusable option
@@ -1712,6 +1716,7 @@ class App extends React.Component {
         status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#83838C',
         statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
+        entryHM: (t.entryTime && String(t.entryTime).length >= 16) ? String(t.entryTime).slice(11, 16) : '', exitHM: (t.exitTime && String(t.exitTime).length >= 16) ? String(t.exitTime).slice(11, 16) : '',
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
         // max lot (from legs, fallback single lot) + MFE ($) for the log
@@ -1767,7 +1772,9 @@ class App extends React.Component {
       if (LF.session && LF.session !== 'all' && (t.session || '') !== LF.session) return false;
       if (LF.setup && LF.setup !== 'all' && this._setupById(t.setupId).name !== LF.setup) return false;
       if (LF.entryType && LF.entryType !== 'all' && this._entryModel(t) !== LF.entryType) return false;
-      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType') || !fieldMatch(t, 'entryKind')) return false;
+      if (LF.retest && LF.retest !== 'all' && this._legRetest(t) !== LF.retest) return false;
+      if (LF.fibo && LF.fibo !== 'all' && this._legFibo(t) !== LF.fibo) return false;
+      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
@@ -1791,10 +1798,11 @@ class App extends React.Component {
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['slZone', 'SL zone'], ['sotType', 'SOT'], ['entryKind', 'Entry kind']];
+    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['sotType', 'SOT']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
-    // entry model now lives on the legs (leg "trigger"); build its option list from there
+    // entry model / fibo now live on the legs; build their option lists from the leg-derived values
     const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
+    const distinctFibo = (() => { const set = new Set(this._fieldOpts('fibo')); trades.forEach(t => { const v = (this._legFibo(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
     const distinctSess = Array.from(new Set(trades.map(t => (t.session || '').trim()).filter(Boolean)));
     const distinctSetup = Array.from(new Set(trades.map(t => this._setupById(t.setupId).name).filter(Boolean)));
     const logFieldFilters = [{ key: 'day', label: 'Day', value: LF.day || 'all', options: [1, 2, 3, 4, 5, 6, 0].map(i => ({ v: dayFull[i], label: dayFull[i] })) }]
@@ -1804,7 +1812,7 @@ class App extends React.Component {
       .concat([{ key: 'session', label: 'Session', value: LF.session || 'all', options: distinctSess.map(v => ({ v, label: v })) }])
       .concat(ANA_FIELDS.map(([key, label]) => ({
         key, label, value: LF[key] || 'all',
-        options: key === 'retest' ? [{ v: 'yes', label: 'Yes' }, { v: 'no', label: 'No' }] : (key === 'entryType' ? distinctEntry : distinctFor(key)).map(v => ({ v, label: v })),
+        options: key === 'retest' ? [{ v: 'yes', label: 'Yes' }, { v: 'no', label: 'No' }] : (key === 'entryType' ? distinctEntry : (key === 'fibo' ? distinctFibo : distinctFor(key))).map(v => ({ v, label: v })),
       })));
     const anyLogF = Object.keys(LF).some(k => LF[k] && LF[k] !== 'all');
     const logAggRaw = this._aggStats(filteredRaw);
@@ -1821,15 +1829,13 @@ class App extends React.Component {
       ltf: { label: 'LTF condition', get: t => (t.ltf || '').trim() || '—' },
       mtf: { label: 'MTF condition', get: t => (t.mtf || '').trim() || '—' },
       htf: { label: 'HTF condition', get: t => (t.htf || '').trim() || '—' },
-      retest: { label: 'Retest', get: t => t.retest === 'yes' ? 'Yes' : (t.retest === 'no' ? 'No' : '—'), order: ['Yes', 'No', '—'] },
-      fibo: { label: 'Fibo M15 side', get: t => (t.fibo || '').trim() || '—' },
+      retest: { label: 'Retest', get: t => { const r = this._legRetest(t); return r === 'yes' ? 'Yes' : (r === 'no' ? 'No' : '—'); }, order: ['Yes', 'No', '—'] },
+      fibo: { label: 'Fibo M15 side', get: t => (this._legFibo(t) || '').trim() || '—' },
       entryType: { label: 'Entry model', get: t => (this._entryModel(t) || '').trim() || '—' },
-      slZone: { label: 'SL zone', get: t => (t.slZone || '').trim() || '—' },
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
       align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
       sotType: { label: 'ประเภทเทรนด์ (SOT)', get: t => (t.sotType || '').trim() || '—' },
-      entryKind: { label: 'ประเภทจุดเข้า', get: t => (t.entryKind || '').trim() || '—' },
     };
     // Only offer factors that actually VARY inside the current filter (≥2 distinct
     // values) — so the comparison is always meaningful and never a single-row echo
@@ -2271,9 +2277,9 @@ class App extends React.Component {
           let cum = 0;
           const rows = legs.map((l, i) => {
             const lot = Math.abs(parseFloat(l.lot) || 0); cum += lot;
-            return { i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', risk: l.risk || '', dd: l.dd || '',
+            return { i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', risk: l.risk || '', dd: l.dd || '', retest: l.retest || '', fibo: l.fibo || '',
               cum, cumStr: cum ? cum.toFixed(2) : '—',
-              optsTrigger: this._fieldOptsWith('legTrigger', l.trigger), optsSL: this._fieldOptsWith('legSL', l.slBasis),
+              optsTrigger: this._fieldOptsWith('legTrigger', l.trigger), optsSL: this._fieldOptsWith('legSL', l.slBasis), optsFibo: this._fieldOptsWith('fibo', l.fibo),
               danger: /under/i.test(l.slBasis || '') };
           });
           const stats = this._legStats({ legs });
@@ -2294,6 +2300,8 @@ class App extends React.Component {
         setLegSL: (i, e) => this.setLeg(i, 'slBasis', e.target.value),
         setLegRisk: (i, e) => this.setLeg(i, 'risk', e.target.value),
         setLegDD: (i, e) => this.setLeg(i, 'dd', e.target.value),
+        setLegRetest: (i, v) => this.setLeg(i, 'retest', v),
+        setLegFibo: (i, e) => { const v = e.target.value; this.setLeg(i, 'fibo', v); if (v && !this._fieldOpts('fibo').includes(v)) this._recordOpt('fibo', v); },
         setDdBaseline: (e) => this.setD('ddBaseline', e.target.value),
         // ----- round summary (final rollup): commission/swap + gross P&L -> net, total risk, total R -----
         dSummary: (() => {
@@ -2332,7 +2340,6 @@ class App extends React.Component {
         }),
         // ----- round metadata (Ble Yup section 01) -----
         dSotType: d.sotType || '', optsSotType: this._fieldOptsWith('sotType', d.sotType), setSotType: (e) => this.setDField('sotType', e.target.value),
-        dEntryKind: d.entryKind || '', optsEntryKind: this._fieldOptsWith('entryKind', d.entryKind), setEntryKind: (e) => this.setDField('entryKind', e.target.value),
         dHhll: d.hhllCount || '', setHhll: (v) => this.setD('hhllCount', d.hhllCount === v ? '' : v),
         dBias: d.bias || d.side || '', setBias: (v) => this.setD('bias', v),
         // ----- feeling on entry / SL / TP (free text) -----
@@ -2486,18 +2493,16 @@ class App extends React.Component {
       logFieldFilters, logAgg, logBreakdown,
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', slZone: 'all', sotType: 'all', entryKind: 'all' }, logLimit: 30 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
+        { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
+        { key: 'legSL', label: 'SL basis (แต่ละไม้)', opts: this._fieldOpts('legSL') },
+        { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
         { key: 'ltf', label: 'LTF condition', opts: this._fieldOpts('ltf') },
         { key: 'mtf', label: 'MTF condition', opts: this._fieldOpts('mtf') },
         { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
-        { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
-        { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
-        { key: 'slZone', label: 'SL zone', opts: this._fieldOpts('slZone') },
         { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
-        { key: 'entryKind', label: 'ประเภทจุดเข้า', opts: this._fieldOpts('entryKind') },
-        { key: 'legSL', label: 'ไม้เบิ้ล · SL basis', opts: this._fieldOpts('legSL') },
       ],
       addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
@@ -2866,7 +2871,7 @@ class App extends React.Component {
               <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max cumulative lot across legs">Max lot</span><span title="Max favourable excursion — how far price ran ($)">MFE</span><span title="Max drawdown of the position (legs DD in pip, else heat R)">Max DD</span><span title="Share of the peak run kept after TP">Captured</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
+                  <span style={css('display:flex;flex-direction:column;gap:3px;align-items:flex-start')}><span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>{(t.entryHM || t.exitHM) && <span style={css('font-family:JetBrains Mono;font-size:10px;color:#83838C;padding-left:2px')}>{t.entryHM || '—'}<span style={css('color:#5a5a62')}> → </span>{t.exitHM || '—'}</span>}</span>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
@@ -3510,10 +3515,9 @@ class App extends React.Component {
             </div>
             {/* ① รอบเทรด · Round context */}
             <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>①</b> รอบเทรด · Round context</div>
-            <div style={css('display:grid;grid-template-columns:1.1fr 1.1fr .95fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทจุดเข้า</div><select value={V.dEntryKind} onChange={V.setEntryKind} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryKind.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:6px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:11px 0;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
+            <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px')}>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:8px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:12px 0;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
             </div>
             {/* ② ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
             <div style={css('font-size:12px;color:#9A9AA4;margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#C9A65F')}>②</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#E2C588')}>{V.dAlignN}/3 aligned</span></div>
@@ -3524,9 +3528,9 @@ class App extends React.Component {
                     <div><span style={css('font-family:JetBrains Mono;font-size:13px;font-weight:700;color:#E2C588')}>{c.role}</span><span style={css('font-size:10px;color:#83838C;margin-left:6px')}>{c.sub}</span></div>
                     <span onClick={() => V.toggleAlign(c.alignKey)} className="rtm-press" title="Aligned กับ bias?" style={css('display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;transition:.14s;' + (c.aligned ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.14);color:#9A9AA4'))}><span style={css('width:5px;height:5px;border-radius:50%;background:currentColor')}></span>Aligned</span>
                   </div>
-                  <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px')} />
-                  <select value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px')}><option value="">— condition —</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                  <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
+                  <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px;box-sizing:border-box')} />
+                  <select value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px;box-sizing:border-box'), color: c.cond ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก condition…</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                  <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
                   <ImageSlot slotId={c.slotId} value={this.state.images[c.slotId]} onChange={(p) => this.setImage(c.slotId, p)} rounded placeholder={'+ ภาพ ' + c.role} style={{ width: '100%', height: 96 }} />
                 </div>
               ))}
@@ -3545,20 +3549,22 @@ class App extends React.Component {
             {V.dLegs.count > 0 ? (
               <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
                 <div style={css('overflow-x:auto')}>
-                <div style={css('min-width:820px')}>
-                <div style={css('display:grid;grid-template-columns:20px 1.35fr .78fr .56fr .5fr 1.05fr .68fr .5fr 22px;gap:9px;padding:0 2px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
-                  <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>จุดเข้า</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>DD</span><span></span>
+                <div style={css('min-width:990px')}>
+                <div style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;padding:0 2px 8px;font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:#83838C')}>
+                  <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>จุดเข้า</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>Retest</span><span>Fibo M15</span><span>DD</span><span></span>
                 </div>
                 {V.dLegs.rows.map((r) => (
-                  <div key={r.i} style={css('display:grid;grid-template-columns:20px 1.35fr .78fr .56fr .5fr 1.05fr .68fr .5fr 22px;gap:9px;align-items:center;padding:4px 2px')}>
+                  <div key={r.i} style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;align-items:center;padding:4px 2px')}>
                     <span title={r.i === 0 ? 'ไม้แรก' : 'ไม้เบิ้ลที่ ' + (r.i + 1)} style={css('font-family:JetBrains Mono;font-size:12px;font-weight:600;color:#B7A981;text-align:center')}>{r.i + 1}</span>
-                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.trigger ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
-                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px;color:#ECEAE3;font-size:13.5px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.slBasis ? '#ECEAE3' : '#6a6a72', background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">เลือก…</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.retest} onChange={(e) => V.setLegRetest(r.i, e.target.value)} title="ไม้นี้ retest มั้ย" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 6px;font-size:12.5px;outline:none;cursor:pointer'), color: r.retest ? (r.retest === 'yes' ? '#5FC08D' : '#DC6A63') : '#6a6a72' }}><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></select>
+                    <select value={r.fibo} onChange={(e) => V.setLegFibo(r.i, e)} title="Retest fibo M15 ของไม้นี้" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.fibo ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
                 ))}
@@ -3583,12 +3589,6 @@ class App extends React.Component {
                 + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#E2C588')}>avg entry</b> และ <b style={css('color:#E2C588')}>Max DD</b> ให้อัตโนมัติ
               </div>
             )}
-            {/* ④ Execution detail — จุดเข้าย้ายไปอยู่ในตารางไม้ (คอลัมน์ "จุดเข้า") แล้ว */}
-            <div style={css('font-size:12px;color:#9A9AA4;margin:6px 0 2px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo <span style={css('color:#6f6a5c;font-size:11px')}>(จุดเข้าอยู่ในตารางไม้ · SL อยู่ที่ SL basis ของแต่ละไม้)</span></div>
-            <div style={css('display:grid;grid-template-columns:.7fr 1fr;gap:16px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-            </div>
 
             {/* Feeling on Entry / SL / TP */}
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
