@@ -21,7 +21,7 @@ html,body,#root{height:100%}
 body{background:#000;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#ECEAE3;overflow:hidden}
 /* ===== liquid glass (Apple-style frosted surface with a top/bottom light rim) ===== */
 .liquid-glass{background:rgba(255,255,255,.01);background-blend-mode:luminosity;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);box-shadow:inset 0 1px 1px rgba(255,255,255,.1);position:relative}
-.liquid-glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(180deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,.15) 20%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,.15) 80%,rgba(255,255,255,.45) 100%);opacity:.5;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.liquid-glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 34%,rgba(255,255,255,0) 62%,rgba(255,255,255,0) 100%);opacity:.55;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .hv-navlink:hover{color:#fff!important;background:rgba(255,255,255,.07)!important}
 /* weighted press — buttons feel like they physically depress */
 .rtm-press{transition:transform .09s cubic-bezier(.2,.7,.3,1),box-shadow .12s,background .14s,border-color .14s,color .14s;will-change:transform}
@@ -41,9 +41,18 @@ body{background:#000;font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,
 @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes pop{from{transform:scale(.96)}to{transform:scale(1)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.rtm-scroll::-webkit-scrollbar{width:10px;height:10px}
-.rtm-scroll::-webkit-scrollbar-thumb{background:linear-gradient(#C9A65F,rgba(201,166,95,.35));border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+.rtm-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,166,95,.5) transparent}
+.rtm-scroll::-webkit-scrollbar{width:9px;height:9px}
+.rtm-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(226,197,136,.85),rgba(201,166,95,.45));border-radius:99px;border:2px solid transparent;background-clip:padding-box;transition:background .2s}
+.rtm-scroll:hover::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#E2C588,rgba(201,166,95,.6));background-clip:padding-box}
 .rtm-scroll::-webkit-scrollbar-track{background:transparent}
+.rtm-scroll::-webkit-scrollbar-corner{background:transparent}
+/* slim elegant scroll for inner tables — sits close to the content, gold thumb */
+.rtm-xscroll{scrollbar-width:thin;scrollbar-color:rgba(201,166,95,.45) transparent}
+.rtm-xscroll::-webkit-scrollbar{height:7px;width:7px}
+.rtm-xscroll::-webkit-scrollbar-thumb{background:rgba(201,166,95,.4);border-radius:99px;transition:background .2s}
+.rtm-xscroll:hover::-webkit-scrollbar-thumb{background:rgba(226,197,136,.7)}
+.rtm-xscroll::-webkit-scrollbar-track{background:rgba(255,255,255,.02);border-radius:99px}
 input,textarea,select{font-family:inherit}
 select option{background:#0c0c0e;color:#ECEAE3}
 

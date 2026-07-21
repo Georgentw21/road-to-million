@@ -3516,7 +3516,7 @@ class App extends React.Component {
             {/* ① รอบเทรด · Round context */}
             <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>①</b> รอบเทรด · Round context</div>
             <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dSotType ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:8px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:12px 0;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
             </div>
             {/* ② ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
@@ -3548,7 +3548,7 @@ class App extends React.Component {
             )}
             {V.dLegs.count > 0 ? (
               <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
-                <div style={css('overflow-x:auto')}>
+                <div className="rtm-xscroll" style={css('overflow-x:auto;padding-bottom:2px')}>
                 <div style={css('min-width:990px')}>
                 <div style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;padding:0 2px 8px;font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:#83838C')}>
                   <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>จุดเข้า</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>Retest</span><span>Fibo M15</span><span>DD</span><span></span>
