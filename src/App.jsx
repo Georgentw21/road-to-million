@@ -79,23 +79,23 @@ function EquityCurve({ line, area, points, lastY, zeroY }) {
     <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={leave}
       style={css('position:relative;width:100%;height:210px')}>
       <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
-        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ECEAE3" stopOpacity=".42"/><stop offset="55%" stopColor="#C9CAD2" stopOpacity=".12"/><stop offset="100%" stopColor="#C9CAD2" stopOpacity="0"/></linearGradient></defs>
+        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E2C588" stopOpacity=".42"/><stop offset="55%" stopColor="#C9A65F" stopOpacity=".12"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
         <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
         {zeroY != null && <Fragment><line x1="0" y1={zeroY} x2="640" y2={zeroY} stroke="rgba(255,255,255,.28)" strokeWidth="1" strokeDasharray="5 5"/><text x="6" y={zeroY - 5} fill="#9A9AA4" fontSize="10" fontFamily="'JetBrains Mono',monospace">breakeven</text></Fragment>}
         <path d={area} fill="url(#cv)"/>
-        <path className="eq-line" d={line} fill="none" stroke="#ECEAE3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path className="eq-line" d={line} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         {hp ? (
           <Fragment>
-            <line x1={hp.x} y1="0" x2={hp.x} y2="230" stroke="rgba(255,255,255,.4)" strokeWidth="1" strokeDasharray="4 4"/>
-            <circle className="rtm-hoverdot" cx={hp.x} cy={hp.y} r="6" fill="#08080B" stroke="#ECEAE3" strokeWidth="2.5"/>
+            <line x1={hp.x} y1="0" x2={hp.x} y2="230" stroke="rgba(226,197,136,.4)" strokeWidth="1" strokeDasharray="4 4"/>
+            <circle className="rtm-hoverdot" cx={hp.x} cy={hp.y} r="6" fill="#08080B" stroke="#E2C588" strokeWidth="2.5"/>
           </Fragment>
         ) : (
-          <circle cx="640" cy={lastY} r="4.5" fill="#ECEAE3"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="640" cy={lastY} r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
         )}
       </svg>
       {hp && (
-        <div style={{ ...css('position:absolute;pointer-events:none;z-index:5;background:rgba(12,12,16,.95);border:1px solid rgba(255,255,255,.4);border-radius:9px;padding:7px 11px;box-shadow:0 10px 30px -12px rgba(0,0,0,.9);white-space:nowrap'), left: tipLeft + '%', top: tipTop + '%', transform: 'translate(' + (flip ? '-108%' : '8%') + ',-118%)' }}>
-          <div style={css('font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:600;color:#ECEAE3')}>{hp.valueStr}</div>
+        <div style={{ ...css('position:absolute;pointer-events:none;z-index:5;background:rgba(12,12,16,.95);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 11px;box-shadow:0 10px 30px -12px rgba(0,0,0,.9);white-space:nowrap'), left: tipLeft + '%', top: tipTop + '%', transform: 'translate(' + (flip ? '-108%' : '8%') + ',-118%)' }}>
+          <div style={css('font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:600;color:#E2C588')}>{hp.valueStr}</div>
           {hp.label ? <div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>{hp.label}</div> : null}
         </div>
       )}
@@ -199,6 +199,9 @@ class App extends React.Component {
       // ----- multi-leg "เบิ้ล" (scaling-in) editable options -----
       legTrigger: ['First entry', 'Pullback / เบิ้ล', 'Retest zone', 'Break confirm', 'All-in'],
       legSL: ['Dow / structure', 'รวมแท่ง (group candle)', 'ใต้แท่ง (under candle)', 'Fixed pips', 'Breakeven'],
+      // ----- round metadata options -----
+      sotType: ['Saucer', 'H&S', 'V-shape (ไหล่ขวาเสร็จ)', 'V-shape → ข้าม', 'Double top/bottom'],
+      entryKind: ['ปรสิตธรรมดา', 'ปรสิตลักไก่', 'คืน Zone เต็ม', 'คืน Zone ครึ่ง', 'Bet break'],
     },
     // trade-log analysis filters + breakdown lens
     logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' },
@@ -333,7 +336,7 @@ class App extends React.Component {
       storageLoadingFlag: st.storageLoading, storageReady: imgReady,
       storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB') : (st.storageLoading ? 'Calculating…' : 'Loading…'),
       storageImgWidth: imgPct.toFixed(2) + '%',
-      storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E0B15A' : '#5FC08D'),
+      storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E2C588' : '#5FC08D'),
       storageDataText: fmt(dataBytes) + ' / 500 MB',
       storageDataWidth: dataPct.toFixed(2) + '%',
       storageNearFull: imgReady && usedPct >= 80, // ≥80% = ใกล้เต็ม เตือนสำรอง
@@ -545,6 +548,7 @@ class App extends React.Component {
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
           ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: t.entryType, slZone: t.slZone,
+          sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {},
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
           heatStr: heatR != null ? heatR.toFixed(1) + 'R' : (this._maeUsd(t) > 0 ? '$' + Math.round(this._maeUsd(t)) : ''),
@@ -552,7 +556,6 @@ class App extends React.Component {
           pigUsd: this._pigUsd(t), alignN: this._alignN(t),
           alignStr: [t.alignHTF && 'HTF', t.alignMTF && 'MTF', t.alignLTF && 'LTF'].filter(Boolean).join(' · '),
           tags: Array.isArray(t.tags) ? t.tags : [],
-          // multi-leg "เบิ้ล": raw legs + derived stats for the Word card
           legs: this._legs(t).map((l, idx) => { const cum = this._legs(t).slice(0, idx + 1).reduce((s, x) => s + (Math.abs(Number(x.lot) || 0)), 0); return { trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', cum: cum.toFixed(2), slBasis: l.slBasis || '', dd: l.dd || '' }; }),
           ...(() => { const ls = this._legStats(t); return { legMaxLot: ls.maxLot ? ls.maxLot.toFixed(2) : '', legAvgEntry: ls.avgEntry != null ? this._fmtPrice(ls.avgEntry) : '', legMaxDD: ls.maxDD || 0, legMulti: ls.isMulti }; })(),
         };
@@ -608,7 +611,7 @@ class App extends React.Component {
   setView(v) { this.setState({ view: v }); }
   navStyle(key) {
     const base = 'width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s;position:relative;';
-    if (this.state.view === key) return base + 'color:#ECEAE3;background:rgba(255,255,255,.14);box-shadow:inset 2px 0 0 #C9CAD2;';
+    if (this.state.view === key) return base + 'color:#E2C588;background:rgba(201,166,95,.14);box-shadow:inset 2px 0 0 #C9A65F;';
     return base + 'color:#83838C;';
   }
 
@@ -761,7 +764,6 @@ class App extends React.Component {
   // how many of the 3 timeframes were aligned with the trade
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
-  // normalised legs array; falls back to a single synthetic leg from the classic entry/lot fields
   _legs(t) {
     const raw = Array.isArray(t.legs) ? t.legs.filter(l => l && (l.price !== '' || l.lot !== '' || l.trigger || l.dd !== '')) : [];
     if (raw.length) return raw;
@@ -770,7 +772,6 @@ class App extends React.Component {
     }
     return [];
   }
-  // derived stats for a position's legs — cumulative/max lot, lot-weighted avg entry, max DD, risky-SL flag
   _legStats(t) {
     const legs = this._legs(t);
     let cum = 0, maxLot = 0, maxDD = 0, wSum = 0, wLot = 0, anyUnder = false;
@@ -781,6 +782,12 @@ class App extends React.Component {
       if (/under/i.test(l.slBasis || '')) anyUnder = true;
     });
     return { count: legs.length, totalLot: cum, maxLot, maxDD, anyUnder, avgEntry: wLot > 0 ? wSum / wLot : null, isMulti: legs.length > 1 };
+  }
+  // price formatter — trims decimals to the instrument's magnitude
+  _fmtPrice(n) {
+    const v = Number(n); if (!isFinite(v)) return '—';
+    const abs = Math.abs(v); const dec = abs >= 100 ? 2 : abs >= 1 ? 3 : 5;
+    return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: dec });
   }
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
@@ -802,7 +809,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [], ddBaseline: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -832,18 +839,15 @@ class App extends React.Component {
   // ----- multi-leg "เบิ้ล" editor -----
   addLeg() {
     const d = this.state.draft; const legs = Array.isArray(d.legs) ? d.legs.slice() : [];
-    // seed the first leg from the classic entry field so nothing is lost when a user starts scaling in
     const first = legs.length === 0 && (d.entry || d.lot)
       ? { trigger: 'First entry', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', dd: '' }
       : { trigger: legs.length === 0 ? 'First entry' : 'Pullback / เบิ้ล', price: '', lot: '', slBasis: 'Dow / structure', dd: '' };
-    legs.push(first);
-    this._patchDraft({ ...d, legs });
+    legs.push(first); this._patchDraft({ ...d, legs });
   }
   removeLeg(i) { const d = this.state.draft; const legs = (d.legs || []).slice(); legs.splice(i, 1); this._patchDraft({ ...d, legs }); }
   setLeg(i, field, v) {
     const d = this.state.draft; const legs = (d.legs || []).slice(); if (!legs[i]) return;
     legs[i] = { ...legs[i], [field]: v };
-    // remember any new trigger / SL-basis the user types, so it becomes a reusable option
     if (field === 'trigger' && v && !this._fieldOpts('legTrigger').includes(v)) this._recordOpt('legTrigger', v);
     if (field === 'slBasis' && v && !this._fieldOpts('legSL').includes(v)) this._recordOpt('legSL', v);
     this._patchDraft({ ...d, legs });
@@ -851,6 +855,12 @@ class App extends React.Component {
   _recordOpt(field, v) {
     const cur = this._fieldOpts(field); if (cur.includes(v)) return;
     this.setState({ tradeFieldOpts: { ...(this.state.tradeFieldOpts || {}), [field]: cur.concat([v]) } });
+  }
+  // per-timeframe meta (timeframe name + factors free-text), keyed htf/mtf/ltf
+  setTfMeta(tf, field, v) {
+    const d = this.state.draft; const tfMeta = { ...(d.tfMeta || {}) };
+    tfMeta[tf] = { ...(tfMeta[tf] || {}), [field]: v };
+    this._patchDraft({ ...d, tfMeta });
   }
   saveTrade() {
     const d = this.state.draft;
@@ -925,7 +935,7 @@ class App extends React.Component {
   _dowShort(dateStr) { if (!dateStr) return ''; return this._DOW_SHORT()[new Date(dateStr + 'T00:00').getDay()]; }
   _dowFull(dateStr) { if (!dateStr) return ''; return this._DOW_FULL()[new Date(dateStr + 'T00:00').getDay()]; }
   // a distinct colour per weekday (Sun..Sat) — Monday = gold, then blue/green/purple/amber, weekends muted
-  _DOW_COLORS() { return ['#C77B7B', '#ECEAE3', '#7BA7D9', '#5FC08D', '#B79CE8', '#E39A6A', '#6E7686']; }
+  _DOW_COLORS() { return ['#C77B7B', '#E2C588', '#7BA7D9', '#5FC08D', '#B79CE8', '#E39A6A', '#6E7686']; }
   _dowColor(dateStr) { if (!dateStr) return '#9A9AA4'; return this._DOW_COLORS()[new Date(dateStr + 'T00:00').getDay()]; }
   // "8 Jul 2026 · Wed"
   _fullDateLabel(dateStr) {
@@ -954,7 +964,7 @@ class App extends React.Component {
     if (s && this.state.setupIsNew && ((s.name && s.name.trim()) || (s.desc && s.desc.trim()) || (s.usage && s.usage.trim()))) {
       this.setState({ showSetup: true }); return;
     }
-    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#ECEAE3', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true }, () => this._save());
+    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true }, () => this._save());
   }
   closeSetup() { this.setState({ showSetup: false }); this._save(); } // ปิดแต่เก็บ draft ไว้
   cancelSetup() {
@@ -981,13 +991,6 @@ class App extends React.Component {
   deleteSetup2(id) { if (!window.confirm('Delete this setup?')) return; const arr = this.state.setups.filter(x => x.id !== id); const { images, paths } = this._purgedImages(k => k.startsWith('setup-' + id + '-chart')); this.setState({ setups: arr, images }); this._save(); deleteImages(paths); }
 
   _fmtMoney(n) { return (n >= 0 ? '+$' : '−$') + Math.abs(Math.round(n)).toLocaleString('en-US'); }
-  // price formatter — trims to a sensible number of decimals for the instrument's magnitude
-  _fmtPrice(n) {
-    const v = Number(n); if (!isFinite(v)) return '—';
-    const abs = Math.abs(v);
-    const dec = abs >= 1000 ? 2 : abs >= 100 ? 2 : abs >= 1 ? 3 : 5;
-    return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: dec });
-  }
   _fmtDur(et, xt) {
     if (!et || !xt) return '—';
     const a = new Date(et).getTime(), b = new Date(xt).getTime();
@@ -1013,10 +1016,10 @@ class App extends React.Component {
     if (h) return h + 'h ' + mins + 'm';
     return mins + 'm';
   }
-  _segStyle(active) { return 'font-size:12.5px;font-weight:600;padding:7px 18px;border-radius:8px;cursor:pointer;transition:.14s;' + (active ? 'background:linear-gradient(180deg,#ffffff,#E7E7EC);color:#1a1408' : 'color:#9A9AA4'); }
+  _segStyle(active) { return 'font-size:12.5px;font-weight:600;padding:7px 18px;border-radius:8px;cursor:pointer;transition:.14s;' + (active ? 'background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : 'color:#9A9AA4'); }
   _tint(c) {
-    const m = { '#5FC08D': 'rgba(95,192,141,.14)', '#7BA7D9': 'rgba(123,167,217,.14)', '#9B8CFF': 'rgba(155,140,255,.14)', '#DC6A63': 'rgba(220,106,99,.14)', '#ECEAE3': 'rgba(255,255,255,.14)' };
-    return m[c] || 'rgba(255,255,255,.14)';
+    const m = { '#5FC08D': 'rgba(95,192,141,.14)', '#7BA7D9': 'rgba(123,167,217,.14)', '#9B8CFF': 'rgba(155,140,255,.14)', '#DC6A63': 'rgba(220,106,99,.14)', '#E2C588': 'rgba(226,197,136,.14)' };
+    return m[c] || 'rgba(201,166,95,.14)';
   }
   _ticker() {
     const live = this.state.livePrices;
@@ -1273,7 +1276,7 @@ class App extends React.Component {
   pageHabitDays(delta) { this.setState({ habitDayOffset: Math.max(0, this.state.habitDayOffset + delta) }); }
   resetHabitDays() { this.setState({ habitDayOffset: 0 }); }
   // habit CRUD
-  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#C9CAD2' } }); }
+  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#C9A65F' } }); }
   closeHabitCfg() { this.setState({ habitCfg: null }); }
   patchHabitCfg(patch) { this.setState({ habitCfg: { ...this.state.habitCfg, ...patch } }); }
   saveHabitCfg() {
@@ -1281,7 +1284,7 @@ class App extends React.Component {
     const clean = {
       id: c.id || ('h' + Date.now()), name: String(c.name).trim(),
       kind: c.kind === 'measure' ? 'measure' : 'bool', unit: (c.unit || (c.kind === 'measure' ? 'units' : 'times')),
-      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#C9CAD2',
+      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#C9A65F',
     };
     let habits = this.state.habits.slice();
     const idx = habits.findIndex(x => x.id === clean.id);
@@ -1402,7 +1405,7 @@ class App extends React.Component {
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
   _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange) {
-    const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#ECEAE3', CAUTION = '#E0B15A', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
+    const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
     // เลขบนแท่งกราฟ: โชว์ค่าจริง (มี comma) ย่อเป็น k เฉพาะเมื่อ ≥ 100,000 เพื่อไม่ให้ล้น
@@ -1501,7 +1504,7 @@ class App extends React.Component {
     const dowMax = Math.max(1, ...dowIdx.map(i => Math.abs(dowSum[i])));
     const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: barMoney(dowSum[i]), color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
 
-    const sesDefs = [['Tokyo', BLUE, '123,167,217'], ['London', GOLD, '255,255,255'], ['New York', PURPLE, '155,140,255']];
+    const sesDefs = [['Tokyo', BLUE, '123,167,217'], ['London', GOLD, '226,197,136'], ['New York', PURPLE, '155,140,255']];
     const sesSum = {}; closed.forEach(t => { sesSum[t.session] = (sesSum[t.session] || 0) + (t.pnl || 0); });
     const sesMax = Math.max(1, ...sesDefs.map(d => Math.abs(sesSum[d[0]] || 0)));
     const sessionBars = sesDefs.map(([l, c, rgb]) => { const v = sesSum[l] || 0; return { label: l, val: barMoney(v), color: c, labelColor: c, bg: `linear-gradient(180deg,${c},rgba(${rgb},.2))`, glow: `0 6px 22px -8px rgba(${rgb},.6)`, h: (Math.abs(v) / sesMax * 100) + '%' }; });
@@ -1609,7 +1612,7 @@ class App extends React.Component {
   }
 
   renderVals() {
-    const GREEN = '#5FC08D', RED = '#DC6A63', BLUE = '#7BA7D9', GOLD = '#ECEAE3', CAUTION = '#E0B15A', PURPLE = '#9B8CFF';
+    const GREEN = '#5FC08D', RED = '#DC6A63', BLUE = '#7BA7D9', GOLD = '#E2C588', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const st = this.state;
     const setups = st.setups;
@@ -1679,10 +1682,10 @@ class App extends React.Component {
       if (!dShort) { dShort = this._dShortCache[t.date] = new Date(t.date + 'T00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); }
       const chips = [];
       if (t.ltf) chips.push({ label: 'LTF · ' + t.ltf, color: '#9CC2E8' });
-      if (t.mtf) chips.push({ label: 'MTF · ' + t.mtf, color: '#ECEAE3' });
+      if (t.mtf) chips.push({ label: 'MTF · ' + t.mtf, color: '#E2C588' });
       if (t.htf) chips.push({ label: 'HTF · ' + t.htf, color: '#B79CE8' });
       if (t.retest) chips.push({ label: 'Retest · ' + (t.retest === 'yes' ? 'Yes' : 'No'), color: t.retest === 'yes' ? '#5FC08D' : '#DC6A63' });
-      if (t.fibo) chips.push({ label: 'Fibo · ' + t.fibo, color: '#ECEAE3' });
+      if (t.fibo) chips.push({ label: 'Fibo · ' + t.fibo, color: '#E2C588' });
       if (t.entryType) chips.push({ label: 'Entry · ' + t.entryType, color: '#9CD3C0' });
       return {
         id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name, accent: su.accent,
@@ -1696,20 +1699,19 @@ class App extends React.Component {
         pnlColor: t.status === 'OPEN' ? '#9A9AA4' : pc(t.pnl),
         rStr: t.status === 'OPEN' ? '—' : ((this._rMult(t) >= 0 ? '+' : '−') + Math.abs(this._rMult(t)).toFixed(1) + 'R'),
         rColor: t.status === 'OPEN' ? '#9A9AA4' : (this._rMult(t) > 0 ? GREEN : (this._rMult(t) < 0 ? RED : '#9A9AA4')),
-        status: t.status, statusColor: t.status === 'OPEN' ? BLUE : '#83838C',
-        statusBg: t.status === 'OPEN' ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.05)',
+        status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#83838C',
+        statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
         // excursion + alignment for the log's "important entry details"
         heatStr: (() => { const r = this._maeR(t); if (r != null) return r.toFixed(1) + 'R'; const m = this._maeUsd(t); return m > 0 ? '$' + Math.round(m) : '—'; })(),
-        heatColor: (() => { const r = this._maeR(t); return r == null ? '#9A9AA4' : (r >= 1 ? '#DC6A63' : (r >= 0.6 ? '#E0B15A' : '#9CD3C0')); })(),
+        heatColor: (() => { const r = this._maeR(t); return r == null ? '#9A9AA4' : (r >= 1 ? '#DC6A63' : (r >= 0.6 ? '#E2C588' : '#9CD3C0')); })(),
         captureStr: (() => { const c = this._captureP(t); return c == null ? '—' : c + '%'; })(),
-        captureColor: (() => { const c = this._captureP(t); return c == null ? '#9A9AA4' : (c >= 80 ? '#5FC08D' : (c >= 55 ? '#E0B15A' : '#DC6A63')); })(),
+        captureColor: (() => { const c = this._captureP(t); return c == null ? '#9A9AA4' : (c >= 80 ? '#5FC08D' : (c >= 55 ? '#E2C588' : '#DC6A63')); })(),
         alignN: this._alignN(t), alignStr: this._alignN(t) + '/3',
-        alignColor: this._alignN(t) >= 3 ? '#5FC08D' : (this._alignN(t) === 2 ? '#E0B15A' : '#9A9AA4'),
+        alignColor: this._alignN(t) >= 3 ? '#5FC08D' : (this._alignN(t) === 2 ? '#E2C588' : '#9A9AA4'),
         feelEntry: t.feelEntry || '', feelSL: t.feelSL || '', feelTP: t.feelTP || '',
-        // multi-leg "เบิ้ล" summary for the log
         ...(() => { const ls = this._legStats(t); return { legN: ls.count, isMulti: ls.isMulti, legMaxLot: ls.maxLot ? ls.maxLot.toFixed(2) : '', legAvgEntry: ls.avgEntry != null ? this._fmtPrice(ls.avgEntry) : '', legMaxDD: ls.maxDD || 0 }; })(),
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
@@ -1728,9 +1730,9 @@ class App extends React.Component {
     });
     const edge = {
       avgHeat: _heatN ? (_heatSum / _heatN).toFixed(2) + 'R' : '—',
-      avgHeatColor: _heatN ? ((_heatSum / _heatN) >= 1 ? RED : ((_heatSum / _heatN) >= 0.6 ? CAUTION : GREEN)) : '#9A9AA4',
+      avgHeatColor: _heatN ? ((_heatSum / _heatN) >= 1 ? RED : ((_heatSum / _heatN) >= 0.6 ? GOLD : GREEN)) : '#9A9AA4',
       avgCapture: _capN ? Math.round(_capSum / _capN) + '%' : '—',
-      avgCaptureColor: _capN ? (Math.round(_capSum / _capN) >= 70 ? GREEN : (Math.round(_capSum / _capN) >= 50 ? CAUTION : RED)) : '#9A9AA4',
+      avgCaptureColor: _capN ? (Math.round(_capSum / _capN) >= 70 ? GREEN : (Math.round(_capSum / _capN) >= 50 ? GOLD : RED)) : '#9A9AA4',
       avgAlign: _alignN ? (_alignSum / _alignN).toFixed(1) + '/3' : '—',
       heatReady: _heatN > 0, capReady: _capN > 0,
     };
@@ -1767,7 +1769,7 @@ class App extends React.Component {
     const logFilters = filterDefs.map(([k, label]) => ({
       label, click: () => this.setState({ logFilter: lf === k ? 'all' : k, logLimit: 30 }),
       fg: lf === k ? '#1a1408' : '#9A9AA4',
-      bg: lf === k ? 'linear-gradient(180deg,#ffffff,#E7E7EC)' : 'rgba(255,255,255,.03)',
+      bg: lf === k ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'rgba(255,255,255,.03)',
       border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
     }));
     // ---- analysis field filters + live stats + breakdown table ----
@@ -1824,7 +1826,7 @@ class App extends React.Component {
         const dowI = dayFull.indexOf(k);
         return {
           name: k, nStr: a.n + (a.n === 1 ? ' trade' : ' trades'),
-          dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#C9CAD2',
+          dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#C9A65F',
           wr: a.closed ? a.wr + '%' : '—', wrColor: a.closed ? (a.wr >= 50 ? GREEN : RED) : '#9A9AA4',
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
@@ -1857,7 +1859,7 @@ class App extends React.Component {
       const has = !!dayTradesMap[d];
       const isToday = d === today;
       if (!has) {
-        calDays.push({ day: String(d), pnl: '', trades: '', dot: '', bg: 'rgba(255,255,255,.02)', border: isToday ? '1.5px solid rgba(255,255,255,.5)' : '1px solid rgba(255,255,255,.05)', dayColor: '#83838C', fg: 'transparent', dotColor: 'transparent', cursor: 'default', click: null });
+        calDays.push({ day: String(d), pnl: '', trades: '', dot: '', bg: 'rgba(255,255,255,.02)', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : '1px solid rgba(255,255,255,.05)', dayColor: '#83838C', fg: 'transparent', dotColor: 'transparent', cursor: 'default', click: null });
       } else {
         const v = dayPnl[d]; const tn = dayTradesMap[d].length;
         const intensity = Math.min(1, Math.abs(v) / 2200);
@@ -1865,9 +1867,9 @@ class App extends React.Component {
         const hasOpen = dayTradesMap[d].some(x => x.status === 'OPEN');
         calDays.push({
           day: String(d), pnl: v === 0 ? '—' : this._fmtMoney(v), trades: tn + ' trades',
-          dot: hasOpen ? '●' : '', dotColor: CAUTION,
-          bg, border: isToday ? '1.5px solid #ECEAE3' : '1px solid rgba(255,255,255,.07)',
-          dayColor: isToday ? '#ECEAE3' : '#ECEAE3', fg: pc(v),
+          dot: hasOpen ? '●' : '', dotColor: GOLD,
+          bg, border: isToday ? '1.5px solid #E2C588' : '1px solid rgba(255,255,255,.07)',
+          dayColor: isToday ? '#E2C588' : '#ECEAE3', fg: pc(v),
           cursor: 'pointer',
           click: () => this.openDay(monthPrefix + '-' + String(d).padStart(2, '0')),
         });
@@ -1912,8 +1914,8 @@ class App extends React.Component {
       for (let i = 0; i < hFirstDow; i++) heat.push({ label: '', bg: 'transparent', fg: 'transparent', border: 'none', title: '' });
       for (let d = 1; d <= hDays; d++) {
         const has = !!hHas[d]; const isToday = d === hToday;
-        if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(255,255,255,.5)' : 'none', title: '' }); }
-        else { const v = hPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #ECEAE3' : 'none', title: d + ' ' + dashMonthShort + ' · ' + this._fmtMoney(v) }); }
+        if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : 'none', title: '' }); }
+        else { const v = hPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' ' + dashMonthShort + ' · ' + this._fmtMoney(v) }); }
       }
     }
 
@@ -1958,10 +1960,10 @@ class App extends React.Component {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
       return {
         label, click: () => this.setState(isYearly ? { yearKey: key } : (isWeekly ? { weekKey: key } : { monthKey: key })),
-        bg: sel ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.03)',
-        border: sel ? '1px solid rgba(255,255,255,.45)' : '1px solid rgba(255,255,255,.07)',
-        labelColor: sel ? '#ECEAE3' : '#ECEAE3',
-        dot: full ? GREEN : (r.done > 0 ? CAUTION : '#83838C'),
+        bg: sel ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.03)',
+        border: sel ? '1px solid rgba(201,166,95,.45)' : '1px solid rgba(255,255,255,.07)',
+        labelColor: sel ? '#E2C588' : '#ECEAE3',
+        dot: full ? GREEN : (r.done > 0 ? GOLD : '#83838C'),
         status: full ? 'Done ✓' : (r.done + '/' + r.total),
       };
     });
@@ -1970,8 +1972,8 @@ class App extends React.Component {
       const done = !!curChecks[it.id]; const editing = st.editCheck === (which + ':' + it.id);
       return {
         id: which + '-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-        boxBorder: done ? '1.5px solid #C9CAD2' : '1.5px solid rgba(255,255,255,.18)',
-        boxBg: done ? 'linear-gradient(150deg,#ffffff,#E7E7EC)' : 'transparent', checkOp: done ? 1 : 0,
+        boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
+        boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
         textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
         toggle: () => this.toggleCheck(scope, periodKey, it.id),
         editing, notEditing: !editing,
@@ -1989,7 +1991,7 @@ class App extends React.Component {
 
     // ---- สรุปวินัย (Discipline) — ภาพรวมทุกรอบของ scope ที่กำลังดู ----
     const ds = this._disciplineStats(scope);
-    const dColor = ds.avgPct >= 80 ? GREEN : (ds.avgPct >= 50 ? CAUTION : RED);
+    const dColor = ds.avgPct >= 80 ? GREEN : (ds.avgPct >= 50 ? GOLD : RED);
     const scopeWord = isYearly ? 'yr' : (isWeekly ? 'wk' : 'mo');
     const disc = {
       pct: ds.avgPct + '%', pctNum: ds.avgPct, color: dColor,
@@ -2001,14 +2003,14 @@ class App extends React.Component {
       offset: 327 - 327 * ds.avgPct / 100,
       spark: ds.spark.map(s => ({
         h: Math.max(6, Math.round(s.ratio * 100)),
-        bg: s.total > 0 && s.done === s.total ? GREEN : (s.done > 0 ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.14)'),
+        bg: s.total > 0 && s.done === s.total ? GREEN : (s.done > 0 ? 'rgba(201,166,95,.7)' : 'rgba(255,255,255,.14)'),
         title: s.done + '/' + s.total,
       })),
       missed: ds.missed.map(m => ({
         text: m.text, pct: Math.round(m.adher * 100) + '%',
         w: Math.round(m.adher * 100),
         sub: 'missed ' + m.miss + '/' + m.present,
-        barBg: m.adher >= 0.5 ? 'rgba(255,255,255,.6)' : 'rgba(224,90,90,.6)',
+        barBg: m.adher >= 0.5 ? 'rgba(201,166,95,.6)' : 'rgba(224,90,90,.6)',
       })),
       allClear: ds.counted > 0 && ds.missed.length === 0,
     };
@@ -2089,7 +2091,7 @@ class App extends React.Component {
       periodLabel: rollInfo.label, atPresent: roff === 0,
       older: () => this.pageRollup(1), newer: () => this.pageRollup(-1), reset: () => this.resetRollup(),
       rows: rollRows, met: rollMet, total: rollRows.length, pct: rollPct,
-      pctColor: rollPct >= 80 ? GREEN : (rollPct >= 50 ? CAUTION : RED), offset: 327 - 327 * rollPct / 100,
+      pctColor: rollPct >= 80 ? GREEN : (rollPct >= 50 ? GOLD : RED), offset: 327 - 327 * rollPct / 100,
       empty: rollRows.length === 0,
       hasAnyHabit: st.habits.length > 0, gridEmpty: st.habits.length === 0,
     };
@@ -2121,7 +2123,7 @@ class App extends React.Component {
       pickWeekly: () => this.patchHabitCfg({ period: 'weekly' }), pickMonthly: () => this.patchHabitCfg({ period: 'monthly' }),
       setAccent: (a) => this.patchHabitCfg({ accent: a }),
       save: () => this.saveHabitCfg(), close: () => this.closeHabitCfg(), del: hc.id ? () => this.delHabit(hc.id) : null,
-      accents: ['#C9CAD2', '#5FC08D', '#7BA7D9', '#DC6A63', '#9B8CFF', '#5FD0C8', '#E2A34B'],
+      accents: ['#C9A65F', '#5FC08D', '#7BA7D9', '#DC6A63', '#9B8CFF', '#5FD0C8', '#E2A34B'],
       // live "connected" hint: the derived target for the other period
       derivedHint: (() => {
         const n = Number(hc.target) || 0; const u = hc.unit || 'times';
@@ -2140,8 +2142,8 @@ class App extends React.Component {
       const done = !!preChecks[it.id]; const editing = st.editCheck === ('pre:' + it.id);
       return {
         id: 'pre-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-        boxBorder: done ? '1.5px solid #C9CAD2' : '1.5px solid rgba(255,255,255,.18)',
-        boxBg: done ? 'linear-gradient(150deg,#ffffff,#E7E7EC)' : 'transparent', checkOp: done ? 1 : 0,
+        boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
+        boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
         textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
         toggle: () => this.toggleCheck('pre', preKey, it.id),
         editing, notEditing: !editing,
@@ -2155,7 +2157,7 @@ class App extends React.Component {
     });
     let pdone = 0; st.preItems.forEach(it => { if (preChecks[it.id]) pdone++; });
     const prePct = st.preItems.length ? Math.round(pdone / st.preItems.length * 100) : 0;
-    const ringStroke = (p) => p === 100 ? GREEN : (p >= 50 ? CAUTION : RED);
+    const ringStroke = (p) => p === 100 ? GREEN : (p >= 50 ? GOLD : RED);
     const ringMsg = (p) => p === 100 ? 'Fully ready — trade with discipline' : (p >= 50 ? 'Almost ready — finish the list' : 'Not ready — don’t start yet');
 
     // affirmation details
@@ -2228,18 +2230,19 @@ class App extends React.Component {
           else { cls = 'bad'; msg = 'Sold the pig — only ' + cap + '% kept, $' + Math.round(pig) + ' left behind. TP was too early for this run.'; }
           return { heatR, heatStr: heatR != null ? heatR.toFixed(1) + 'R' : '$' + Math.round(mae), cap, capStr: cap != null ? cap + '%' : '—', pig: Math.round(pig), zero, exit, maeStr: '−$' + Math.round(mae), mfeStr: '+$' + Math.round(mfe), cls, msg, maeReady: mae > 0, mfeReady: mfe > 0 };
         })(),
+        // ----- timeframe alignment (HTF/MTF/LTF each aligned with the trade?) -----
+        dAlignHTF: !!d.alignHTF, dAlignMTF: !!d.alignMTF, dAlignLTF: !!d.alignLTF, dAlignN: (d.alignHTF ? 1 : 0) + (d.alignMTF ? 1 : 0) + (d.alignLTF ? 1 : 0),
+        toggleAlign: (k) => this.setD(k, !d[k]),
         // ----- multi-leg "เบิ้ล" (scaling-in) editor -----
         dLegs: (() => {
           const legs = Array.isArray(d.legs) ? d.legs : [];
           let cum = 0;
           const rows = legs.map((l, i) => {
             const lot = Math.abs(parseFloat(l.lot) || 0); cum += lot;
-            return {
-              i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', dd: l.dd || '',
-              cum: cum, cumStr: cum ? cum.toFixed(2) : '—',
+            return { i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', dd: l.dd || '',
+              cum, cumStr: cum ? cum.toFixed(2) : '—',
               optsTrigger: this._fieldOptsWith('legTrigger', l.trigger), optsSL: this._fieldOptsWith('legSL', l.slBasis),
-              danger: /under/i.test(l.slBasis || ''),
-            };
+              danger: /under/i.test(l.slBasis || '') };
           });
           const stats = this._legStats({ legs, entry: d.entry, lot: d.lot });
           const baseline = Math.abs(parseFloat(d.ddBaseline) || 0);
@@ -2247,14 +2250,12 @@ class App extends React.Component {
           const ddPct = baseline > 0 ? Math.min(100, ddShown / baseline * 100) : (ddShown ? 100 : 0);
           const risk = Math.abs(parseFloat(d.risk) || 0);
           const rNet = risk > 0 && d.status !== 'OPEN' ? ((parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0)) / risk : null;
-          return {
-            rows, count: rows.length,
+          return { rows, count: rows.length,
             maxLot: stats.maxLot ? stats.maxLot.toFixed(2) : '—',
             avgEntry: stats.avgEntry != null ? this._fmtPrice(stats.avgEntry) : '—',
             maxDD: stats.maxDD || 0, ddShown, ddPct, over: baseline > 0 && ddShown > baseline, baseline,
             anyUnder: stats.anyUnder, rNet: rNet != null ? (rNet >= 0 ? '+' : '') + rNet.toFixed(2) + 'R' : '—',
-            ddBaseline: d.ddBaseline || '',
-          };
+            ddBaseline: d.ddBaseline || '' };
         })(),
         addLeg: () => this.addLeg(), removeLeg: (i) => this.removeLeg(i),
         setLegTrigger: (i, e) => this.setLeg(i, 'trigger', e.target.value),
@@ -2263,9 +2264,28 @@ class App extends React.Component {
         setLegSL: (i, e) => this.setLeg(i, 'slBasis', e.target.value),
         setLegDD: (i, e) => this.setLeg(i, 'dd', e.target.value),
         setDdBaseline: (e) => this.setD('ddBaseline', e.target.value),
-        // ----- timeframe alignment (HTF/MTF/LTF each aligned with the trade?) -----
-        dAlignHTF: !!d.alignHTF, dAlignMTF: !!d.alignMTF, dAlignLTF: !!d.alignLTF, dAlignN: (d.alignHTF ? 1 : 0) + (d.alignMTF ? 1 : 0) + (d.alignLTF ? 1 : 0),
-        toggleAlign: (k) => this.setD(k, !d[k]),
+        // ----- per-timeframe cards (Ble Yup style): name + factors + image + aligned -----
+        tfCards: ['htf', 'mtf', 'ltf'].map(tf => {
+          const meta = (d.tfMeta || {})[tf] || {};
+          const alignKey = tf === 'htf' ? 'alignHTF' : (tf === 'mtf' ? 'alignMTF' : 'alignLTF');
+          const condKey = tf; // ltf/mtf/htf condition selects already exist
+          return {
+            tf, role: tf.toUpperCase(),
+            sub: tf === 'htf' ? 'บริบท · Zone ใหญ่' : (tf === 'mtf' ? 'setup · โครงสร้าง' : 'execution · เข็ม'),
+            timeframe: meta.timeframe || '', factors: meta.factors || '',
+            cond: d[condKey] || '', condOpts: this._fieldOptsWith(condKey, d[condKey]),
+            aligned: !!d[alignKey], alignKey,
+            slotId: 'trade-' + d.id + '-tf-' + tf, imgVal: (st.images || {})[('trade-' + d.id + '-tf-' + tf)],
+            setTimeframe: (e) => this.setTfMeta(tf, 'timeframe', e.target.value),
+            setFactors: (e) => this.setTfMeta(tf, 'factors', e.target.value),
+            setCond: (e) => this.setDField(condKey, e.target.value),
+          };
+        }),
+        // ----- round metadata (Ble Yup section 01) -----
+        dSotType: d.sotType || '', optsSotType: this._fieldOptsWith('sotType', d.sotType), setSotType: (e) => this.setDField('sotType', e.target.value),
+        dEntryKind: d.entryKind || '', optsEntryKind: this._fieldOptsWith('entryKind', d.entryKind), setEntryKind: (e) => this.setDField('entryKind', e.target.value),
+        dHhll: d.hhllCount || '', setHhll: (v) => this.setD('hhllCount', d.hhllCount === v ? '' : v),
+        dBias: d.bias || d.side || '', setBias: (v) => this.setD('bias', v),
         // ----- feeling on entry / SL / TP (editable-option selects) -----
         dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
         optsFeelEntry: this._fieldOptsWith('feelEntry', d.feelEntry), optsFeelSL: this._fieldOptsWith('feelSL', d.feelSL), optsFeelTP: this._fieldOptsWith('feelTP', d.feelTP),
@@ -2341,8 +2361,8 @@ class App extends React.Component {
         const editing = st.editPlan === (scope + ':' + it.id);
         return {
           text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-          boxBorder: done ? '1.5px solid #C9CAD2' : '1.5px solid rgba(255,255,255,.18)',
-          boxBg: done ? 'linear-gradient(150deg,#ffffff,#E7E7EC)' : 'transparent', checkOp: done ? 1 : 0,
+          boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
+          boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
           textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
           toggle: () => this.toggleCheck(scope, key, it.id),
           editing, notEditing: !editing,
@@ -2430,6 +2450,8 @@ class App extends React.Component {
         { key: 'feelEntry', label: 'Feeling · Entry', opts: this._fieldOpts('feelEntry') },
         { key: 'feelSL', label: 'Feeling · SL', opts: this._fieldOpts('feelSL') },
         { key: 'feelTP', label: 'Feeling · TP', opts: this._fieldOpts('feelTP') },
+        { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
+        { key: 'entryKind', label: 'ประเภทจุดเข้า', opts: this._fieldOpts('entryKind') },
         { key: 'legTrigger', label: 'ไม้เบิ้ล · Trigger', opts: this._fieldOpts('legTrigger') },
         { key: 'legSL', label: 'ไม้เบิ้ล · SL basis', opts: this._fieldOpts('legSL') },
       ],
@@ -2479,39 +2501,39 @@ class App extends React.Component {
     const VAL = css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600');
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#ECEAE3')}>— manage portfolios &amp; stats</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
 
-        <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(255,255,255,.12),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#ECEAE3', flex: 'none' }}>{V.avatarLetter}</div>
+        <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
           <div style={{ flex: 1, minWidth: 0 }}><div style={css('font-size:15px;color:#ECEAE3;font-weight:600')}>{V.accountName}</div><div style={css('font-size:12.5px;color:#9A9AA4')}>{V.userEmail || '—'}</div></div>
           <div onClick={V.signOut} className="hv-deloutline" style={css('padding:10px 16px;border-radius:10px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:13px;font-weight:600;cursor:pointer;transition:.14s')}>Sign out</div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;animation:rise .5s .06s both')}>
-          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #ECEAE3')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}>{V.acctTotalEquity}</div></div>
+          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #E2C588')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}>{V.acctTotalEquity}</div></div>
           <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.acctTotalNetColor }}>{V.acctTotalNet}</div></div>
         </div>
 
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>Add portfolio</div>
         <div style={css('display:flex;gap:10px;margin-bottom:20px;animation:rise .5s .08s both')}>
           <input value={V.newPortName} onChange={V.setNewPortName} onKeyDown={V.addPortKey} placeholder="Portfolio name, e.g. FTMO Challenge, Live, Demo" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#ECEAE3;font-size:14px;outline:none')} />
-          <div onClick={V.addPortfolioNamed} className="hv-save rtm-press" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#ffffff,#E7E7EC);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
+          <div onClick={V.addPortfolioNamed} className="hv-save rtm-press" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
         </div>
 
         <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:12px')}>All portfolios · click to view</div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
           {V.portfolioStats.map((p) => (
-            <div key={p.id} onClick={p.select} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.07)') }}>
+            <div key={p.id} onClick={p.select} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.07)') }}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px')}>
                 <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="Click to rename" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:4px 8px;outline:none')} />
-                {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>Viewing</span>}
+                {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>Viewing</span>}
                 <span onClick={p.del} title="Delete portfolio" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;cursor:pointer;transition:.14s;flex:none')}>✕</span>
               </div>
               {/* ===== การจัดการเงิน (ฝาก/ถอน) ===== */}
               <div className="liquid-glass" style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);padding:14px 15px;margin-bottom:14px')}>
                 <div style={css('display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px')}>
                   <div><div style={LBL}>Starting capital ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:110px;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;outline:none')} /></div>
-                  <div style={css('text-align:right')}><div style={LBL}>Current equity</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.equityStr}</div></div>
+                  <div style={css('text-align:right')}><div style={LBL}>Current equity</div><div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div></div>
                 </div>
                 {/* breakdown */}
                 <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px')}>
@@ -2531,7 +2553,7 @@ class App extends React.Component {
                         <span style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span><span onClick={m.del} title="Delete this entry" className="hv-deltext" style={css('color:#83838C;cursor:pointer')}>✕</span></span>
                       </div>
                     ))}
-                    <span onClick={p.openTxns} className="hv-op" style={css('margin-top:3px;font-size:11.5px;color:#C9CAD2;cursor:pointer;text-align:center')}>{p.txnCount > 3 ? ('View all ' + p.txnCount + ' →') : 'View full history →'}</span>
+                    <span onClick={p.openTxns} className="hv-op" style={css('margin-top:3px;font-size:11.5px;color:#C9A65F;cursor:pointer;text-align:center')}>{p.txnCount > 3 ? ('View all ' + p.txnCount + ' →') : 'View full history →'}</span>
                   </div>
                 )}
               </div>
@@ -2551,9 +2573,9 @@ class App extends React.Component {
             <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Backup &amp; storage</div>
             <span style={css('font-size:11px;color:#83838C;font-family:JetBrains Mono')}>Last backup: {V.lastBackupStr}</span>
           </div>
-          <div style={css('font-size:12.5px;color:#9A9AA4;line-height:1.6;margin-bottom:16px')}>Download all your data to keep safe (restorable) · when storage runs low, “archive old trades” to free image space — their P&amp;L is folded in so <b style={css('color:#ECEAE3')}>the milestone and Growth curve stay continuous, never reset</b></div>
+          <div style={css('font-size:12.5px;color:#9A9AA4;line-height:1.6;margin-bottom:16px')}>Download all your data to keep safe (restorable) · when storage runs low, “archive old trades” to free image space — their P&amp;L is folded in so <b style={css('color:#E2C588')}>the milestone and Growth curve stay continuous, never reset</b></div>
           <div style={css('display:flex;flex-wrap:wrap;gap:10px;align-items:center')}>
-            <span onClick={V.backupJournal} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);transition:.14s')}>⤓ Back up (.json)</span>
+            <span onClick={V.backupJournal} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);transition:.14s')}>⤓ Back up (.json)</span>
             <label className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);transition:.14s')}>⤒ Restore from file<input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.restoreJournal(f); e.target.value = ''; }} /></label>
             <div style={css('flex:1')}></div>
             <span style={css('font-size:12px;color:#9A9AA4')}>Archive trades older than</span>
@@ -2569,14 +2591,14 @@ class App extends React.Component {
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(255,255,255,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(255,255,255,.32);box-shadow:0 14px 50px -24px rgba(255,255,255,.6);animation:rise .55s both')}>
-          <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2')}><span style={css('width:18px;height:1px;background:rgba(255,255,255,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(255,255,255,.5)')}></span></div>
-          <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(255,255,255,.35)' }}>{V.affirmation}</div>
+        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s both')}>
+          <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F')}><span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span></div>
+          <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
           <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9CAD2;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kEquity} /></div></div>
+          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
           <div className="hv-k-green liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
           <div className="hv-k-green liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
           <div className="hv-k-blue liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
@@ -2588,7 +2610,7 @@ class App extends React.Component {
           <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#83838C;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
               {['ALL', '3M', '1M'].map((rg) => (
-                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
+                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
               ))}
             </div></div>
             <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
@@ -2596,7 +2618,7 @@ class App extends React.Component {
               <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
               <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
               <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
-              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#ECEAE3')}>{V.balanceStr}</div></div>
+              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
             </div>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
@@ -2617,10 +2639,10 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
           <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);animation:rise .55s .4s both;background:rgba(255,255,255,.02);padding:20px 22px')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Edge snapshot <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#C9CAD2;cursor:pointer')}>Analytics →</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Edge snapshot <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Analytics →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
               {[
-                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#ECEAE3', s: 'avg $ per trade' },
+                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588', s: 'avg $ per trade' },
                 { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9', s: 'gross win ÷ loss' },
                 { l: 'Green days', v: V.consistencyStr, c: '#5FC08D', s: 'days in profit' },
                 { l: 'Avg heat / DD', v: V.edge.avgHeat, c: V.edge.avgHeatColor, s: 'how deep it runs against you' },
@@ -2637,7 +2659,7 @@ class App extends React.Component {
             {(!V.edge.heatReady && !V.edge.capReady) && <div style={css('font-size:11.5px;color:#6a6a72;margin-top:14px;line-height:1.5')}>Fill <b style={css('color:#9A9AA4')}>Max heat</b> and <b style={css('color:#9A9AA4')}>Best unrealised</b> on your trades (in the log modal) to unlock the heat &amp; capture edge metrics.</div>}
           </div>
           <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9CAD2;cursor:pointer')}>Calendar →</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
               {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
             </div>
@@ -2656,7 +2678,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3)')}>Today</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#83838C;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
@@ -2682,7 +2704,7 @@ class App extends React.Component {
             ))}
           </div>
         </div>
-        <div style={css('margin-top:14px;font-size:12px;color:#83838C;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9CAD2" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" strokeLinecap="round"/></svg>Click a day with trades to see all its orders</div>
+        <div style={css('margin-top:14px;font-size:12px;color:#83838C;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" strokeLinecap="round"/></svg>Click a day with trades to see all its orders</div>
       </div>
     );
   }
@@ -2697,7 +2719,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
           <div style={css('display:flex;gap:8px')}>
             <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
@@ -2705,8 +2727,8 @@ class App extends React.Component {
               <option value="month">Export: This month</option>
             </select>
             <span onClick={V.exportCSV} className="hv-lift" title="Download as CSV (Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
-            <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#ECEAE3;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
-            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New trade</span>
+            <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
+            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New trade</span>
           </div>
         </div>
         <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
@@ -2723,7 +2745,7 @@ class App extends React.Component {
             <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Filter &amp; analyse</div>
               <div style={css('display:flex;align-items:center;gap:8px')}>
-                {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3)')}>✕ Clear filters</span>}
+                {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>✕ Clear filters</span>}
                 <span onClick={V.openFieldCfg} className="hv-lift" title="Add / edit the choices for each field" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Edit options</span>
               </div>
             </div>
@@ -2736,7 +2758,7 @@ class App extends React.Component {
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:5px;min-width:0')}>
                   <span style={css('font-size:10px;color:#83838C;letter-spacing:.04em')}>{f.label}</span>
-                  <select value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.12)') }}>
+                  <select value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
                     <option value="all">All</option>
                     {f.options.map((o) => (<option key={o.v} value={o.v}>{o.label}</option>))}
                   </select>
@@ -2745,7 +2767,7 @@ class App extends React.Component {
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px')}>
               {[
-                { l: 'Trades', v: V.logAgg.n, c: '#ECEAE3', sub: (V.logAgg.n === 1 ? 'order' : 'orders') + ' in view' },
+                { l: 'Trades', v: V.logAgg.n, c: '#E2C588', sub: (V.logAgg.n === 1 ? 'order' : 'orders') + ' in view' },
                 { l: 'Win rate', v: V.logAgg.wrStr, c: V.logAgg.wrColor, sub: V.logAgg.record },
                 { l: 'Net P&L', v: V.logAgg.netStr, c: V.logAgg.netColor, sub: 'after commission' },
                 { l: 'Avg R', v: V.logAgg.avgRStr, c: V.logAgg.avgRColor, sub: 'per trade' },
@@ -2762,7 +2784,7 @@ class App extends React.Component {
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare win rate by</div>
               {V.logBreakdown.hasCompare && (
-                <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.4);border-radius:9px;padding:7px 12px;color:#ECEAE3;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+                <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                   {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
                 </select>
               )}
@@ -2794,11 +2816,11 @@ class App extends React.Component {
               <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max heat / drawdown of the position">Max DD</span><span title="Share of the best move kept">Captured</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B9BAC2')}>{t.dateShort}</span></span>
-                  <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:rgba(255,255,255,.75);padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
-                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#ECEAE3;padding:3px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.05)')}>{t.holdShort}</span>
+                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
                   <span title={t.alignN + ' of 3 timeframes aligned'} style={{ ...css('font-family:JetBrains Mono;font-size:12.5px;font-weight:600'), color: t.alignColor }}>{t.alignStr}</span>
                   <span title="Max heat / drawdown the position took" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
                   <span title="How much of the best move you kept" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.captureColor }}>{t.captureStr}</span>
@@ -2817,7 +2839,7 @@ class App extends React.Component {
           )}
           {V.logHasMore && (
             <div style={css('display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <span onClick={V.loadMoreLog} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 20px;border-radius:9px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);transition:.14s')}>Load 50 more</span>
+              <span onClick={V.loadMoreLog} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 20px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);transition:.14s')}>Load 50 more</span>
               <span onClick={V.showAllLog} className="hv-cancel" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#9A9AA4;border:1px solid rgba(255,255,255,.12);transition:.14s')}>Show all</span>
               <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>Showing {V.logShownN} / {V.filteredCount}</span>
             </div>
@@ -2830,10 +2852,10 @@ class App extends React.Component {
   renderAnalytics(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#ECEAE3')}>— know your edge &amp; your leaks</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
         <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
-            { l: 'Expectancy / trade', v: V.expectancyStr, c: '#ECEAE3' },
+            { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588' },
             { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
             { l: 'Max Drawdown', v: V.anaDD, c: '#DC6A63' },
             { l: 'Green days', v: V.consistencyStr, c: '#5FC08D' },
@@ -2917,8 +2939,8 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#ECEAE3')}>— keep only what gives an edge</span></div></div>
-          <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
+          <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
           {V.setupCards.map((s) => (
@@ -2932,7 +2954,7 @@ class App extends React.Component {
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.pnlColor }}>{s.pnlStr}</div></div>
               </div>
               <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:12px')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
-              <div style={css('font-size:11.5px;color:#C9CAD2;display:flex;align-items:center;gap:5px')}>View details &amp; example chart <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div style={css('font-size:11.5px;color:#C9A65F;display:flex;align-items:center;gap:5px')}>View details &amp; example chart <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             </div>
           ))}
         </div>
@@ -2959,7 +2981,7 @@ class App extends React.Component {
         )}
         <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg key={'tick' + c.checkOp} className={c.checkOp ? 'rtm-tick' : undefined} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
         {c.editing ? (
-          <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+          <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
         ) : (
           <Fragment>
             <span onClick={c.toggle} style={{ ...css('flex:1;font-size:14px;cursor:pointer'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
@@ -2973,8 +2995,8 @@ class App extends React.Component {
 
   _renderReadiness(stroke, offset, pct, msg, frac) {
     return (
-      <div className="rtm-float" style={css('position:sticky;top:0;padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.22);text-align:center')}>
-        <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9CAD2;margin-bottom:14px')}>Readiness</div>
+      <div className="rtm-float" style={css('position:sticky;top:0;padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(201,166,95,.1),rgba(255,255,255,.015));border:1px solid rgba(201,166,95,.22);text-align:center')}>
+        <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Readiness</div>
         <div style={css('position:relative;width:130px;height:130px;margin:0 auto')}><svg viewBox="0 0 120 120" style={css('width:130px;height:130px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="9"/><circle cx="60" cy="60" r="52" fill="none" stroke={stroke} strokeWidth="9" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .5s' }}/></svg><div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600'), color: stroke }}>{pct}</span></div></div>
         {msg ? <div style={css('font-size:13px;color:#9A9AA4;margin-top:16px;line-height:1.5')}>{msg}</div> : null}
         <div style={{ ...css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono'), marginTop: msg ? 10 : 16 }}>{frac}</div>
@@ -2988,7 +3010,7 @@ class App extends React.Component {
     return (
       <div className="rtm-float" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(180deg,rgba(155,140,255,.08),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.09)')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
-          <span style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9CAD2')}>Discipline</span>
+          <span style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F')}>Discipline</span>
           <span style={{ ...css('font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px'), color: d.color, background: 'rgba(255,255,255,.05)' }}>{d.grade}</span>
         </div>
         {d.hasData ? (
@@ -3068,7 +3090,7 @@ class App extends React.Component {
           <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '88' }}></span>
           <div style={css('min-width:0;flex:1')}>
             {r.editing
-              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
+              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
               : <div onClick={r.startRename} title="Click to rename" style={css('font-size:13.5px;color:#ECEAE3;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25')}>{r.name}</div>}
             <div style={css('font-size:10px;color:#83838C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px')}>{r.targetLabel}</div>
           </div>
@@ -3094,7 +3116,7 @@ class App extends React.Component {
     const m = V.habitCfgVM; if (!m) return null;
     return (
       <div onClick={m.close} style={css('position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(4px);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s both')}>
-        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(255,255,255,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
+        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(201,166,95,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
           <div style={css('padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
             <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
             <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#9A9AA4;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
@@ -3127,7 +3149,7 @@ class App extends React.Component {
                 <span onClick={m.pickWeekly} className={'rtm-seg' + (m.period === 'weekly' ? ' on' : '')} style={{ flex: 1 }}>Week</span>
                 <span onClick={m.pickMonthly} className={'rtm-seg' + (m.period === 'monthly' ? ' on' : '')} style={{ flex: 1 }}>Month</span>
               </div>
-              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#C9CAD2')}> {m.derivedHint}</span> : null}</div>
+              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#C9A65F')}> {m.derivedHint}</span> : null}</div>
               <div style={css('font-size:11px;color:#8a8a92;margin-top:5px;line-height:1.5')}>Yearly ambitions go in “Yearly goals” below the tracker.</div>
             </div>
             <div>
@@ -3141,7 +3163,7 @@ class App extends React.Component {
             {m.del ? <span onClick={m.del} className="hv-deltext" style={css('font-size:13px;color:#DC6A63;cursor:pointer')}>Delete habit</span> : <span></span>}
             <div style={css('display:flex;gap:10px')}>
               <span onClick={m.close} className="hv-close" style={css('font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)')}>Cancel</span>
-              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC)')}>Save</span>
+              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F)')}>Save</span>
             </div>
           </div>
         </div>
@@ -3153,8 +3175,8 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#ECEAE3')}>— build the streak</span></div></div>
-          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
+          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
         </div>
 
         {/* daily grid */}
@@ -3165,7 +3187,7 @@ class App extends React.Component {
               <div style={css('font-size:12px;color:#7d7d86')}>Tap a box to log · number cells: tap to type an amount · drag to reorder</div>
             </div>
             <div style={css('display:flex;align-items:center;gap:8px')}>
-              {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#ECEAE3;cursor:pointer')}>Today</span>}
+              {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;cursor:pointer')}>Today</span>}
               <span onClick={V.pageHabitOlder} title="Previous week" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
               <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Next week" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
             </div>
@@ -3176,8 +3198,8 @@ class App extends React.Component {
                 <div style={css('padding:10px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a92')}>Habit</div>
                 {V.dayCols.map((d, i) => (
                   <div key={i} style={css('text-align:center;padding:9px 0 7px')}>
-                    <div style={{ ...css('font-size:11px;font-weight:600;letter-spacing:.02em'), color: d.isToday ? '#ECEAE3' : (d.weekend ? '#6E7078' : '#9CA0A6') }}>{d.dow}</div>
-                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13.5px;font-weight:600;margin-top:3px;width:28px;height:28px;line-height:28px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#1a1408' : '#ECEAE3', background: d.isToday ? 'linear-gradient(180deg,#ffffff,#E7E7EC)' : 'transparent' }}>{d.day}</div>
+                    <div style={{ ...css('font-size:11px;font-weight:600;letter-spacing:.02em'), color: d.isToday ? '#E2C588' : (d.weekend ? '#8a7a52' : '#9CA0A6') }}>{d.dow}</div>
+                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13.5px;font-weight:600;margin-top:3px;width:28px;height:28px;line-height:28px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#1a1408' : '#ECEAE3', background: d.isToday ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'transparent' }}>{d.day}</div>
                   </div>
                 ))}
                 <div style={css('text-align:right;padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a92')}>Streak</div>
@@ -3187,16 +3209,16 @@ class App extends React.Component {
                 : V.habitRows.map((r, i) => this._renderHabitRow(r, V, i))}
             </div>
           </div>
-          {!R.gridEmpty && <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.05);color:#C9CAD2;font-size:13px;cursor:pointer;transition:.14s')}>
-            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>New habit
+          {!R.gridEmpty && <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.05);color:#C9A65F;font-size:13px;cursor:pointer;transition:.14s')}>
+            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>New habit
           </div>}
         </div>
 
         {/* progress roll-up: weekly / monthly, streak + % to goal */}
-        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.2);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.012));overflow:hidden;margin-top:16px;animation:rise .5s .12s both')}>
+        <div style={css('border-radius:16px;border:1px solid rgba(201,166,95,.2);background:linear-gradient(180deg,rgba(201,166,95,.06),rgba(255,255,255,.012));overflow:hidden;margin-top:16px;animation:rise .5s .12s both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);gap:12px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:center;gap:10px')}>
-              <span style={css('font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#C9CAD2')}>Progress</span>
+              <span style={css('font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F')}>Progress</span>
               <span onClick={R.older} title="Previous" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
               <span style={css('font-size:13px;color:#D6D2C6;min-width:120px;text-align:center')}>{R.periodLabel}</span>
               <span onClick={R.atPresent ? undefined : R.newer} title="Next" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: R.atPresent ? 'default' : 'pointer', opacity: R.atPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
@@ -3234,11 +3256,11 @@ class App extends React.Component {
                           <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>current</div>
                         </div>
                         <div style={css('text-align:center;min-width:50px')}>
-                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#C9CAD2' : '#6a6a72' }}>{r.best > 0 ? <span><span className="hb-flame">🔥</span>{r.best}</span> : '—'}</div>
+                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#C9A65F' : '#6a6a72' }}>{r.best > 0 ? <span><span className="hb-flame">🔥</span>{r.best}</span> : '—'}</div>
                           <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>longest</div>
                         </div>
                       </div>
-                      <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap;text-align:center;box-sizing:border-box'), minWidth: 116, color: r.done ? '#12100b' : '#ECEAE3', background: r.done ? 'linear-gradient(180deg,#7DDca0,#5FC08D)' : 'rgba(255,255,255,.14)', border: r.done ? 'none' : '1px solid rgba(255,255,255,.3)' }}>{r.badge}</span>
+                      <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap;text-align:center;box-sizing:border-box'), minWidth: 116, color: r.done ? '#12100b' : '#E2C588', background: r.done ? 'linear-gradient(180deg,#7DDca0,#5FC08D)' : 'rgba(201,166,95,.14)', border: r.done ? 'none' : '1px solid rgba(201,166,95,.3)' }}>{r.badge}</span>
                     </div>
                   ))}
                 </div>
@@ -3258,7 +3280,7 @@ class App extends React.Component {
               <span style={css('font-family:JetBrains Mono;font-size:12px;color:#9CA0A6')}>{YG.done}/{YG.total}</span>
               <div style={css('display:flex;align-items:center;gap:8px')}>
                 <span onClick={YG.prev} title="Previous year" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-                <span style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3;min-width:44px;text-align:center')}>{YG.year}</span>
+                <span style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#E2C588;min-width:44px;text-align:center')}>{YG.year}</span>
                 <span onClick={YG.atThisYear ? undefined : YG.next} title="Next year" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: YG.atThisYear ? 'default' : 'pointer', opacity: YG.atThisYear ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
               </div>
             </div>
@@ -3278,10 +3300,10 @@ class App extends React.Component {
           </div>
         </div>
 
-        <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(255,255,255,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(255,255,255,.22);cursor:pointer;animation:rise .55s .2s both')}>
-          <span style={css('width:24px;height:1px;background:rgba(255,255,255,.45);flex:none')}></span>
-          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(255,255,255,.3)' }}>{V.affirmation}</span>
-          <span style={css('width:24px;height:1px;background:rgba(255,255,255,.45);flex:none')}></span>
+        <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .2s both')}>
+          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
+          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
+          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
           <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
 
@@ -3293,27 +3315,27 @@ class App extends React.Component {
   renderPlaybook(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#ECEAE3')}>— the rules I live by</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
 
-        <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(255,255,255,.16),rgba(155,140,255,.08));border:1px solid rgba(255,255,255,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
-          <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);pointer-events:none')}></div>
-          <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:14px')}>Trader affirmation</div>
+        <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
+          <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
+          <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Trader affirmation</div>
           <div style={css('display:flex;align-items:flex-start;gap:14px;margin-bottom:18px')}>
             {V.editAffirm ? (
-              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 12px;outline:none')} />
+              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 12px;outline:none')} />
             ) : (
               <Fragment>
                 <div onClick={V.startAffirm} title="Click to edit" style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;line-height:1.4;color:#F3E9D2;cursor:text')}>{V.affirmation}</div>
-                <div onClick={V.startAffirm} className="hv-op" style={css('flex:none;color:#C9CAD2;cursor:pointer;opacity:.7')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={V.startAffirm} className="hv-op" style={css('flex:none;color:#C9A65F;cursor:pointer;opacity:.7')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               </Fragment>
             )}
           </div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:10px')}>
             {V.affirmDetails.map((a, i) => (
               <div key={i} style={css('display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06)')}>
-                <span style={css('color:#C9CAD2;flex:none')}>▸</span>
+                <span style={css('color:#C9A65F;flex:none')}>▸</span>
                 {a.editing ? (
-                  <input defaultValue={a.text} onBlur={a.commit} onKeyDown={a.key} autoFocus style={css('flex:1;font-size:13.5px;color:#ECEAE3;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:4px 9px;outline:none')} />
+                  <input defaultValue={a.text} onBlur={a.commit} onKeyDown={a.key} autoFocus style={css('flex:1;font-size:13.5px;color:#ECEAE3;background:rgba(0,0,0,.3);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:4px 9px;outline:none')} />
                 ) : (
                   <Fragment>
                     <span onClick={a.edit} style={css('flex:1;font-size:13.5px;color:#D6D2C6;cursor:text;line-height:1.4')}>{a.text}</span>
@@ -3322,7 +3344,7 @@ class App extends React.Component {
                 )}
               </div>
             ))}
-            <div onClick={V.addAffirmDetail} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.12);border:1px dashed rgba(255,255,255,.3);color:#C9CAD2;font-size:13px;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a line</div>
+            <div onClick={V.addAffirmDetail} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.12);border:1px dashed rgba(201,166,95,.3);color:#C9A65F;font-size:13px;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a line</div>
           </div>
         </div>
 
@@ -3331,7 +3353,7 @@ class App extends React.Component {
             <div style={css('padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:17px;color:#ECEAE3')}>Pre-trade checklist <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>Daily</span></div><span style={css('font-size:11px;color:#83838C')}>Resets daily</span></div>
             {V.preItems.map((c, i) => this._renderCheckRow(c, i))}
             <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;color:#C9CAD2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               <input placeholder="Add a pre-trade item, then Enter" onKeyDown={V.addPreKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
             </div>
           </div>
@@ -3345,21 +3367,21 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9CAD2;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#ECEAE3')}>— your why</span></div></div>
-          <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#ffffff,#E7E7EC);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
+          <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
         </div>
 
-        <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(255,255,255,.16),rgba(155,140,255,.08));border:1px solid rgba(255,255,255,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
-          <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);pointer-events:none')}></div>
+        <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
+          <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9CAD2;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· cumulative P&amp;L</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9CAD2);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
-              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· cumulative P&amp;L</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
               <span onClick={V.startGoal} title="Click to edit goal" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
             )}</div></div>
-            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#ECEAE3')}>{V.milestonePct}</div>
+            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div>
           </div>
-          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9CAD2,#ECEAE3);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
+          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
           <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#83838C')}>{V.milestoneMarks.map((m, i) => (<span key={i}>{m}</span>))}</div>
         </div>
 
@@ -3371,7 +3393,7 @@ class App extends React.Component {
               <ImageSlot slotId={'vision-' + v.id} value={this.state.images['vision-' + v.id]} onChange={(p) => this.setImage('vision-' + v.id, p)} placeholder="Drop a dream image" style={{ width: '100%', height: '190px' }} />
               <div style={css('padding:14px 16px')}>
                 {v.editing ? (
-                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
                 ) : (
                   <div onClick={v.edit} style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{v.title}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 )}
@@ -3387,17 +3409,17 @@ class App extends React.Component {
   renderDayModal(V) {
     return (
       <div onClick={V.closeDay} style={css('position:fixed;inset:0;z-index:28;background:rgba(4,4,7,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:18px 22px;display:flex;flex-direction:column;gap:10px')}>
             <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#9A9AA4')}><span>{V.dayCount} trades</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
             {V.dayTrades.map((t) => (
               <div key={t.id} onClick={t.open} className="hv-slide" style={{ ...css('display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:.14s'), borderLeft: '3px solid ' + t.accent }}>
-                <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#C9CAD2;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
+                <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#C9A65F;background:rgba(201,166,95,.12);border:1px solid rgba(201,166,95,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
                 <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</div><div style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</div></div>
               </div>
             ))}
-            <div onClick={V.openNewForDay} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:13px;border:1px dashed rgba(255,255,255,.35);color:#C9CAD2;font-size:13px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a trade for this day</div>
+            <div onClick={V.openNewForDay} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:13px;border:1px dashed rgba(201,166,95,.35);color:#C9A65F;font-size:13px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a trade for this day</div>
           </div>
         </div>
       </div>
@@ -3408,8 +3430,8 @@ class App extends React.Component {
     const fieldInput = (style) => ({ ...css(style), });
     return (
       <div onClick={V.closeTrade} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
@@ -3428,7 +3450,7 @@ class App extends React.Component {
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:7px')}><span style={css('font-size:11px;color:#9A9AA4')}>Risk $ <span style={css('color:#83838C')}>(1R)</span></span>{V.dRiskHint && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('font-size:10px;color:#C9CAD2;cursor:pointer;font-family:JetBrains Mono')} title="Fill from |entry−stop| × lot (exact for $1/point)">≈{V.dRiskHint.val}</span>}</div><input value={V.dRisk} onChange={V.setRisk} placeholder="65" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:7px')}><span style={css('font-size:11px;color:#9A9AA4')}>Risk $ <span style={css('color:#83838C')}>(1R)</span></span>{V.dRiskHint && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('font-size:10px;color:#C9A65F;cursor:pointer;font-family:JetBrains Mono')} title="Fill from |entry−stop| × lot (exact for $1/point)">≈{V.dRiskHint.val}</span>}</div><input value={V.dRisk} onChange={V.setRisk} placeholder="65" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap</div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD) <span style={css('color:#83838C')}>before cost</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
@@ -3438,19 +3460,47 @@ class App extends React.Component {
                 {V.dR && <span>Realized R <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dR.color }}>{V.dR.str}</span></span>}
               </div>
             )}
-            {/* ===== ไม้ที่เบิ้ล · Entry legs (multi-leg scaling-in) ===== */}
+            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Exit — closed</div><input type="datetime-local" value={V.dExitTime} onChange={V.setExitTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
+            </div>
+            <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E2C588" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div style={css('font-size:12px;color:#9A9AA4')}>Holding time</div>
+              <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#E2C588')}>{V.holdingDur}</div>
+            </div>
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px')}>
-              <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:8px')}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 18V6M10 18v-7M16 18v-4M22 18V9" strokeLinecap="round"/></svg>
-                ไม้ที่เบิ้ล · Entry legs
-              </div>
-              <div style={css('display:flex;align-items:center;gap:12px')}>
-                <span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer')}>edit choices</span>
-                <span onClick={V.addLeg} className="rtm-press" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;background:#fff;color:#000')}>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มไม้ (เบิ้ล)
-                </span>
-              </div>
+            <div style={css('display:flex;align-items:center;justify-content:space-between')}>
+              <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
+              <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
+            </div>
+            {/* ① รอบเทรด · Round context */}
+            <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:1px')}><b style={css('color:#C9A65F')}>①</b> รอบเทรด · Round context</div>
+            <div style={css('display:grid;grid-template-columns:1.1fr 1.1fr .95fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>ประเภทจุดเข้า</div><select value={V.dEntryKind} onChange={V.setEntryKind} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryKind.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:6px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:11px 0;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
+            </div>
+            {/* ② ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
+            <div style={css('font-size:11px;color:#9A9AA4;margin:6px 0 1px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#C9A65F')}>②</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#E2C588')}>{V.dAlignN}/3 aligned</span></div>
+            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px')}>
+              {V.tfCards.map((c) => (
+                <div key={c.tf} className="liquid-glass" style={{ ...css('border-radius:13px;padding:12px'), background: c.aligned ? 'rgba(95,192,141,.06)' : 'rgba(255,255,255,.02)', border: '1px solid ' + (c.aligned ? 'rgba(95,192,141,.4)' : 'rgba(255,255,255,.1)') }}>
+                  <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:9px')}>
+                    <div><span style={css('font-family:JetBrains Mono;font-size:13px;font-weight:700;color:#E2C588')}>{c.role}</span><span style={css('font-size:10px;color:#83838C;margin-left:6px')}>{c.sub}</span></div>
+                    <span onClick={() => V.toggleAlign(c.alignKey)} className="rtm-press" title="Aligned กับ bias?" style={css('display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;transition:.14s;' + (c.aligned ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.14);color:#9A9AA4'))}><span style={css('width:5px;height:5px;border-radius:50%;background:currentColor')}></span>Aligned</span>
+                  </div>
+                  <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px')} />
+                  <select value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px')}><option value="">— condition —</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                  <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
+                  <ImageSlot slotId={c.slotId} value={this.state.images[c.slotId]} onChange={(p) => this.setImage(c.slotId, p)} rounded placeholder={'+ ภาพ ' + c.role} style={{ width: '100%', height: 96 }} />
+                </div>
+              ))}
+            </div>
+            {/* ③ ไม้ที่เบิ้ล · Entry legs (multi-leg scaling-in) */}
+            <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:4px')}>
+              <div style={css('font-size:11px;color:#9A9AA4')}><b style={css('color:#C9A65F')}>③</b> ไม้ที่เบิ้ล · Entry legs</div>
+              <span onClick={V.addLeg} className="rtm-press hv-addbtn" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มไม้ (เบิ้ล)</span>
             </div>
             {V.dLegs.anyUnder && (
               <div style={css('display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:10px;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.32);font-size:12px;color:#E79088')}>
@@ -3459,7 +3509,7 @@ class App extends React.Component {
               </div>
             )}
             {V.dLegs.count > 0 ? (
-              <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.03)')}>
+              <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
                 <div style={css('display:grid;grid-template-columns:20px 1.25fr .85fr .62fr .62fr 1.2fr .62fr 24px;gap:8px;padding:0 2px 7px;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:#83838C')}>
                   <span></span><span>Trigger</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>DD</span><span></span>
                 </div>
@@ -3469,58 +3519,33 @@ class App extends React.Component {
                     <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
                     <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
                     <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
-                    <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;text-align:right;padding-right:2px'), color: r.cum ? '#fff' : '#83838C' }}>{r.cumStr}</span>
+                    <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
                     <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
                     <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
                     <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
                 ))}
-                {/* summary */}
                 <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.08)')}>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Max lot</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#fff')}>{V.dLegs.maxLot}</div></div>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Avg entry</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#fff')}>{V.dLegs.avgEntry}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Max lot</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#E2C588')}>{V.dLegs.maxLot}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Avg entry</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3')}>{V.dLegs.avgEntry}</div></div>
                   <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Cum R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.rNet.startsWith('-') ? '#DC6A63' : '#5FC08D' }}>{V.dLegs.rNet}</div></div>
                   <div>
                     <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:4px')}>
                       <span style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C')}>Max DD</span>
                       <input value={V.dLegs.ddBaseline} onChange={V.setDdBaseline} placeholder="base" title="DD baseline (pip)" className="hv-focus" style={css('width:52px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:2px 6px;color:#ECEAE3;font-size:10px;outline:none;font-family:JetBrains Mono;text-align:right')} />
                     </div>
-                    <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.over ? '#DC6A63' : '#fff' }}>{V.dLegs.ddShown || 0}<span style={css('font-size:10px;color:#83838C')}>{V.dLegs.baseline ? '/' + V.dLegs.baseline + 'p' : 'p'}</span></div>
-                    <div style={css('height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px')}><div style={{ ...css('height:100%;border-radius:3px'), width: V.dLegs.ddPct + '%', background: V.dLegs.over ? '#DC6A63' : 'rgba(255,255,255,.6)' }}></div></div>
+                    <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.over ? '#DC6A63' : '#E2C588' }}>{V.dLegs.ddShown || 0}<span style={css('font-size:10px;color:#83838C')}>{V.dLegs.baseline ? '/' + V.dLegs.baseline + 'p' : 'p'}</span></div>
+                    <div style={css('height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px')}><div style={{ ...css('height:100%;border-radius:3px'), width: V.dLegs.ddPct + '%', background: V.dLegs.over ? '#DC6A63' : 'linear-gradient(90deg,#E2C588,#C9A65F)' }}></div></div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div onClick={V.addLeg} className="hv-op" style={css('cursor:pointer;text-align:center;padding:13px;border-radius:11px;border:1px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.02);font-size:12px;color:#9A9AA4')}>
-                + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#ECEAE3')}>avg entry</b> และ <b style={css('color:#ECEAE3')}>Max DD</b> ให้อัตโนมัติ
+              <div onClick={V.addLeg} className="hv-op" style={css('cursor:pointer;text-align:center;padding:13px;border-radius:11px;border:1px dashed rgba(201,166,95,.28);background:rgba(201,166,95,.04);font-size:12px;color:#9A9AA4')}>
+                + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#E2C588')}>avg entry</b> และ <b style={css('color:#E2C588')}>Max DD</b> ให้อัตโนมัติ
               </div>
             )}
-            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Exit — closed</div><input type="datetime-local" value={V.dExitTime} onChange={V.setExitTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
-            </div>
-            <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(255,255,255,.12),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.2)')}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ECEAE3" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <div style={css('font-size:12px;color:#9A9AA4')}>Holding time</div>
-              <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#ECEAE3')}>{V.holdingDur}</div>
-            </div>
-            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('display:flex;align-items:center;justify-content:space-between')}>
-              <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9CAD2;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9CAD2" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
-              <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
-            </div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>LTF condition</div><select value={V.dLtf} onChange={V.setLtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsLtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>MTF condition</div><select value={V.dMtf} onChange={V.setMtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsMtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>HTF condition</div><select value={V.dHtf} onChange={V.setHtf} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsHtf.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-            </div>
-            <div style={css('display:flex;align-items:center;gap:10px;flex-wrap:wrap')}>
-              <span style={css('font-size:11px;color:#9A9AA4')}>Timeframes aligned with the trade?</span>
-              {[['alignHTF', 'HTF', V.dAlignHTF], ['alignMTF', 'MTF', V.dAlignMTF], ['alignLTF', 'LTF', V.dAlignLTF]].map(([k, lab, on]) => (
-                <span key={k} onClick={() => V.toggleAlign(k)} className="rtm-press" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;transition:.14s;' + (on ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);color:#9A9AA4'))}><span style={css('width:6px;height:6px;border-radius:50%;background:currentColor')}></span>{lab}</span>
-              ))}
-              <span style={css('margin-left:auto;font-family:JetBrains Mono;font-size:12.5px;color:#ECEAE3')}>{V.dAlignN}/3 aligned</span>
-            </div>
+            {/* ④ Execution detail */}
+            <div style={css('font-size:11px;color:#9A9AA4;margin:6px 0 1px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo / entry model</div>
             <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>SL zone</div><select value={V.dSlZone} onChange={V.setSlZone} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSlZone.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
@@ -3537,7 +3562,7 @@ class App extends React.Component {
 
             {/* Excursion — how much heat did the position take (Max DD) and how much of the best move did we keep */}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9CAD2;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9CAD2" strokeWidth="1.8"><path d="M3 12h4l3-8 4 16 3-8h4" strokeLinecap="round" strokeLinejoin="round"/></svg>Heat &amp; capture <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:10.5px')}>· did the trade run against you, and did you sell the pig?</span></div>
+            <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 12h4l3-8 4 16 3-8h4" strokeLinecap="round" strokeLinejoin="round"/></svg>Heat &amp; capture <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:10.5px')}>· did the trade run against you, and did you sell the pig?</span></div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Max heat / DD ($) <span style={css('color:#83838C')}>MAE — worst point</span></div><input value={V.dMae} onChange={V.setMae} placeholder="e.g. 45" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Best unrealised ($) <span style={css('color:#83838C')}>MFE — peak profit</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
@@ -3554,9 +3579,9 @@ class App extends React.Component {
                 <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px')}>
                   <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Max DD (heat)</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#DC6A63')}>{V.dExc.heatStr}</div></div>
                   <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Captured of best</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#5FC08D')}>{V.dExc.capStr}</div></div>
-                  <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Pig left</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#ECEAE3')}>${V.dExc.pig}</div></div>
+                  <div className="liquid-glass" style={css('padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>Pig left</div><div style={css('font-family:JetBrains Mono;font-size:18px;font-weight:600;color:#E2C588')}>${V.dExc.pig}</div></div>
                 </div>
-                <div style={{ ...css('margin-top:12px;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.5'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.12)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.4)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
+                <div style={{ ...css('margin-top:12px;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.5'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.1)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.35)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
               </div>
             )}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
@@ -3567,7 +3592,7 @@ class App extends React.Component {
                 {V.tagList.map((tag) => {
                   const on = V.dTags.includes(tag);
                   return (
-                    <span key={tag} onClick={() => V.toggleTag(tag)} style={{ ...css('display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;font-size:12.5px;cursor:pointer;transition:.14s'), background: on ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (on ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.1)'), color: on ? '#ECEAE3' : '#9A9AA4' }}>
+                    <span key={tag} onClick={() => V.toggleTag(tag)} style={{ ...css('display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;font-size:12.5px;cursor:pointer;transition:.14s'), background: on ? 'rgba(201,166,95,.16)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (on ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.1)'), color: on ? '#E2C588' : '#9A9AA4' }}>
                       {tag}
                       <span onClick={(e) => V.delTag(tag, e)} className="hv-deltext" style={{ color: '#83838C', fontSize: 11 }}>✕</span>
                     </span>
@@ -3577,7 +3602,7 @@ class App extends React.Component {
               <input placeholder="Add a tag, e.g. News, off-plan, then Enter" onKeyDown={V.addTagKey} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
             </div>
             <div>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Images / chart screenshots <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9CAD2;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Images / chart screenshots <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>
                 {V.tradeImgs.map((im) => (
                   <ImageSlot key={im.n} slotId={'trade-' + im.tid + '-img-' + im.n} value={this.state.images['trade-' + im.tid + '-img-' + im.n]} onChange={(p) => this.setImage('trade-' + im.tid + '-img-' + im.n, p)} rounded placeholder="Drop a chart image" style={{ width: '100%', height: '120px' }} />
@@ -3589,10 +3614,10 @@ class App extends React.Component {
                 <div onClick={V.deleteTrade} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
               )}
               {V.canDuplicate && (
-                <div onClick={V.duplicateTrade} className="hv-lift" title="Duplicate as new trade" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(255,255,255,.35);color:#ECEAE3;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Duplicate</div>
+                <div onClick={V.duplicateTrade} className="hv-lift" title="Duplicate as new trade" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(201,166,95,.35);color:#E2C588;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Duplicate</div>
               )}
               <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveTrade} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#ffffff,#E7E7EC);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.saveTrade} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -3604,16 +3629,16 @@ class App extends React.Component {
     const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 12px;color:#ECEAE3;font-size:12px;outline:none';
     return (
       <div onClick={V.closeFieldCfg} style={css('position:fixed;inset:0;z-index:34;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px);z-index:2')}>
-            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
+            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
             <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
           </div>
           <div style={css('padding:8px 26px 24px')}>
             <div style={css('font-size:12px;color:#83838C;line-height:1.55;margin:12px 0 16px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
             {V.fieldCfgVM.map((f) => (
               <div key={f.key} style={css('margin-bottom:16px')}>
-                <div style={css('font-size:11px;font-weight:600;color:#ECEAE3;margin-bottom:7px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
+                <div style={css('font-size:11px;font-weight:600;color:#E2C588;margin-bottom:7px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
                 <div style={css('display:flex;flex-direction:column;gap:5px;margin-bottom:7px')}>
                   {f.opts.length ? f.opts.map((o, oi) => (
                     <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:8px;padding:3px 7px 3px 9px;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
@@ -3631,7 +3656,7 @@ class App extends React.Component {
             ))}
           </div>
           <div style={css('display:flex;justify-content:flex-end;gap:12px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.07);position:sticky;bottom:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px)')}>
-            <div onClick={V.closeFieldCfg} className="hv-save rtm-press" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#ffffff,#E7E7EC);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+            <div onClick={V.closeFieldCfg} className="hv-save rtm-press" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -3641,14 +3666,14 @@ class App extends React.Component {
   renderPlanModal(V) {
     return (
       <div onClick={V.planClose} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(255,255,255,.16),rgba(155,140,255,.08))')}>
-            <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);pointer-events:none')}></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08))')}>
+            <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
               <div>
-                <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ECEAE3" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2')}>{V.planTag}</span></div>
+                <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F')}>{V.planTag}</span></div>
                 <div style={css('font-family:\'Instrument Serif\',serif;font-size:23px;color:#ECEAE3')}>{V.planTitle}</div>
-                <div style={css('font-size:12.5px;color:#9A9AA4;margin-top:4px')}>Prepare before the new period starts · <span style={css('color:#ECEAE3')}>{V.planLabel}</span></div>
+                <div style={css('font-size:12.5px;color:#9A9AA4;margin-top:4px')}>Prepare before the new period starts · <span style={css('color:#E2C588')}>{V.planLabel}</span></div>
               </div>
               <div onClick={V.planClose} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
             </div>
@@ -3658,7 +3683,7 @@ class App extends React.Component {
               <div key={i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:14px 20px;transition:.14s'), borderTop: c.border }}>
                 <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 {c.editing ? (
-                  <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                  <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
                 ) : (
                   <Fragment>
                     <span onClick={c.toggle} style={{ ...css('flex:1;font-size:14px;cursor:pointer'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
@@ -3669,13 +3694,13 @@ class App extends React.Component {
               </div>
             ))}
             <div style={css('display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;color:#C9CAD2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               <input placeholder="Add an item, then Enter" onKeyDown={V.planAddKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
             </div>
           </div>
           <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)')}>
             <span style={css('font-size:12px;color:#83838C;font-family:JetBrains Mono')}>Done {V.planFrac}</span>
-            <div onClick={V.planClose} className="hv-save rtm-press" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#ffffff,#E7E7EC);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+            <div onClick={V.planClose} className="hv-save rtm-press" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -3686,17 +3711,17 @@ class App extends React.Component {
     const p = V.txnModal;
     return (
       <div onClick={V.closeTxns} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('position:sticky;top:0;z-index:2;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(18,18,24,.92);backdrop-filter:blur(8px)')}>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
-              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
+              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
               <div onClick={V.closeTxns} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px')}>
               <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Total in</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#5FC08D')}>{p.depositedStr}</div></div>
               <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Withdrawn</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.withdrawnStr !== '$0' ? '#DC6A63' : '#9A9AA4' }}>{p.withdrawnStr}</div></div>
               <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Net capital</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
-              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Equity</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.equityStr}</div></div>
+              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Equity</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#E2C588')}>{p.equityStr}</div></div>
             </div>
             <div style={css('display:flex;gap:8px;margin-top:14px')}>
               <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>Deposit</span>
@@ -3744,8 +3769,8 @@ class App extends React.Component {
   renderSetupModal(V) {
     return (
       <div onClick={V.closeSetup} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(255,255,255,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9CAD2;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Setup name</div><input value={V.sName} onChange={V.setSName} placeholder="e.g. Rally" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
@@ -3765,7 +3790,7 @@ class App extends React.Component {
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Short description</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="e.g. Uptrend continuation, enter on pullback" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>How to use / entry conditions</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="Describe how to use this setup, when to enter, where to set SL/TP..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
             <div>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Example entry charts for this setup <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddSetupImg && <span onClick={V.addSetupImg} className="hv-op" style={css('font-size:11.5px;color:#C9CAD2;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Example entry charts for this setup <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddSetupImg && <span onClick={V.addSetupImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:10px')}>
                 {V.setupImgs.map((im) => (
                   <ImageSlot key={im.n} slotId={im.slotId} value={this.state.images[im.slotId]} onChange={(p) => this.setImage(im.slotId, p)} rounded placeholder="Drop an example chart" style={{ width: '100%', height: '220px' }} />
@@ -3777,7 +3802,7 @@ class App extends React.Component {
                 <div onClick={V.deleteSetup} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
               )}
               <div onClick={V.cancelSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.setupIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveSetup} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#ffffff,#E7E7EC);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.saveSetup} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -3810,9 +3835,9 @@ class App extends React.Component {
           {/* TOPBAR — hero-style navbar: logo · name · page links · clock · actions */}
           <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:11px 24px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.012);backdrop-filter:blur(14px)')}>
             <div style={css('display:flex;align-items:center;gap:14px;min-width:0')}>
-              <div className="rtm-logo" style={css('width:32px;height:32px;border-radius:10px;flex:none;background:linear-gradient(145deg,rgba(255,255,255,.34),rgba(255,255,255,.06));box-shadow:0 0 0 1px rgba(255,255,255,.28),0 6px 18px -8px rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ECEAE3" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div className="rtm-logo" style={css('width:32px;height:32px;border-radius:10px;flex:none;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               {V.editName ? (
-                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:3px 10px;outline:none;width:190px')} />
+                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:190px')} />
               ) : (
                 <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:7px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;letter-spacing:-.01em;white-space:nowrap')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
@@ -3823,30 +3848,30 @@ class App extends React.Component {
               ))}
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
-              <div title={V.todayLabel + ' · ' + V.tzAbbr} style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 13px')}>
+              <div title={V.todayLabel + ' · ' + V.tzAbbr} style={css('display:flex;align-items:center;gap:8px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:999px;padding:6px 13px')}>
                 <span style={{ ...css('width:6px;height:6px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
-                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#ECEAE3;line-height:1')}>{V.clock}</span>
+                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
               </div>
-              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#ffffff,#E7E7EC);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(255,255,255,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
-                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(19,19,22,.88)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
-                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#ECEAE3' : '#ECEAE3' }}>All portfolio</div>
+                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>All portfolio</div>
                     {V.portfolios.map((p) => (
-                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#ECEAE3' : '#ECEAE3' }}>
+                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
                         <span>{p.name}</span>
                         <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#83838C', cursor: 'pointer', paddingLeft: 10 }}>✕</span>
                       </div>
                     ))}
-                    <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9CAD2' }}>+ Add / manage portfolios</div>
+                    <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ Add / manage portfolios</div>
                   </div>
                 )}
               </div>
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
-                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#ECEAE3', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
+                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
-                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(19,19,22,.88)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'My account'}</div>
                     {/* มาตรวัดพื้นที่ใช้งาน */}
                     <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4 }}>

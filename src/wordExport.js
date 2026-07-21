@@ -130,16 +130,35 @@ export async function exportWeeklyWord(rows, accountName) {
       h += `</table>`;
     }
 
-    // Trade analysis
-    const anyTA = r.ltf || r.mtf || r.htf || r.retest || r.fibo || r.entryType || r.slZone || r.alignN;
-    if (anyTA) {
-      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">Trade analysis</div>`;
+    // Round context
+    if (r.sotType || r.entryKind || r.hhllCount) {
+      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">รอบเทรด · Round context</div>`;
       h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse">`;
-      h += fieldRow([
-        field('LTF', r.ltf), field('MTF', r.mtf), field('HTF', r.htf),
-        field('Retest', r.retest), field('Fibo M15', r.fibo), field('Entry model', r.entryType),
-        field('SL zone', r.slZone), field('TF aligned', (r.alignN || 0) + '/3' + (r.alignStr ? ' · ' + r.alignStr : ''), r.alignN >= 2 ? GREEN : null),
-      ]);
+      h += fieldRow([field('ประเภทเทรนด์ (SOT)', r.sotType), field('ประเภทจุดเข้า', r.entryKind), field('เข้าที่ HH/LL ครั้งที่', r.hhllCount)]);
+      h += `</table>`;
+    }
+
+    // 3-Timeframe factors (per-TF: timeframe + condition + factors)
+    const tfm = r.tfMeta || {};
+    const anyTF = r.ltf || r.mtf || r.htf || r.alignN || (tfm.htf && (tfm.htf.factors || tfm.htf.timeframe)) || (tfm.mtf && (tfm.mtf.factors || tfm.mtf.timeframe)) || (tfm.ltf && (tfm.ltf.factors || tfm.ltf.timeframe));
+    if (anyTF) {
+      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">ปัจจัย 3 Timeframe · ${(r.alignN || 0)}/3 aligned${r.alignStr ? ' (' + esc(r.alignStr) + ')' : ''}</div>`;
+      h += `<table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;font-family:Arial;font-size:11px;border-color:${LINE}">`;
+      h += `<tr style="background:#fff">` + ['TF', 'Timeframe', 'Condition', 'Factors'].map((c) => `<th align="left" style="color:${SUB};font-weight:normal;font-size:9px;text-transform:uppercase">${c}</th>`).join('') + `</tr>`;
+      [['HTF', 'htf', r.htf], ['MTF', 'mtf', r.mtf], ['LTF', 'ltf', r.ltf]].forEach(([role, key, cond]) => {
+        const m = tfm[key] || {};
+        if (!(cond || m.timeframe || m.factors)) return;
+        h += `<tr>` + [`<b style="color:${GOLD}">${role}</b>`, esc(m.timeframe || '—'), esc(cond || '—'), esc(m.factors || '—')]
+          .map((c, i) => `<td valign="top"${i === 3 ? ' style="width:44%"' : ''}>${c}</td>`).join('') + `</tr>`;
+      });
+      h += `</table>`;
+    }
+
+    // Execution detail
+    if (r.retest || r.fibo || r.entryType || r.slZone) {
+      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">Execution</div>`;
+      h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse">`;
+      h += fieldRow([field('Retest', r.retest), field('Fibo M15', r.fibo), field('Entry model', r.entryType), field('SL zone', r.slZone)]);
       h += `</table>`;
     }
 
