@@ -204,7 +204,7 @@ class App extends React.Component {
       entryKind: ['ปรสิตธรรมดา', 'ปรสิตลักไก่', 'คืน Zone เต็ม', 'คืน Zone ครึ่ง', 'Bet break'],
     },
     // trade-log analysis filters + breakdown lens
-    logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' },
+    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', slZone: 'all', sotType: 'all', entryKind: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
@@ -742,10 +742,12 @@ class App extends React.Component {
   _rMult(t) {
     if (t.status === 'OPEN') return 0;
     const p = Number(t.pnl) || 0;
-    const risk = Math.abs(Number(t.risk) || 0);
+    const risk = this._posRisk(t);
     if (risk > 0) return p / risk;
     if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0;
   }
+  // the position's 1R in $ — sum of each leg's risk when scaled in, else the single risk field
+  _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(Number(t.risk) || 0); }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
   _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
   // a copy of the trades with pnl already net of commission — everything downstream
@@ -756,8 +758,8 @@ class App extends React.Component {
   _maeUsd(t) { return Math.abs(Number(t.mae) || 0); }
   _mfeUsd(t) { return Math.abs(Number(t.mfe) || 0); }
   // heat in R (how deep the position's drawdown ran vs the $ risked) — the "Max DD of this position"
-  _maeR(t) { const r = Math.abs(Number(t.risk) || 0); return r > 0 ? this._maeUsd(t) / r : null; }
-  _mfeR(t) { const r = Math.abs(Number(t.risk) || 0); return r > 0 ? this._mfeUsd(t) / r : null; }
+  _maeR(t) { const r = this._posRisk(t); return r > 0 ? this._maeUsd(t) / r : null; }
+  _mfeR(t) { const r = this._posRisk(t); return r > 0 ? this._mfeUsd(t) / r : null; }
   // how much of the best move you actually kept (0–100%). The rest is the "pig" left on the table.
   _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round(this._netPnl(t) / mfe * 100))); }
   _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - this._netPnl(t)); }
@@ -765,23 +767,25 @@ class App extends React.Component {
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
   _legs(t) {
-    const raw = Array.isArray(t.legs) ? t.legs.filter(l => l && (l.price !== '' || l.lot !== '' || l.trigger || l.dd !== '')) : [];
+    const raw = Array.isArray(t.legs) ? t.legs.filter(l => l && (l.price || l.lot || l.risk || l.dd)) : [];
     if (raw.length) return raw;
+    // backward-compat: synthesise one leg from the classic single-entry fields
     if ((t.entry != null && t.entry !== '') || (t.lot != null && t.lot !== '')) {
-      return [{ trigger: 'First entry', price: t.entry || '', lot: t.lot || '', slBasis: '', dd: '' }];
+      return [{ trigger: 'First entry', price: t.entry || '', lot: t.lot || '', slBasis: '', risk: t.risk || '', dd: '' }];
     }
     return [];
   }
   _legStats(t) {
     const legs = this._legs(t);
-    let cum = 0, maxLot = 0, maxDD = 0, wSum = 0, wLot = 0, anyUnder = false;
+    let cum = 0, maxLot = 0, maxDD = 0, wSum = 0, wLot = 0, anyUnder = false, totalRisk = 0;
     legs.forEach(l => {
       const lot = Math.abs(Number(l.lot) || 0), price = Number(l.price) || 0, dd = Math.abs(Number(l.dd) || 0);
       cum += lot; if (cum > maxLot) maxLot = cum; if (dd > maxDD) maxDD = dd;
+      totalRisk += Math.abs(Number(l.risk) || 0);
       if (lot > 0 && price > 0) { wSum += price * lot; wLot += lot; }
       if (/under/i.test(l.slBasis || '')) anyUnder = true;
     });
-    return { count: legs.length, totalLot: cum, maxLot, maxDD, anyUnder, avgEntry: wLot > 0 ? wSum / wLot : null, isMulti: legs.length > 1 };
+    return { count: legs.length, totalLot: cum, maxLot, maxDD, anyUnder, totalRisk, avgEntry: wLot > 0 ? wSum / wLot : null, isMulti: legs.length > 1 };
   }
   // price formatter — trims decimals to the instrument's magnitude
   _fmtPrice(n) {
@@ -809,7 +813,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: 'First entry', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -840,8 +844,8 @@ class App extends React.Component {
   addLeg() {
     const d = this.state.draft; const legs = Array.isArray(d.legs) ? d.legs.slice() : [];
     const first = legs.length === 0 && (d.entry || d.lot)
-      ? { trigger: 'First entry', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', dd: '' }
-      : { trigger: legs.length === 0 ? 'First entry' : 'Pullback / เบิ้ล', price: '', lot: '', slBasis: 'Dow / structure', dd: '' };
+      ? { trigger: 'First entry', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', risk: d.risk || '', dd: '' }
+      : { trigger: legs.length === 0 ? 'First entry' : 'Pullback / เบิ้ล', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' };
     legs.push(first); this._patchDraft({ ...d, legs });
   }
   removeLeg(i) { const d = this.state.draft; const legs = (d.legs || []).slice(); legs.splice(i, 1); this._patchDraft({ ...d, legs }); }
@@ -1750,7 +1754,10 @@ class App extends React.Component {
       else if (lf === 'long') { if (t.side !== 'BUY') return false; }
       else if (lf === 'short') { if (t.side !== 'SELL') return false; }
       if (LF.day && LF.day !== 'all' && this._dowFull(t.date) !== LF.day) return false;
-      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'entryType') || !fieldMatch(t, 'slZone')) return false;
+      if (LF.align && LF.align !== 'all' && String(this._alignN(t)) !== LF.align) return false;
+      if (LF.session && LF.session !== 'all' && (t.session || '') !== LF.session) return false;
+      if (LF.setup && LF.setup !== 'all' && this._setupById(t.setupId).name !== LF.setup) return false;
+      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'retest') || !fieldMatch(t, 'fibo') || !fieldMatch(t, 'entryType') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType') || !fieldMatch(t, 'entryKind')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
@@ -1774,9 +1781,15 @@ class App extends React.Component {
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['slZone', 'SL zone']];
+    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['slZone', 'SL zone'], ['sotType', 'SOT'], ['entryKind', 'Entry kind']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
+    const distinctSess = Array.from(new Set(trades.map(t => (t.session || '').trim()).filter(Boolean)));
+    const distinctSetup = Array.from(new Set(trades.map(t => this._setupById(t.setupId).name).filter(Boolean)));
     const logFieldFilters = [{ key: 'day', label: 'Day', value: LF.day || 'all', options: [1, 2, 3, 4, 5, 6, 0].map(i => ({ v: dayFull[i], label: dayFull[i] })) }]
+      // TF-alignment count — the key "combine 2/3 aligned + fibo …" edge lens
+      .concat([{ key: 'align', label: 'TF aligned', value: LF.align || 'all', options: ['3', '2', '1', '0'].map(v => ({ v, label: v + '/3' })) }])
+      .concat([{ key: 'setup', label: 'Setup', value: LF.setup || 'all', options: distinctSetup.map(v => ({ v, label: v })) }])
+      .concat([{ key: 'session', label: 'Session', value: LF.session || 'all', options: distinctSess.map(v => ({ v, label: v })) }])
       .concat(ANA_FIELDS.map(([key, label]) => ({
         key, label, value: LF[key] || 'all',
         options: key === 'retest' ? [{ v: 'yes', label: 'Yes' }, { v: 'no', label: 'No' }] : distinctFor(key).map(v => ({ v, label: v })),
@@ -1802,6 +1815,9 @@ class App extends React.Component {
       slZone: { label: 'SL zone', get: t => (t.slZone || '').trim() || '—' },
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
+      align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
+      sotType: { label: 'ประเภทเทรนด์ (SOT)', get: t => (t.sotType || '').trim() || '—' },
+      entryKind: { label: 'ประเภทจุดเข้า', get: t => (t.entryKind || '').trim() || '—' },
     };
     // Only offer factors that actually VARY inside the current filter (≥2 distinct
     // values) — so the comparison is always meaningful and never a single-row echo
@@ -1818,9 +1834,17 @@ class App extends React.Component {
     if (dimDef.order) groupKeys.sort((a, b) => { const ia = dimDef.order.indexOf(a), ib = dimDef.order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
     else groupKeys.sort((a, b) => groupAgg[b].net - groupAgg[a].net);
     const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(groupAgg[k].net)));
+    // "best edge" = highest win-rate among groups with a meaningful sample (≥3 closed) —
+    // so on large data you instantly see which value of the compared factor wins most
+    const SAMPLE_MIN = 3;
+    let bestKey = null, bestWr = -1;
+    groupKeys.forEach(k => { const a = groupAgg[k]; if (a.closed >= SAMPLE_MIN && a.wr > bestWr) { bestWr = a.wr; bestKey = k; } });
+    const edgeRows = groupKeys.filter(k => groupAgg[k].closed >= SAMPLE_MIN);
     const logBreakdown = {
       dim: dimKey, dimLabel: dimDef.label, hasCompare, filteredCount: logTotal,
       dims: dimAvail.map(k => ({ v: k, label: dimDefs[k].label })),
+      // headline edge callout: only when ≥2 comparable groups have enough sample
+      bestEdge: (bestKey && edgeRows.length >= 2) ? { name: bestKey, wr: groupAgg[bestKey].wr + '%', n: groupAgg[bestKey].closed, dim: dimDef.label } : null,
       rows: groupKeys.map(k => {
         const a = groupAgg[k];
         const dowI = dayFull.indexOf(k);
@@ -1831,6 +1855,7 @@ class App extends React.Component {
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
           w: (Math.abs(a.net) / bmax * 100) + '%', barColor: a.net >= 0 ? GREEN : RED,
+          best: k === bestKey,
         };
       }),
     };
@@ -2213,7 +2238,7 @@ class App extends React.Component {
         dMfe: d.mfe != null ? String(d.mfe) : '', setMfe: (e) => this.setD('mfe', e.target.value),
         dExc: (() => {
           const mae = Math.abs(parseFloat(d.mae) || 0), mfe = Math.abs(parseFloat(d.mfe) || 0);
-          const risk = Math.abs(parseFloat(d.risk) || 0);
+          const risk = this._legStats({ legs: d.legs }).totalRisk || Math.abs(parseFloat(d.risk) || 0);
           const net = (parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0);
           if (!mae && !mfe) return null;
           const heatR = risk ? mae / risk : null;
@@ -2233,37 +2258,54 @@ class App extends React.Component {
         // ----- timeframe alignment (HTF/MTF/LTF each aligned with the trade?) -----
         dAlignHTF: !!d.alignHTF, dAlignMTF: !!d.alignMTF, dAlignLTF: !!d.alignLTF, dAlignN: (d.alignHTF ? 1 : 0) + (d.alignMTF ? 1 : 0) + (d.alignLTF ? 1 : 0),
         toggleAlign: (k) => this.setD(k, !d[k]),
-        // ----- multi-leg "เบิ้ล" (scaling-in) editor -----
+        // ----- multi-leg "เบิ้ล" (scaling-in) editor — the single place entries are captured -----
         dLegs: (() => {
           const legs = Array.isArray(d.legs) ? d.legs : [];
           let cum = 0;
           const rows = legs.map((l, i) => {
             const lot = Math.abs(parseFloat(l.lot) || 0); cum += lot;
-            return { i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', dd: l.dd || '',
+            return { i, trigger: l.trigger || '', price: l.price || '', lot: l.lot || '', slBasis: l.slBasis || '', risk: l.risk || '', dd: l.dd || '',
               cum, cumStr: cum ? cum.toFixed(2) : '—',
               optsTrigger: this._fieldOptsWith('legTrigger', l.trigger), optsSL: this._fieldOptsWith('legSL', l.slBasis),
               danger: /under/i.test(l.slBasis || '') };
           });
-          const stats = this._legStats({ legs, entry: d.entry, lot: d.lot });
+          const stats = this._legStats({ legs });
           const baseline = Math.abs(parseFloat(d.ddBaseline) || 0);
           const ddShown = Math.max(stats.maxDD, baseline);
           const ddPct = baseline > 0 ? Math.min(100, ddShown / baseline * 100) : (ddShown ? 100 : 0);
-          const risk = Math.abs(parseFloat(d.risk) || 0);
-          const rNet = risk > 0 && d.status !== 'OPEN' ? ((parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0)) / risk : null;
           return { rows, count: rows.length,
             maxLot: stats.maxLot ? stats.maxLot.toFixed(2) : '—',
             avgEntry: stats.avgEntry != null ? this._fmtPrice(stats.avgEntry) : '—',
+            totalRisk: stats.totalRisk, totalRiskStr: stats.totalRisk ? '$' + this._fmtPrice(stats.totalRisk) : '—',
             maxDD: stats.maxDD || 0, ddShown, ddPct, over: baseline > 0 && ddShown > baseline, baseline,
-            anyUnder: stats.anyUnder, rNet: rNet != null ? (rNet >= 0 ? '+' : '') + rNet.toFixed(2) + 'R' : '—',
-            ddBaseline: d.ddBaseline || '' };
+            anyUnder: stats.anyUnder, ddBaseline: d.ddBaseline || '' };
         })(),
         addLeg: () => this.addLeg(), removeLeg: (i) => this.removeLeg(i),
         setLegTrigger: (i, e) => this.setLeg(i, 'trigger', e.target.value),
         setLegPrice: (i, e) => this.setLeg(i, 'price', e.target.value),
         setLegLot: (i, e) => this.setLeg(i, 'lot', e.target.value),
         setLegSL: (i, e) => this.setLeg(i, 'slBasis', e.target.value),
+        setLegRisk: (i, e) => this.setLeg(i, 'risk', e.target.value),
         setLegDD: (i, e) => this.setLeg(i, 'dd', e.target.value),
         setDdBaseline: (e) => this.setD('ddBaseline', e.target.value),
+        // ----- round summary (final rollup): commission/swap + gross P&L -> net, total risk, total R -----
+        dSummary: (() => {
+          const totalRisk = this._legStats({ legs: d.legs }).totalRisk;
+          const gross = parseFloat(d.pnl) || 0, comm = parseFloat(d.commission) || 0;
+          const net = gross - comm;
+          const open = d.status === 'OPEN';
+          const r = (!open && totalRisk > 0) ? net / totalRisk : null;
+          return {
+            grossStr: open ? '—' : (gross >= 0 ? '+$' : '−$') + Math.abs(gross).toLocaleString('en-US', { maximumFractionDigits: 2 }),
+            commStr: comm ? '−$' + Math.abs(comm).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '$0',
+            netStr: open ? '—' : (net >= 0 ? '+$' : '−$') + Math.abs(net).toLocaleString('en-US', { maximumFractionDigits: 2 }),
+            netColor: open ? '#9A9AA4' : (net >= 0 ? '#5FC08D' : '#DC6A63'),
+            totalRiskStr: totalRisk ? '$' + this._fmtPrice(totalRisk) : '—',
+            rStr: r != null ? (r >= 0 ? '+' : '') + r.toFixed(2) + 'R' : '—',
+            rColor: r == null ? '#9A9AA4' : (r >= 0 ? '#5FC08D' : '#DC6A63'),
+            riskMissing: !open && totalRisk <= 0,
+          };
+        })(),
         // ----- per-timeframe cards (Ble Yup style): name + factors + image + aligned -----
         tfCards: ['htf', 'mtf', 'ltf'].map(tf => {
           const meta = (d.tfMeta || {})[tf] || {};
@@ -2438,7 +2480,7 @@ class App extends React.Component {
       logFieldFilters, logAgg, logBreakdown,
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all' }, logLimit: 30 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', slZone: 'all', sotType: 'all', entryKind: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
         { key: 'ltf', label: 'LTF condition', opts: this._fieldOpts('ltf') },
@@ -2790,13 +2832,19 @@ class App extends React.Component {
               )}
             </div>
             <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>Splits the same {V.filteredCount} filtered {V.filteredCount === 1 ? 'trade' : 'trades'} by one factor — so you can see which value wins most. The headline win rate above is the whole filtered set combined.</div>
+            {V.logBreakdown.bestEdge && (
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:linear-gradient(100deg,rgba(95,192,141,.12),rgba(201,166,95,.06));border:1px solid rgba(95,192,141,.28);font-size:12px;color:#B7E6CE')}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5FC08D" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z" strokeLinejoin="round"/></svg>
+                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> win rate <span style={css('color:#83838C')}>({V.logBreakdown.bestEdge.n} trades)</span></span>
+              </div>
+            )}
             {V.logBreakdown.hasCompare ? (
               <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:15px;max-height:340px;overflow-y:auto;padding-right:4px')}>
                 <div style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6a6a72;padding-right:2px')}><span></span><span style={css('text-align:right')}>Win rate</span><span style={css('text-align:right')}>Net · record</span><span style={css('text-align:right')}>Avg R</span></div>
                 {V.logBreakdown.rows.map((r, i) => (
                   <div key={i} style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;align-items:center')}>
                     <div>
-                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
+                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}{r.best && <span title="Highest win rate (≥3 trades)" style={css('font-size:9px;font-weight:700;letter-spacing:.04em;color:#5FC08D;border:1px solid rgba(95,192,141,.4);background:rgba(95,192,141,.12);padding:1px 6px;border-radius:5px')}>BEST</span>}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
                       <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
                     </div>
                     <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.wrColor }}>{r.wr}</div>
@@ -3442,24 +3490,6 @@ class App extends React.Component {
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
             </div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry price</div><input value={V.dEntry} onChange={V.setEntry} placeholder="2418.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Stop loss</div><input value={V.dStop} onChange={V.setStop} placeholder="2410.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Target</div><input value={V.dTarget} onChange={V.setTarget} placeholder="2435.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Lot / Size</div><input value={V.dLot} onChange={V.setLot} placeholder="1.0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-            </div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Risk : Reward</div><input value={V.dRR} onChange={V.setRR} placeholder="2.5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:7px')}><span style={css('font-size:11px;color:#9A9AA4')}>Risk $ <span style={css('color:#83838C')}>(1R)</span></span>{V.dRiskHint && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('font-size:10px;color:#C9A65F;cursor:pointer;font-family:JetBrains Mono')} title="Fill from |entry−stop| × lot (exact for $1/point)">≈{V.dRiskHint.val}</span>}</div><input value={V.dRisk} onChange={V.setRisk} placeholder="65" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap</div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD) <span style={css('color:#83838C')}>before cost</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
-            </div>
-            {(V.dR || (V.dNet && V.dNet.show)) && (
-              <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-top:-6px;font-size:12px;color:#9A9AA4')}>
-                {V.dNet && V.dNet.show && <span>Net after cost <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dNet.color }}>{V.dNet.str}</span></span>}
-                {V.dR && <span>Realized R <span style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:700'), color: V.dR.color }}>{V.dR.str}</span></span>}
-              </div>
-            )}
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Exit — closed</div><input type="datetime-local" value={V.dExitTime} onChange={V.setExitTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
@@ -3510,25 +3540,30 @@ class App extends React.Component {
             )}
             {V.dLegs.count > 0 ? (
               <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
-                <div style={css('display:grid;grid-template-columns:20px 1.25fr .85fr .62fr .62fr 1.2fr .62fr 24px;gap:8px;padding:0 2px 7px;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:#83838C')}>
-                  <span></span><span>Trigger</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>DD</span><span></span>
+                <div style={css('overflow-x:auto')}>
+                <div style={css('min-width:560px')}>
+                <div style={css('display:grid;grid-template-columns:18px 1fr .72fr .5fr .5fr .95fr .62fr .5fr 20px;gap:7px;padding:0 2px 7px;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
+                  <span></span><span>Trigger</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>DD</span><span></span>
                 </div>
                 {V.dLegs.rows.map((r) => (
-                  <div key={r.i} style={css('display:grid;grid-template-columns:20px 1.25fr .85fr .62fr .62fr 1.2fr .62fr 24px;gap:8px;align-items:center;padding:3px 2px')}>
+                  <div key={r.i} style={css('display:grid;grid-template-columns:18px 1fr .72fr .5fr .5fr .95fr .62fr .5fr 20px;gap:7px;align-items:center;padding:3px 2px')}>
                     <span style={css('font-family:JetBrains Mono;font-size:11px;color:#83838C;text-align:center')}>{r.i + 1}</span>
-                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
-                    <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
-                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 9px;color:#ECEAE3;font-size:12px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
+                    <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
+                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
                     <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
                 ))}
+                </div>
+                </div>
                 <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.08)')}>
                   <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Max lot</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#E2C588')}>{V.dLegs.maxLot}</div></div>
                   <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Avg entry</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3')}>{V.dLegs.avgEntry}</div></div>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Cum R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.rNet.startsWith('-') ? '#DC6A63' : '#5FC08D' }}>{V.dLegs.rNet}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Total risk <span style={css('color:#6f6a5c')}>(1R)</span></div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3')}>{V.dLegs.totalRiskStr}</div></div>
                   <div>
                     <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:4px')}>
                       <span style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C')}>Max DD</span>
@@ -3584,6 +3619,20 @@ class App extends React.Component {
                 <div style={{ ...css('margin-top:12px;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.5'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.1)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(226,197,136,.35)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
               </div>
             )}
+            {/* ⑥ สรุปรอบ · Round summary — cost + result roll up here (entries & risk live in the legs) */}
+            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
+            <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:1px')}><b style={css('color:#C9A65F')}>⑤</b> สรุปรอบ · Round summary</div>
+            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Commission / Swap <span style={css('color:#83838C')}>(รวมทุกไม้)</span></div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>P&amp;L (USD) <span style={css('color:#83838C')}>ก่อนหักค่าธรรมเนียม</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
+            </div>
+            <div className="liquid-glass" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border-radius:12px;padding:12px 14px;background:linear-gradient(100deg,rgba(201,166,95,.08),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Total risk (1R)</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#ECEAE3')}>{V.dSummary.totalRiskStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Commission</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#9A9AA4')}>{V.dSummary.commStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Net P&amp;L</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.netColor }}>{V.dSummary.netStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>ได้กี่ R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.rColor }}>{V.dSummary.rStr}</div></div>
+            </div>
+            {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#C9A65F;margin-top:-4px')}>ⓘ ใส่ Risk $ ในแต่ละไม้ เพื่อให้ระบบคำนวณ “ได้กี่ R” ของรอบนี้</div>)}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
             <div>
