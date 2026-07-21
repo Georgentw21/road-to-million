@@ -538,6 +538,9 @@ class App extends React.Component {
       .map(t => {
         const urls = [];
         for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
+        // per-timeframe card images (new capture) — so every attached chart makes it into Word
+        const tfImages = {};
+        ['htf', 'mtf', 'ltf'].forEach(tf => { const p = imgs['trade-' + t.id + '-tf-' + tf]; if (p) tfImages[tf] = getImageUrl(p); });
         const closed = t.status !== 'OPEN';
         const heatR = this._maeR(t), cap = this._captureP(t);
         return {
@@ -548,7 +551,7 @@ class App extends React.Component {
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
           ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: t.retest, fibo: t.fibo, entryType: t.entryType, slZone: t.slZone,
-          sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {},
+          sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {}, tfImages,
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
           heatStr: heatR != null ? heatR.toFixed(1) + 'R' : (this._maeUsd(t) > 0 ? '$' + Math.round(this._maeUsd(t)) : ''),
@@ -591,7 +594,7 @@ class App extends React.Component {
 
   _seedTrades() {
     const T = (id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, et, xt, notes, status) =>
-      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, lot: '1.0', entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1', tags: pnl > 0 ? ['ตามแผน'] : (pnl < 0 ? ['รีบเข้า'] : []) });
+      ({ id, date, sym, side, setupId, session, entry, stop, target, rr, pnl, lot: '1.0', entryTime: et, exitTime: xt, notes, status, imgCount: 2, portfolioId: 'pf1', feelEntry: pnl > 0 ? 'มั่นใจ · ตามแผน' : (pnl < 0 ? 'รีบเข้า / FOMO' : '') });
     return [
       T('t1', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'London', '2418.5', '2410.0', '2440.0', 2.1, 1240, '2026-06-22T13:30', '2026-06-22T16:45', 'เทรนด์ขาขึ้นชัด เข้าที่ pullback EMA20 ตรงแผน', 'CLOSED'),
       T('t2', '2026-06-22', 'XAUUSD', 'BUY', 's1', 'New York', '2435.0', '2428.0', '2455.0', 2.5, 0, '2026-06-22T19:10', '', 'ไม้ที่สองของวัน รอ target', 'OPEN'),
@@ -1570,9 +1573,9 @@ class App extends React.Component {
     const symbolBars = symSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + 't · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / symMaxAbs * 100) + '%' }));
     const symbolMore = Math.max(0, symSorted.length - LIST_CAP);
 
-    // by tag / อารมณ์
+    // by feeling on entry — the emotional read that used to be tags
     const tagMap = {};
-    closed.forEach(t => (t.tags || []).forEach(tag => { const m = tagMap[tag] || (tagMap[tag] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; }));
+    closed.forEach(t => { const f = (t.feelEntry || '').trim(); if (!f) return; const m = tagMap[f] || (tagMap[f] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; });
     const tagArr = Object.keys(tagMap).map(tag => ({ name: tag, net: tagMap[tag].net, n: tagMap[tag].n, wr: tagMap[tag].n ? Math.round(tagMap[tag].w / tagMap[tag].n * 100) : 0 }));
     let tagMaxAbs = 1; tagArr.forEach(s => { const a = Math.abs(s.net); if (a > tagMaxAbs) tagMaxAbs = a; });
     const tagSorted = tagArr.sort((a, b) => a.net - b.net);
@@ -1708,6 +1711,10 @@ class App extends React.Component {
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
         commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
+        // max lot (from legs, fallback single lot) + MAE/MFE ($) for the log
+        maxLotStr: (() => { const ml = this._legStats(t).maxLot; if (ml > 0) return ml.toFixed(2); return (t.lot != null && t.lot !== '') ? String(t.lot) : '—'; })(),
+        maeStr: (() => { const m = this._maeUsd(t); return m > 0 ? '−$' + Math.round(m) : '—'; })(),
+        mfeStr: (() => { const m = this._mfeUsd(t); return m > 0 ? '+$' + Math.round(m) : '—'; })(),
         // excursion + alignment for the log's "important entry details"
         heatStr: (() => { const r = this._maeR(t); if (r != null) return r.toFixed(1) + 'R'; const m = this._maeUsd(t); return m > 0 ? '$' + Math.round(m) : '—'; })(),
         heatColor: (() => { const r = this._maeR(t); return r == null ? '#9A9AA4' : (r >= 1 ? '#DC6A63' : (r >= 0.6 ? '#E2C588' : '#9CD3C0')); })(),
@@ -2328,10 +2335,9 @@ class App extends React.Component {
         dEntryKind: d.entryKind || '', optsEntryKind: this._fieldOptsWith('entryKind', d.entryKind), setEntryKind: (e) => this.setDField('entryKind', e.target.value),
         dHhll: d.hhllCount || '', setHhll: (v) => this.setD('hhllCount', d.hhllCount === v ? '' : v),
         dBias: d.bias || d.side || '', setBias: (v) => this.setD('bias', v),
-        // ----- feeling on entry / SL / TP (editable-option selects) -----
+        // ----- feeling on entry / SL / TP (free text) -----
         dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
-        optsFeelEntry: this._fieldOptsWith('feelEntry', d.feelEntry), optsFeelSL: this._fieldOptsWith('feelSL', d.feelSL), optsFeelTP: this._fieldOptsWith('feelTP', d.feelTP),
-        setFeelEntry: (e) => this.setDField('feelEntry', e.target.value), setFeelSL: (e) => this.setDField('feelSL', e.target.value), setFeelTP: (e) => this.setDField('feelTP', e.target.value),
+        setFeelEntry: (e) => this.setD('feelEntry', e.target.value), setFeelSL: (e) => this.setD('feelSL', e.target.value), setFeelTP: (e) => this.setD('feelTP', e.target.value),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
@@ -2489,9 +2495,6 @@ class App extends React.Component {
         { key: 'fibo', label: 'Retest fibo M15 side', opts: this._fieldOpts('fibo') },
         { key: 'entryType', label: 'Entry — M5 / M15', opts: this._fieldOpts('entryType') },
         { key: 'slZone', label: 'SL zone', opts: this._fieldOpts('slZone') },
-        { key: 'feelEntry', label: 'Feeling · Entry', opts: this._fieldOpts('feelEntry') },
-        { key: 'feelSL', label: 'Feeling · SL', opts: this._fieldOpts('feelSL') },
-        { key: 'feelTP', label: 'Feeling · TP', opts: this._fieldOpts('feelTP') },
         { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
         { key: 'entryKind', label: 'ประเภทจุดเข้า', opts: this._fieldOpts('entryKind') },
         { key: 'legTrigger', label: 'ไม้เบิ้ล · Trigger', opts: this._fieldOpts('legTrigger') },
@@ -2753,8 +2756,8 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '172px 104px 60px 120px 92px 66px 90px 96px 66px 104px';
-    const gminw = 1140;
+    const gcols = '166px 118px 56px 108px 84px 52px 62px 74px 74px 78px 84px 60px 96px';
+    const gminw = 1330;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -2861,7 +2864,7 @@ class App extends React.Component {
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max heat / drawdown of the position">Max DD</span><span title="Share of the best move kept">Captured</span><span>R</span><span>P&amp;L</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max cumulative lot across legs">Max lot</span><span title="Max adverse excursion ($)">MAE</span><span title="Max favourable excursion ($)">MFE</span><span title="Max heat / drawdown of the position (R)">Max DD</span><span title="Share of the best move kept">Captured</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
@@ -2870,7 +2873,10 @@ class App extends React.Component {
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
                   <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
                   <span title={t.alignN + ' of 3 timeframes aligned'} style={{ ...css('font-family:JetBrains Mono;font-size:12.5px;font-weight:600'), color: t.alignColor }}>{t.alignStr}</span>
-                  <span title="Max heat / drawdown the position took" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
+                  <span title="Max cumulative lot across legs" style={css('font-family:JetBrains Mono;font-size:12px;color:#C9CAD2')}>{t.maxLotStr}</span>
+                  <span title="Max adverse excursion ($)" style={css('font-family:JetBrains Mono;font-size:12px;color:#C58F8B')}>{t.maeStr}</span>
+                  <span title="Max favourable excursion ($)" style={css('font-family:JetBrains Mono;font-size:12px;color:#8FBFA6')}>{t.mfeStr}</span>
+                  <span title="Max heat / drawdown the position took (R)" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
                   <span title="How much of the best move you kept" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.captureColor }}>{t.captureStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.rColor }}>{t.rStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
@@ -2971,12 +2977,12 @@ class App extends React.Component {
         </div>
 
         <div className="hv-brd-gold liquid-glass" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by tag / emotion <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— which tag costs you</span></div></div>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by feeling <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— which entry emotion costs you</span></div></div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:11px 24px')}>
             {V.tagStats.length ? V.tagStats.map((s, i) => (
               <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
-            )) : <div style={css('font-size:12.5px;color:#83838C')}>No tags on trades yet — add tags when logging to see which emotions cost you</div>}
-            {V.tagMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#83838C;text-align:center')}>+ {V.tagMore} more tags (top 15)</div>}
+            )) : <div style={css('font-size:12.5px;color:#83838C')}>ยังไม่มีข้อมูล Feeling · Entry — กรอกช่อง “Feeling · Entry” ตอนบันทึกเทรด เพื่อดูว่าอารมณ์ไหนทำให้เสีย</div>}
+            {V.tagMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#83838C;text-align:center')}>+ {V.tagMore} more feelings (top 15)</div>}
           </div>
         </div>
       </div>
@@ -3478,9 +3484,9 @@ class App extends React.Component {
     const fieldInput = (style) => ({ ...css(style), });
     return (
       <div onClick={V.closeTrade} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:680px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:1040px;max-width:96vw;max-height:92vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
-          <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
+          <div style={css('padding:26px 34px 30px;display:flex;flex-direction:column;gap:17px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
               <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
@@ -3541,20 +3547,20 @@ class App extends React.Component {
             {V.dLegs.count > 0 ? (
               <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
                 <div style={css('overflow-x:auto')}>
-                <div style={css('min-width:560px')}>
-                <div style={css('display:grid;grid-template-columns:18px 1fr .72fr .5fr .5fr .95fr .62fr .5fr 20px;gap:7px;padding:0 2px 7px;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
+                <div style={css('min-width:720px')}>
+                <div style={css('display:grid;grid-template-columns:18px 1fr .72fr .5fr .5fr .95fr .62fr .5fr 20px;gap:7px;padding:0 2px 8px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#83838C')}>
                   <span></span><span>Trigger</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>DD</span><span></span>
                 </div>
                 {V.dLegs.rows.map((r) => (
                   <div key={r.i} style={css('display:grid;grid-template-columns:18px 1fr .72fr .5fr .5fr .95fr .62fr .5fr 20px;gap:7px;align-items:center;padding:3px 2px')}>
                     <span style={css('font-family:JetBrains Mono;font-size:11px;color:#83838C;text-align:center')}>{r.i + 1}</span>
-                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}><option value="">—</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
-                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
-                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;color:#ECEAE3;font-size:11.5px;outline:none;font-family:JetBrains Mono')} />
+                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer'), background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">—</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
                 ))}
@@ -3580,19 +3586,18 @@ class App extends React.Component {
               </div>
             )}
             {/* ④ Execution detail */}
-            <div style={css('font-size:11px;color:#9A9AA4;margin:6px 0 1px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo / entry model</div>
-            <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:11px 6px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>SL zone</div><select value={V.dSlZone} onChange={V.setSlZone} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsSlZone.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+            <div style={css('font-size:12px;color:#9A9AA4;margin:6px 0 2px')}><b style={css('color:#C9A65F')}>④</b> Execution · retest / fibo / entry model <span style={css('color:#6f6a5c;font-size:11px')}>(SL อยู่ที่ SL basis ของแต่ละไม้แล้ว)</span></div>
+            <div style={css('display:grid;grid-template-columns:.85fr 1fr 1fr;gap:16px')}>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest?</div><div style={css('display:flex;gap:8px')}><div onClick={() => V.setRetest('yes')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'yes' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>Yes</div><div onClick={() => V.setRetest('no')} style={css('flex:1;text-align:center;padding:12px 6px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dRetest === 'no' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>No</div></div></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Retest fibo M15 side</div><select value={V.dFibo} onChange={V.setFibo} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — M5/M15</div><select value={V.dEntryType} onChange={V.setEntryType} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsEntryType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
             </div>
 
             {/* Feeling on Entry / SL / TP */}
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · Entry</div><select value={V.dFeelEntry} onChange={V.setFeelEntry} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelEntry.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · SL</div><select value={V.dFeelSL} onChange={V.setFeelSL} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelSL.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-              <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Feeling · TP</div><select value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:13.5px;outline:none;cursor:pointer')}><option value="">—</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · Entry</div><input value={V.dFeelEntry} onChange={V.setFeelEntry} placeholder="เช่น มั่นใจ / รีบเข้า" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · SL</div><input value={V.dFeelSL} onChange={V.setFeelSL} placeholder="เช่น สบายๆ / แน่นไป" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · TP</div><input value={V.dFeelTP} onChange={V.setFeelTP} placeholder="เช่น ถือถึงเป้า / ขายหมู" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
             </div>
 
             {/* Excursion — how much heat did the position take (Max DD) and how much of the best move did we keep */}
@@ -3635,21 +3640,6 @@ class App extends React.Component {
             {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#C9A65F;margin-top:-4px')}>ⓘ ใส่ Risk $ ในแต่ละไม้ เพื่อให้ระบบคำนวณ “ได้กี่ R” ของรอบนี้</div>)}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:7px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
-            <div>
-              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:9px;letter-spacing:.04em')}>Tags / emotion <span style={css('color:#83838C')}>(tap to toggle · ✕ remove · type + Enter to add)</span></div>
-              <div style={css('display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px')}>
-                {V.tagList.map((tag) => {
-                  const on = V.dTags.includes(tag);
-                  return (
-                    <span key={tag} onClick={() => V.toggleTag(tag)} style={{ ...css('display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;font-size:12.5px;cursor:pointer;transition:.14s'), background: on ? 'rgba(201,166,95,.16)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (on ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.1)'), color: on ? '#E2C588' : '#9A9AA4' }}>
-                      {tag}
-                      <span onClick={(e) => V.delTag(tag, e)} className="hv-deltext" style={{ color: '#83838C', fontSize: 11 }}>✕</span>
-                    </span>
-                  );
-                })}
-              </div>
-              <input placeholder="Add a tag, e.g. News, off-plan, then Enter" onKeyDown={V.addTagKey} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
-            </div>
             <div>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Images / chart screenshots <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>

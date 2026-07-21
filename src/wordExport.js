@@ -60,7 +60,11 @@ function fieldRow(cells) {
 
 export async function exportWeeklyWord(rows, accountName) {
   const seen = new Set(); const allUrls = [];
-  rows.forEach((r) => (r.images || []).forEach((u) => { if (u && !seen.has(u)) { seen.add(u); allUrls.push(u); } }));
+  const addUrl = (u) => { if (u && !seen.has(u)) { seen.add(u); allUrls.push(u); } };
+  rows.forEach((r) => {
+    (r.images || []).forEach(addUrl);
+    if (r.tfImages) ['htf', 'mtf', 'ltf'].forEach((tf) => addUrl(r.tfImages[tf]));
+  });
   const imgCapped = allUrls.length > IMG_EMBED_CAP;
   const embedUrls = allUrls.slice(0, IMG_EMBED_CAP);
   const dataMap = {};
@@ -152,6 +156,14 @@ export async function exportWeeklyWord(rows, accountName) {
           .map((c, i) => `<td valign="top"${i === 3 ? ' style="width:44%"' : ''}>${c}</td>`).join('') + `</tr>`;
       });
       h += `</table>`;
+      // per-TF chart images below the factors table
+      const tfi = r.tfImages || {};
+      const tfShots = [['HTF', 'htf'], ['MTF', 'mtf'], ['LTF', 'ltf']].filter(([, k]) => tfi[k] && dataMap[tfi[k]]);
+      if (tfShots.length) {
+        h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-top:6px"><tr>` + tfShots.map(([role, k]) =>
+          `<td valign="top" style="width:33%;padding-right:8px"><div style="font-family:Arial;font-size:9px;color:${SUB};margin-bottom:3px">${role} chart</div><img src="${dataMap[tfi[k]]}" style="width:100%;max-width:240px;border:1px solid ${LINE}"/></td>`
+        ).join('') + `</tr></table>`;
+      }
     }
 
     // Execution detail
@@ -174,13 +186,6 @@ export async function exportWeeklyWord(rows, accountName) {
         field('Feeling · entry', r.feelEntry), field('Feeling · SL', r.feelSL), field('Feeling · TP', r.feelTP),
       ]);
       h += `</table>`;
-    }
-
-    // Tags
-    if (r.tags && r.tags.length) {
-      h += `<div style="margin:8px 0 2px">` + r.tags.map((t) =>
-        `<span style="font-family:Arial;font-size:10px;color:${GOLD};border:1px solid ${LINE};background:#fff;padding:2px 8px;margin:0 4px 4px 0;display:inline-block;border-radius:10px">${esc(t)}</span>`
-      ).join('') + `</div>`;
     }
 
     // Notes
