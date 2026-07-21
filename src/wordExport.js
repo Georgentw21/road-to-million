@@ -174,16 +174,18 @@ export async function exportWeeklyWord(rows, accountName) {
       h += `</table>`;
     }
 
-    // Heat & capture + psychology
-    const anyHC = r.mae || r.mfe || r.feelEntry || r.feelSL || r.feelTP;
+    // MFE / capture + psychology
+    const anyHC = r.mfe || r.legMaxDD || r.feelEntry || r.feelSL || r.feelTP;
     if (anyHC) {
-      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">Heat, capture &amp; psychology</div>`;
+      h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">MFE, capture &amp; psychology</div>`;
       h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse">`;
       h += fieldRow([
-        field('Max DD (heat)', r.heatStr, r.heatStr ? RED : null),
-        field('Captured of best', r.captureStr, r.captureStr ? GREEN : null),
-        field('Pig left', r.pigUsd ? '$' + Math.round(r.pigUsd) : '', r.pigUsd ? GOLD : null),
-        field('Feeling · entry', r.feelEntry), field('Feeling · SL', r.feelSL), field('Feeling · TP', r.feelTP),
+        field('MFE (peak run)', r.mfe ? '$' + Math.round(r.mfe) : '', r.mfe ? GREEN : null),
+        field('Captured of peak', r.captureStr, r.captureStr ? GREEN : null),
+        field('Ran after TP', r.pigUsd ? '$' + Math.round(r.pigUsd) : '', r.pigUsd ? GOLD : null),
+        field('Max DD (legs)', r.legMaxDD ? r.legMaxDD + 'p' : ''),
+        field('Feeling · entry', r.feelEntry), field('Feeling · SL', r.feelSL),
+        field('Feeling · TP', r.feelTP),
       ]);
       h += `</table>`;
     }
