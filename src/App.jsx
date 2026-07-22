@@ -535,7 +535,9 @@ class App extends React.Component {
     const rows = this.state.trades
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === (this.state.portfolios[0] && this.state.portfolios[0].id)))
       .filter(t => inRange(t.date))
-      .map(t => {
+      .map(t0 => {
+        // net the pnl once so R / capture / pig all read the true realized figure (gross stays for the Gross P&L cell)
+        const t = (Number(t0.commission) || 0) ? { ...t0, pnl: this._netPnl(t0) } : t0;
         const urls = [];
         for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
         // per-timeframe card images (new capture) — so every attached chart makes it into Word
@@ -546,7 +548,7 @@ class App extends React.Component {
         return {
           date: t.date, weekday: this._dowFull(t.date), sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
           session: t.session, lot: (t.lot != null && t.lot !== '') ? String(t.lot) : '', portfolioName: this._portfolioName(t.portfolioId),
-          pnlNum: closed ? (t.pnl || 0) : 0, commission: Number(t.commission) || 0, netPnl: closed ? this._netPnl(t) : 0,
+          pnlNum: closed ? (t0.pnl || 0) : 0, commission: Number(t0.commission) || 0, netPnl: closed ? (t.pnl || 0) : 0,
           rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
@@ -555,7 +557,7 @@ class App extends React.Component {
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
           heatStr: heatR != null ? heatR.toFixed(1) + 'R' : (this._maeUsd(t) > 0 ? '$' + Math.round(this._maeUsd(t)) : ''),
-          captureStr: cap != null && this._netPnl(t) > 0 ? cap + '%' : '',
+          captureStr: cap != null && (t.pnl || 0) > 0 ? cap + '%' : '',
           pigUsd: this._pigUsd(t), alignN: this._alignN(t),
           alignStr: [t.alignHTF && 'HTF', t.alignMTF && 'MTF', t.alignLTF && 'LTF'].filter(Boolean).join(' · '),
           tags: Array.isArray(t.tags) ? t.tags : [],
@@ -769,8 +771,10 @@ class App extends React.Component {
   _maeR(t) { const r = this._posRisk(t); return r > 0 ? this._maeUsd(t) / r : null; }
   _mfeR(t) { const r = this._posRisk(t); return r > 0 ? this._mfeUsd(t) / r : null; }
   // how much of the best move you actually kept (0–100%). The rest is the "pig" left on the table.
-  _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round(this._netPnl(t) / mfe * 100))); }
-  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - this._netPnl(t)); }
+  // NOTE: like _rMult, these expect t.pnl to already be the realized NET figure (callers pass netted
+  // trades, or wrap a raw trade as {...t, pnl:_netPnl(t)}) — so we never re-subtract commission here.
+  _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round((Number(t.pnl) || 0) / mfe * 100))); }
+  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - (Number(t.pnl) || 0)); }
   // how many of the 3 timeframes were aligned with the trade
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
@@ -1589,10 +1593,37 @@ class App extends React.Component {
     const tagStats = tagSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + ' trades · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
     const tagMore = Math.max(0, tagSorted.length - LIST_CAP);
 
+    // ---- Edge finder — which confluence factors actually lift your win-rate ----
+    // Group closed trades by each factor's value, take each factor's strongest value
+    // (highest win-rate with a real sample), and rank by "lift" over the baseline win-rate.
+    // This is the "know your edge" read: e.g. TF 3/3 aligned + retest ✓ → +18 pts.
+    const efMin = 4; // a group needs at least this many trades before we trust its win-rate
+    const efFactors = [
+      { label: 'TF alignment', get: t => this._alignN(t) + '/3 aligned' },
+      { label: 'Retest', get: t => { const r = this._legRetest(t); return r === 'yes' ? 'Retest ✓' : (r === 'no' ? 'No retest' : ''); } },
+      { label: 'Fibo M15', get: t => this._legFibo(t) },
+      { label: 'Entry model', get: t => this._entryModel(t) },
+      { label: 'Trend · SOT', get: t => (t.sotType || '').trim() },
+      { label: 'Session', get: t => (t.session || '').trim() },
+      { label: 'Day of week', get: t => this._dowFull(t.date) },
+      { label: 'Setup', get: t => this._setupById(t.setupId).name },
+    ];
+    const efRows = [];
+    efFactors.forEach(f => {
+      const grp = {};
+      closed.forEach(t => { const v = f.get(t); if (!v) return; const m = grp[v] || (grp[v] = { n: 0, w: 0, net: 0 }); m.n++; if (t.pnl > 0) m.w++; m.net += t.pnl || 0; });
+      let best = null;
+      Object.keys(grp).forEach(v => { const m = grp[v]; if (m.n < efMin) return; const wr = m.w / m.n * 100; if (!best || wr > best.wr || (wr === best.wr && m.n > best.n)) best = { value: v, wr, n: m.n, w: m.w, net: m.net }; });
+      if (best) efRows.push({ factor: f.label, value: best.value, wr: Math.round(best.wr), n: best.n, record: best.w + 'W · ' + (best.n - best.w) + 'L', net: fm(best.net), netColor: pc(best.net), lift: Math.round(best.wr - winRate), w: (Math.min(100, best.wr)) + '%' });
+    });
+    efRows.sort((a, b) => b.lift - a.lift || b.wr - a.wr || b.n - a.n);
+    const edgeFinder = { baselineWr: Math.round(winRate), hasData: closed.length >= 8 && efRows.length > 0, minSample: efMin, rows: efRows.slice(0, 8) };
+
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
     // milestone อิงกำไรสะสม (net P&L) → แพ้ก็ติดลบจริง, ไม่รวมเติม/ถอนเงิน จึงสะท้อนการเติบโตจากฝีมือเทรดล้วนๆ
     const progPct = Math.max(0, Math.min(100, net / g * 100));
     return {
+      edgeFinder,
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
       consistencyStr, tradeDaysN, greenDaysN,
       ddLine, ddArea, symbolBars, tagStats, symbolMore, tagMore,
@@ -2513,6 +2544,7 @@ class App extends React.Component {
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
+      edgeFinder: S.edgeFinder,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
@@ -2940,6 +2972,29 @@ class App extends React.Component {
               ))}
             </div>
           </div>
+        </div>
+        {/* Edge finder — which confluence factors actually lift the win-rate (the "know your edge" panel) */}
+        <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);margin-bottom:16px;animation:rise .5s .12s both;transition:.18s')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;flex-wrap:wrap;gap:8px')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Edge finder <span style={css('font-style:italic;color:#E2C588')}>— where your win-rate comes from</span></div>
+            <div style={css('font-size:11.5px;color:#83838C')}>Baseline win-rate <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.baselineWr}%</b> · แต่ละปัจจัยจับค่าที่ชนะบ่อยสุด (≥{V.edgeFinder.minSample} ไม้)</div>
+          </div>
+          {V.edgeFinder.hasData ? (
+            <div style={css('margin-top:14px;display:flex;flex-direction:column;gap:7px')}>
+              {V.edgeFinder.rows.map((r, i) => (
+                <div key={i} className="hv-row" style={{ ...css('display:grid;grid-template-columns:132px 1fr 62px 74px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)') }}>
+                  <div style={css('min-width:0')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>{r.factor}</div><div style={css('font-size:13px;font-weight:600;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={r.value}>{r.value}</div></div>
+                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.record}</span></div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.wr >= 50 ? '#5FC08D' : '#E0B15A' }}>{r.wr}%</div>
+                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: r.lift > 0 ? '#5FC08D' : (r.lift < 0 ? '#DC6A63' : '#9A9AA4'), background: r.lift > 0 ? 'rgba(95,192,141,.12)' : (r.lift < 0 ? 'rgba(220,106,99,.1)' : 'rgba(255,255,255,.04)') }}>{(r.lift > 0 ? '+' : '') + r.lift} pts</span></div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;text-align:right'), color: r.netColor }}>{r.net}</div>
+                </div>
+              ))}
+              <div style={css('font-size:11px;color:#6f6f78;margin-top:4px;line-height:1.5')}>อ่านว่า: ปัจจัยไหน <b style={css('color:#9CD3C0')}>+pts</b> มาก = ตอนมีเงื่อนไขนั้น ชนะมากกว่าค่าเฉลี่ยรวม — โฟกัสเข้าไม้เฉพาะตอนปัจจัยเข้าทางจะรีดวินเรตขึ้นได้</div>
+            </div>
+          ) : (
+            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4')}>บันทึกเทรดที่ปิดแล้วอย่างน้อย <b style={css('color:#E2C588')}>8 ไม้</b> พร้อมข้อมูล TF / retest / fibo แล้วระบบจะหาว่าปัจจัยไหนดันวินเรตให้คุณ</div>
+          )}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
           <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .14s both;transition:.18s')}>
