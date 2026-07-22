@@ -821,7 +821,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -852,8 +852,8 @@ class App extends React.Component {
   addLeg() {
     const d = this.state.draft; const legs = Array.isArray(d.legs) ? d.legs.slice() : [];
     const first = legs.length === 0 && (d.entry || d.lot)
-      ? { trigger: d.entryType || '', price: d.entry || '', lot: d.lot || '', slBasis: 'Dow / structure', risk: d.risk || '', dd: '' }
-      : { trigger: '', price: '', lot: '', slBasis: 'Dow / structure', risk: '', dd: '' };
+      ? { trigger: d.entryType || '', price: d.entry || '', lot: d.lot || '', slBasis: '', risk: d.risk || '', dd: '' }
+      : { trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' };
     legs.push(first); this._patchDraft({ ...d, legs });
   }
   removeLeg(i) { const d = this.state.draft; const legs = (d.legs || []).slice(); legs.splice(i, 1); this._patchDraft({ ...d, legs }); }
@@ -900,7 +900,7 @@ class App extends React.Component {
   // can never linger as an un-removable option in the dropdowns or Edit-choices.
   _fieldOpts(field) { const o = this.state.tradeFieldOpts || {}; const a = Array.isArray(o[field]) ? o[field] : []; return a.filter(v => { const s = String(v == null ? '' : v).trim(); return s && s !== '—' && s !== '-' && s !== '–'; }); }
   // options for a <select>, guaranteeing the current draft value is present even if not in the list
-  _fieldOptsWith(field, cur) { const o = this._fieldOpts(field); return (cur && !o.includes(cur)) ? [cur].concat(o) : o; }
+  _fieldOptsWith(field, cur) { const o = this._fieldOpts(field); const c = String(cur == null ? '' : cur).trim(); const clean = (c && c !== '—' && c !== '-' && c !== '–') ? c : ''; return (clean && !o.includes(clean)) ? [clean].concat(o) : o; }
   // set an analysis field on the draft; if it's a brand-new value, remember it as a reusable option
   setDField(field, value) {
     const v = (value || '').trim();
@@ -2760,8 +2760,8 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '168px 122px 56px 112px 88px 54px 66px 80px 82px 88px 62px 98px';
-    const gminw = 1260;
+    const gcols = '140px 72px 72px 116px 52px 100px 82px 50px 62px 74px 80px 86px 58px 92px';
+    const gminw = 1340;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -2868,10 +2868,12 @@ class App extends React.Component {
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max cumulative lot across legs">Max lot</span><span title="Max favourable excursion — how far price ran ($)">MFE</span><span title="Max drawdown of the position (legs DD in pip, else heat R)">Max DD</span><span title="Share of the peak run kept after TP">Captured</span><span>R</span><span>P&amp;L</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้าออเดอร์">Time Entry</span><span title="เวลาออกออเดอร์">Time Exit</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max cumulative lot across legs">Max lot</span><span title="Max favourable excursion — how far price ran ($)">MFE</span><span title="Max drawdown of the position (legs DD in pip, else heat R)">Max DD</span><span title="Share of the peak run kept after TP">Captured</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-                  <span style={css('display:flex;flex-direction:column;gap:3px;align-items:flex-start')}><span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>{(t.entryHM || t.exitHM) && <span style={css('font-family:JetBrains Mono;font-size:10px;color:#83838C;padding-left:2px')}>{t.entryHM || '—'}<span style={css('color:#5a5a62')}> → </span>{t.exitHM || '—'}</span>}</span>
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
+                  <span title="เวลาเข้า" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.entryHM ? '#C9CAD2' : '#5a5a62' }}>{t.entryHM || '—'}</span>
+                  <span title="เวลาออก" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.exitHM ? '#8FBFA6' : '#5a5a62' }}>{t.exitHM || '—'}</span>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
