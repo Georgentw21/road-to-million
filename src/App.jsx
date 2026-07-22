@@ -766,7 +766,19 @@ class App extends React.Component {
   // ----- excursion (MAE/MFE) & timeframe alignment -----
   // MAE = worst heat this position took ($), MFE = best unrealised profit ($). Both magnitudes.
   _maeUsd(t) { return Math.abs(Number(t.mae) || 0); }
-  _mfeUsd(t) { return Math.abs(Number(t.mfe) || 0); }
+  // MFE $ — prefer the value auto-derived from prices (how far the peak ran vs your avg entry,
+  // calibrated by the realized move → $/point); fall back to a manually-typed $ for older trades.
+  _mfeUsd(t) { const a = this._autoMfe(t); return a != null ? a : Math.abs(Number(t.mfe) || 0); }
+  // Derive full MFE $ from the peak price with no need for the instrument's contract size:
+  //   $/point = |pnl| / |exitPrice − avgEntry|   (the move you actually realized calibrates it)
+  //   MFE $   = $/point × |peakPrice − avgEntry|  (entry → the furthest the trend ran)
+  // Needs a TP/exit price, a peak price, a leg avg entry and a non-zero realized pnl.
+  _autoMfe(t) {
+    const peak = Number(t.peakPrice), exit = Number(t.exitPrice), avg = this._legStats(t).avgEntry, pnl = Number(t.pnl) || 0;
+    if (!isFinite(peak) || !peak || !isFinite(exit) || !exit || avg == null || !isFinite(avg) || !avg || !pnl) return null;
+    const capturedPts = Math.abs(exit - avg); if (capturedPts <= 0) return null;
+    return Math.abs(pnl) / capturedPts * Math.abs(peak - avg);
+  }
   // heat in R (how deep the position's drawdown ran vs the $ risked) — the "Max DD of this position"
   _maeR(t) { const r = this._posRisk(t); return r > 0 ? this._maeUsd(t) / r : null; }
   _mfeR(t) { const r = this._posRisk(t); return r > 0 ? this._mfeUsd(t) / r : null; }
@@ -825,7 +837,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '', exitPrice: '', peakPrice: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -2282,10 +2294,15 @@ class App extends React.Component {
         // realized R preview from the entered risk
         dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
         dDayLabel: this._fullDateLabel(d.date),
-        // ----- MFE / capture: one $ input → did price keep running after your TP? -----
+        // ----- MFE / capture: enter TP + peak price → the system works out how far the trend ran -----
         dMfe: d.mfe != null ? String(d.mfe) : '', setMfe: (e) => this.setD('mfe', e.target.value),
+        dExitPrice: d.exitPrice != null ? String(d.exitPrice) : '', setExitPrice: (e) => this.setD('exitPrice', e.target.value),
+        dPeakPrice: d.peakPrice != null ? String(d.peakPrice) : '', setPeakPrice: (e) => this.setD('peakPrice', e.target.value),
+        dAvgEntry: (() => { const a = this._legStats(d).avgEntry; return a != null ? this._fmtPrice(a) : ''; })(),
+        // did the price fields produce an auto MFE? (drives the "auto ✓" hint + hides the manual $ input)
+        dMfeAuto: this._autoMfe(d) != null,
         dExc: (() => {
-          const mfe = Math.abs(parseFloat(d.mfe) || 0);
+          const mfe = this._mfeUsd(d);                                              // auto from prices, else the manual $
           const net = (parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0);
           if (!mfe) return null;
           const cap = Math.max(-20, Math.min(100, Math.round(net / mfe * 100)));   // % of the peak run you kept
@@ -3656,11 +3673,19 @@ class App extends React.Component {
 
             {/* ⑤ MFE / capture — how far price ran, and how much you kept after TP. (Drawdown lives in the legs DD) */}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M4 14l5-5 4 3 7-8" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>MFE · เก็บกำไร <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:11px')}>· หลัง TP แล้ว ราคาวิ่งต่อได้อีกมั้ย (ขายหมูรึเปล่า)</span></div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>MFE — ราคาวิ่งไปไกลสุด ($) <span style={css('color:#83838C')}>peak ก่อนย้อน</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div style={css('display:flex;align-items:flex-end')}><div style={css('font-size:11.5px;color:#6f6a5c;line-height:1.5;padding-bottom:4px')}>Max DD ของรอบดูได้ที่ <b style={css('color:#9A9AA4')}>DD ของแต่ละไม้</b> ด้านบน — ไม่ต้องกรอกซ้ำ</div></div>
+            <div style={css('font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M4 14l5-5 4 3 7-8" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>MFE · เก็บกำไร <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:11px')}>· ใส่ราคา TP + ราคาสุดเทรนด์ แล้วระบบคำนวณ MFE ให้เอง</span></div>
+            {/* price-driven MFE: exit(TP) price + peak price → system derives how far the trend ran, no contract size needed */}
+            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ราคา TP / จุดออก</div><input value={V.dExitPrice} onChange={V.setExitPrice} placeholder="e.g. 25900" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ราคาสุดเทรนด์ <span style={css('color:#83838C')}>peak</span></div><input value={V.dPeakPrice} onChange={V.setPeakPrice} placeholder="e.g. 26000" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Avg entry <span style={css('color:#83838C')}>· จากไม้</span></div><div style={{ ...css('width:100%;border-radius:10px;padding:12px 15px;font-size:14.5px;font-family:JetBrains Mono;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09)'), color: V.dAvgEntry ? '#E2C588' : '#6a6a72' }}>{V.dAvgEntry || 'ใส่ราคาเข้าในไม้ก่อน'}</div></div>
             </div>
+            {V.dMfeAuto
+              ? (<div style={css('font-size:11.5px;color:#5FC08D;display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#5FC08D" strokeWidth="2.2"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>คำนวณ MFE อัตโนมัติจากราคาแล้ว — เต็มเทรนด์ {V.dExc ? V.dExc.mfeStr : ''} · เก็บได้ {V.dExc ? V.dExc.capStr : ''} · หลัง TP เหลือ {V.dExc ? V.dExc.ranAfter : ''}</div>)
+              : (<div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
+                  <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>หรือใส่ MFE เป็น $ เอง <span style={css('color:#83838C')}>(ถ้าไม่มีราคา)</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+                  <div style={css('display:flex;align-items:flex-end')}><div style={css('font-size:11.5px;color:#6f6a5c;line-height:1.5;padding-bottom:4px')}>Max DD ของรอบดูได้ที่ <b style={css('color:#9A9AA4')}>DD ของแต่ละไม้</b> ด้านบน — ไม่ต้องกรอกซ้ำ</div></div>
+                </div>)}
             {V.dExc && (
               <div>
                 <div style={css('position:relative;height:30px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);overflow:hidden')}>
