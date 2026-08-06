@@ -184,6 +184,25 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
 /* 8. Inputs warm slightly on hover — the surface feels responsive before you click. */
 .hv-focus{transition:border-color .15s,box-shadow .15s,background-color .15s}
 .hv-focus:hover:not(:focus){border-color:rgba(201,166,95,.28)!important}
+/* ===== dropdown (Sel) — a real panel we control, with weight ===== */
+/* trigger: takes weight as you press, lights up while open */
+.rtm-sel{transition:transform .13s cubic-bezier(.2,.7,.3,1),box-shadow .16s,border-color .16s,background-color .16s;will-change:transform}
+.rtm-sel:hover{border-color:rgba(201,166,95,.42)!important;background-color:rgba(201,166,95,.05)!important}
+.rtm-sel[data-press="1"]{transform:translateY(1px) scale(.985);box-shadow:inset 0 4px 12px rgba(0,0,0,.45)}
+.rtm-sel[data-open="1"]{border-color:rgba(201,166,95,.6)!important;box-shadow:0 0 0 3px rgba(201,166,95,.12)}
+.rtm-selchev{transition:transform .26s cubic-bezier(.34,1.4,.5,1)}
+.rtm-sel[data-open="1"] .rtm-selchev{transform:rotate(180deg)}
+/* panel springs open from the trigger edge (flips origin when it opens upward) */
+@keyframes selIn{from{opacity:0;transform:translateY(-9px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes selInUp{from{opacity:0;transform:translateY(9px) scale(.96)}to{opacity:1;transform:none}}
+.rtm-selpanel{animation:selIn .21s cubic-bezier(.25,1.35,.4,1) both;transform-origin:top center}
+.rtm-selpanel[data-up="1"]{animation-name:selInUp;transform-origin:bottom center}
+/* options cascade in; the highlight glides and nudges the row right */
+@keyframes selOptIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
+.rtm-selopt{animation:selOptIn .22s cubic-bezier(.2,.8,.3,1) both;transition:background .13s,color .13s,padding-left .16s}
+.rtm-selopt[data-hi="1"]{background:rgba(201,166,95,.14);color:#F3E6C8!important;padding-left:18px}
+.rtm-selopt:active{transform:scale(.985)}
+
 /* 9. Respect reduced-motion: keep the information, drop the movement. */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}

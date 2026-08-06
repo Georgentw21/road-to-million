@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { ImageSlot } from './ImageSlot.jsx';
 import { loadJournal, saveJournal, getImageUrl, deleteImages, imageUsage } from './dataStore.js';
 import { exportWeeklyWord } from './wordExport.js';
@@ -49,6 +50,129 @@ function CountUp({ value, dur = 900 }) {
     return () => cancelAnimationFrame(raf);
   }, [value, dur]);
   return <Fragment>{disp}</Fragment>;
+}
+
+/* ===== Sel — the app's dropdown ==========================================
+   A native select hands its menu to the OS: it can't be styled, can't animate and
+   gives no feedback beyond the click — which is why every "choose a value" moment in
+   the app felt flat. This is a drop-in replacement (same value / onChange / <option>
+   children API) that renders a panel we control: the trigger takes weight as you press
+   it, the panel springs open, options cascade in and the highlight glides.
+   The panel is fixed-positioned in a portal so the legs table and the modal's own
+   scroll containers can never clip it. */
+function Sel({ value, onChange, children, style, className, title, disabled }) {
+  const opts = [];
+  React.Children.forEach(children, (c) => {
+    if (!c || !c.props) return;
+    opts.push({ v: c.props.value != null ? c.props.value : '', label: c.props.children });
+  });
+  const [open, setOpen] = React.useState(false);
+  const [press, setPress] = React.useState(false);
+  const [hi, setHi] = React.useState(-1);
+  const [pos, setPos] = React.useState(null);
+  const btnRef = React.useRef(null);
+  const panelRef = React.useRef(null);
+
+  const cur = opts.find(o => String(o.v) === String(value == null ? '' : value));
+  const shown = cur ? cur.label : (value || (opts[0] ? opts[0].label : ''));
+
+  const place = () => {
+    const el = btnRef.current; if (!el || !el.getBoundingClientRect) return;
+    const r = el.getBoundingClientRect();
+    const vh = (typeof window !== 'undefined' && window.innerHeight) || 800;
+    const need = Math.min(288, opts.length * 38 + 12);
+    const up = r.bottom + need + 10 > vh && r.top > need + 10;   // flip up when there's no room below
+    setPos({ left: r.left, width: r.width, top: up ? null : r.bottom + 6, bottom: up ? (vh - r.top + 6) : null, up });
+  };
+  const doOpen = () => {
+    if (disabled) return;
+    place();
+    setHi(Math.max(0, opts.findIndex(o => String(o.v) === String(value == null ? '' : value))));
+    setOpen(true);
+  };
+  const close = () => { setOpen(false); setPress(false); };
+  const pick = (v) => { close(); if (onChange) onChange({ target: { value: v } }); };
+
+  // Pointer/scroll live on the document; keys are handled on the focused trigger below, so
+  // the two never race over the same keystroke.
+  React.useEffect(() => {
+    if (!open || typeof document === 'undefined' || !document.addEventListener) return;
+    const onDown = (e) => {
+      const b = btnRef.current, p = panelRef.current;
+      if (b && b.contains && b.contains(e.target)) return;
+      if (p && p.contains && p.contains(e.target)) return;
+      close();
+    };
+    // a fixed panel would drift away from its trigger if the page scrolls underneath it
+    const onScroll = () => close();
+    document.addEventListener('mousedown', onDown, true);
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('scroll', onScroll, true);
+      window.addEventListener('resize', onScroll);
+    }
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('scroll', onScroll, true);
+        window.removeEventListener('resize', onScroll);
+      }
+    };
+  }, [open]);
+
+  const onKeyDown = (e) => {
+    if (!open) {
+      // a focused control shouldn't fire the app's global shortcuts (the old <select> was exempt
+      // by tag name; this div isn't) — but Escape still belongs to the modal above us.
+      if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); doOpen(); }
+      return;
+    }
+    // while open the dropdown owns the keyboard — Escape must dismiss it without also
+    // closing the trade modal underneath.
+    e.stopPropagation();
+    if (e.key === 'Escape' || e.key === 'Tab') { if (e.key === 'Escape') e.preventDefault(); close(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = opts.length; if (!n) return;
+      const d = e.key === 'ArrowDown' ? 1 : -1;
+      setHi(h => (h + d + n) % n);
+      return;
+    }
+    if (e.key === 'Home') { e.preventDefault(); setHi(0); return; }
+    if (e.key === 'End') { e.preventDefault(); setHi(opts.length - 1); return; }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const o = opts[hi]; if (o) pick(o.v); }
+  };
+
+  const cls = ('rtm-sel ' + String(className || '').replace(/rtm-select/g, '')).trim();
+  const trigger = (
+    <div ref={btnRef} className={cls} title={title} role="combobox" aria-expanded={open} tabIndex={disabled ? -1 : 0}
+      data-open={open ? '1' : '0'} data-press={press ? '1' : '0'}
+      onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
+      onClick={() => (open ? close() : doOpen())}
+      onKeyDown={onKeyDown}
+      style={{ ...style, display: 'flex', alignItems: 'center', gap: 8, cursor: disabled ? 'default' : 'pointer', userSelect: 'none', position: 'relative', opacity: disabled ? .5 : 1 }}>
+      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shown}</span>
+      <svg className="rtm-selchev" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#C9A65F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
+    </div>
+  );
+  if (!open || !pos) return trigger;
+  const panel = (
+    <div ref={panelRef} className="rtm-selpanel rtm-xscroll" data-up={pos.up ? '1' : '0'} role="listbox"
+      style={{ position: 'fixed', left: pos.left, width: pos.width, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), maxHeight: 288, overflowY: 'auto', zIndex: 9000, borderRadius: 12, padding: '6px', background: 'rgba(18,18,22,.97)', border: '1px solid rgba(201,166,95,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+      {opts.map((o, i) => {
+        const sel = String(o.v) === String(value == null ? '' : value);
+        return (
+          <div key={i} className="rtm-selopt" role="option" aria-selected={sel} data-hi={i === hi ? '1' : '0'}
+            onMouseEnter={() => setHi(i)} onClick={() => pick(o.v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, color: sel ? '#E2C588' : '#D8D8DE', fontWeight: sel ? 600 : 400, animationDelay: Math.min(i, 10) * 18 + 'ms' }}>
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+            {sel && <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#E2C588" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M20 6L9 17l-5-5" /></svg>}
+          </div>
+        );
+      })}
+    </div>
+  );
+  return (<Fragment>{trigger}{ReactDOM.createPortal(panel, document.body)}</Fragment>);
 }
 
 // กราฟ equity แบบ interactive — เอาเมาส์ชี้เพื่อดูค่าแต่ละจุด
@@ -868,12 +992,15 @@ class App extends React.Component {
   // free-typed 24h time field so the browser locale can never render 12h AM/PM.
   _dtDate(v) { const s = String(v || ''); return s.length >= 10 ? s.slice(0, 10) : ''; }
   _dtHM(v) { const s = String(v || ''); return s.length >= 16 ? s.slice(11, 16) : ''; }
-  // progressive formatting while typing: "930" -> "9:30", "0930" -> "09:30" (no clamping mid-type)
+  // Progressive formatting while typing: "930" -> "9:30", "1430" -> "14:30".
+  // The hour is deliberately NOT zero-padded here: padding "143" to "01:43" would both
+  // misread a half-typed "1430" and push the text to maxLength, swallowing the last digit.
+  // Padding happens on blur, in _clampHM.
   _fmtHMInput(raw) {
     const d = String(raw == null ? '' : raw).replace(/\D/g, '').slice(0, 4);
     if (!d) return '';
     if (d.length <= 2) return d;
-    return d.slice(0, d.length - 2).padStart(2, '0') + ':' + d.slice(-2);
+    return d.slice(0, d.length - 2) + ':' + d.slice(-2);
   }
   // final normalise to a real 24h value ('' when nothing usable was typed)
   _clampHM(raw) {
@@ -962,7 +1089,7 @@ class App extends React.Component {
   // options for an editable-choice field. Filter out blank / dash values so a stray "—"
   // can never linger as an un-removable option in the dropdowns or Edit-choices.
   _fieldOpts(field) { const o = this.state.tradeFieldOpts || {}; const a = Array.isArray(o[field]) ? o[field] : []; return a.filter(v => { const s = String(v == null ? '' : v).trim(); return s && s !== '—' && s !== '-' && s !== '–'; }); }
-  // options for a <select>, guaranteeing the current draft value is present even if not in the list
+  // options for a dropdown, guaranteeing the current draft value is present even if not in the list
   _fieldOptsWith(field, cur) { const o = this._fieldOpts(field); const c = String(cur == null ? '' : cur).trim(); const clean = (c && c !== '—' && c !== '-' && c !== '–') ? c : ''; return (clean && !o.includes(clean)) ? [clean].concat(o) : o; }
   // set an analysis field on the draft; if it's a brand-new value, remember it as a reusable option
   setDField(field, value) {
@@ -2829,7 +2956,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><select value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</select></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
+          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><Sel value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</Sel></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#83838C;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
@@ -2872,11 +2999,11 @@ class App extends React.Component {
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
           <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
           <div style={css('display:flex;gap:8px')}>
-            <select value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
+            <Sel value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
               <option value="week">Export: This week</option>
               <option value="month">Export: This month</option>
-            </select>
+            </Sel>
             <span onClick={V.exportCSV} className="hv-lift" title="Download as CSV (Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
             <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
             <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New trade</span>
@@ -2884,12 +3011,12 @@ class App extends React.Component {
         </div>
         <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
           <input value={V.logSearch} onChange={V.setLogSearch} placeholder="🔍 Search symbol / setup / notes…" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
-          <select value={V.logSort} onChange={V.setLogSort} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
+          <Sel value={V.logSort} onChange={V.setLogSort} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
             <option value="date-desc">Newest → oldest</option>
             <option value="date-asc">Oldest → newest</option>
             <option value="pnl-desc">Highest P&amp;L</option>
             <option value="pnl-asc">Lowest P&amp;L</option>
-          </select>
+          </Sel>
         </div>
         <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:14px;animation:rise .5s .06s both')}>
           <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
@@ -2909,10 +3036,10 @@ class App extends React.Component {
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:5px;min-width:0')}>
                   <span style={css('font-size:10px;color:#83838C;letter-spacing:.04em')}>{f.label}</span>
-                  <select value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
+                  <Sel value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
                     <option value="all">All</option>
                     {f.options.map((o) => (<option key={o.v} value={o.v}>{o.label}</option>))}
-                  </select>
+                  </Sel>
                 </div>
               ))}
             </div>
@@ -2935,9 +3062,9 @@ class App extends React.Component {
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare win rate by</div>
               {V.logBreakdown.hasCompare && (
-                <select value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+                <Sel value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                   {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
-                </select>
+                </Sel>
               )}
             </div>
             <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>Splits the same {V.filteredCount} filtered {V.filteredCount === 1 ? 'trade' : 'trades'} by one factor — so you can see which value wins most. The headline win rate above is the whole filtered set combined.</div>
@@ -3020,9 +3147,9 @@ class App extends React.Component {
             { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
             { l: 'Max Drawdown', v: V.anaDD, c: '#DC6A63' },
             { l: 'Green days', v: V.consistencyStr, c: '#5FC08D' },
-            { l: 'Current streak', v: V.curStreakStr, c: V.curStreakColor },
+            { l: 'Current streak', v: V.curStreakStr, c: V.curStreakColor, count: false },  // prose, not a figure
           ].map((m, i) => (
-            <div key={i} className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.v}</div></div>
+            <div key={i} className="hv-k-gold liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s;animation:rise .5s both'), animationDelay: (0.04 + i * 0.06) + 's' }}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.count === false ? m.v : <CountUp value={m.v} />}</div></div>
           ))}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
@@ -3052,9 +3179,9 @@ class App extends React.Component {
           {V.edgeFinder.hasData ? (
             <div style={css('margin-top:14px;display:flex;flex-direction:column;gap:7px')}>
               {V.edgeFinder.rows.map((r, i) => (
-                <div key={i} className="hv-row" style={{ ...css('display:grid;grid-template-columns:132px 1fr 62px 74px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)') }}>
+                <div key={i} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:132px 1fr 62px 74px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)'), animationDelay: (i * 0.06) + 's' }}>
                   <div style={css('min-width:0')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>{r.factor}</div><div style={css('font-size:13px;font-weight:600;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={r.value}>{r.value}</div></div>
-                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.record}</span></div>
+                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)', animationDelay: (0.1 + i * 0.06) + 's' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.record}</span></div>
                   <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.wr >= 50 ? '#5FC08D' : '#E0B15A' }}>{r.wr}%</div>
                   <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: r.lift > 0 ? '#5FC08D' : (r.lift < 0 ? '#DC6A63' : '#9A9AA4'), background: r.lift > 0 ? 'rgba(95,192,141,.12)' : (r.lift < 0 ? 'rgba(220,106,99,.1)' : 'rgba(255,255,255,.04)') }}>{(r.lift > 0 ? '+' : '') + r.lift} pts</span></div>
                   <div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;text-align:right'), color: r.netColor }}>{r.net}</div>
@@ -3618,13 +3745,13 @@ class App extends React.Component {
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:26px 34px 30px;display:flex;flex-direction:column;gap:17px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><select value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><Sel value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup</div><select value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup</div><Sel value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><Sel value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></Sel></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><input type="date" value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
@@ -3643,7 +3770,7 @@ class App extends React.Component {
             {/* ① รอบเทรด · Round context */}
             <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>①</b> รอบเทรด · Round context</div>
             <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><select value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dSotType ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><Sel value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dSotType ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:8px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:12px 0;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
             </div>
             {/* ② ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
@@ -3656,7 +3783,7 @@ class App extends React.Component {
                     <span onClick={() => V.toggleAlign(c.alignKey)} className="rtm-press" title="Aligned กับ bias?" style={css('display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;transition:.14s;' + (c.aligned ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.14);color:#9A9AA4'))}><span style={css('width:5px;height:5px;border-radius:50%;background:currentColor')}></span>Aligned</span>
                   </div>
                   <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px;box-sizing:border-box')} />
-                  <select value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px;box-sizing:border-box'), color: c.cond ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก condition…</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                  <Sel value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px;box-sizing:border-box'), color: c.cond ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก condition…</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
                   <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
                   <ImageSlot slotId={c.slotId} value={this.state.images[c.slotId]} onChange={(p) => this.setImage(c.slotId, p)} rounded placeholder={'+ ภาพ ' + c.role} style={{ width: '100%', height: 96 }} />
                 </div>
@@ -3683,14 +3810,14 @@ class App extends React.Component {
                 {V.dLegs.rows.map((r) => (
                   <div key={r.i} style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;align-items:center;padding:4px 2px')}>
                     <span title={r.i === 0 ? 'ไม้แรก' : 'ไม้เบิ้ลที่ ' + (r.i + 1)} style={css('font-family:JetBrains Mono;font-size:12px;font-weight:600;color:#B7A981;text-align:center')}>{r.i + 1}</span>
-                    <select value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.trigger ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <Sel value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.trigger ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
                     <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
-                    <select value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.slBasis ? '#ECEAE3' : '#6a6a72', background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">เลือก…</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <Sel value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.slBasis ? '#ECEAE3' : '#6a6a72', background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">เลือก…</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
                     <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
-                    <select value={r.retest} onChange={(e) => V.setLegRetest(r.i, e.target.value)} title="ไม้นี้ retest มั้ย" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 6px;font-size:12.5px;outline:none;cursor:pointer'), color: r.retest ? (r.retest === 'yes' ? '#5FC08D' : '#DC6A63') : '#6a6a72' }}><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></select>
-                    <select value={r.fibo} onChange={(e) => V.setLegFibo(r.i, e)} title="Retest fibo M15 ของไม้นี้" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.fibo ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</select>
+                    <Sel value={r.retest} onChange={(e) => V.setLegRetest(r.i, e.target.value)} title="ไม้นี้ retest มั้ย" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 6px;font-size:12.5px;outline:none;cursor:pointer'), color: r.retest ? (r.retest === 'yes' ? '#5FC08D' : '#DC6A63') : '#6a6a72' }}><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></Sel>
+                    <Sel value={r.fibo} onChange={(e) => V.setLegFibo(r.i, e)} title="Retest fibo M15 ของไม้นี้" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.fibo ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
                     <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
                     <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
