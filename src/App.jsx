@@ -807,7 +807,8 @@ class App extends React.Component {
       .filter(t => inRange(t.date))
       .map(t0 => {
         // net the pnl once so R / capture / pig all read the true realized figure (gross stays for the Gross P&L cell)
-        const t = (Number(t0.commission) || 0) ? { ...t0, pnl: this._netPnl(t0) } : t0;
+        // net once, and always — so a non-finite or non-numeric pnl can't reach the document
+        const t = { ...t0, pnl: this._netPnl(t0) };
         const urls = [];
         for (let n = 0; n < (t.imgCount || 2); n++) { const p = imgs['trade-' + t.id + '-img-' + n]; if (p) urls.push(getImageUrl(p)); }
         // per-timeframe card images (new capture) — so every attached chart makes it into Word
@@ -818,9 +819,9 @@ class App extends React.Component {
         return {
           date: t.date, weekday: this._dowFull(t.date), sym: t.sym || '—', side: t.side, setupName: this._setupById(t.setupId).name,
           session: t.session, lot: (t.lot != null && t.lot !== '') ? String(t.lot) : '', portfolioName: this._portfolioName(t.portfolioId),
-          pnlNum: closed ? (t0.pnl || 0) : 0, commission: Number(t0.commission) || 0, netPnl: closed ? (t.pnl || 0) : 0,
+          pnlNum: closed ? this._n(t0.pnl) : 0, commission: this._n(t0.commission), netPnl: closed ? this._n(t.pnl) : 0,
           rr: this._rMult(t), status: t.status, notes: t.notes || '', images: urls,
-          entry: t.entry, stop: t.stop, target: t.target, riskUsd: Number(t.risk) || 0,
+          entry: t.entry, stop: t.stop, target: t.target, riskUsd: this._n(t.risk),
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
           ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: this._legRetest(t), fibo: this._legFibo(t), entryType: this._entryModel(t), slZone: t.slZone,
           sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {}, tfImages,
@@ -854,7 +855,8 @@ class App extends React.Component {
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, t.lot, t.entry, t.stop, t.target, t.rr, (t.risk != null ? t.risk : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? t.pnl : ''), (t.commission != null ? t.commission : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      // numeric columns go out sanitized, so a spreadsheet never opens on "NaN"/"not-a-number"
+      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? this._n(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -1014,40 +1016,46 @@ class App extends React.Component {
   // and slippage past the stop can be worse than −1R. Falls back to the old approximation
   // (win = +planned R:R, loss = −1R) only when no dollar risk was recorded.
   // NOTE: callers pass trades whose pnl is already net of commission, so use t.pnl directly.
+  // Coerce whatever the journal holds (typed text, pasted junk, legacy rows) into a finite
+  // number. `Number(x) || 0` already handles "abc", but Infinity is truthy and sails straight
+  // through — poisoning every total, average and axis it touches.
+  _n(v) { const x = Number(v); return isFinite(x) ? x : 0; }
   _rMult(t) {
     if (t.status === 'OPEN') return 0;
-    const p = Number(t.pnl) || 0;
+    const p = this._n(t.pnl);
     const risk = this._posRisk(t);
     if (risk > 0) return p / risk;
-    if (p < 0) return -1; if (p > 0) return Math.abs(Number(t.rr) || 0); return 0;
+    if (p < 0) return -1; if (p > 0) return Math.abs(this._n(t.rr)); return 0;
   }
   // the position's 1R in $ — sum of each leg's risk when scaled in, else the single risk field
-  _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(Number(t.risk) || 0); }
+  _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(this._n(t.risk)); }
   // entry model — now lives on the first real leg's "trigger"; falls back to the old per-trade entryType
   _entryModel(t) { const legs = this._legs(t); const first = legs.find(l => (l.trigger || '').trim()); return (first && first.trigger) || t.entryType || ''; }
   // retest / fibo now live per-leg too — derive a trade-level read (first leg that has it, else the old field)
   _legRetest(t) { const l = this._legs(t).find(x => x.retest === 'yes' || x.retest === 'no'); return (l && l.retest) || t.retest || ''; }
   _legFibo(t) { const l = this._legs(t).find(x => (x.fibo || '').trim()); return (l && l.fibo) || t.fibo || ''; }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
-  _netPnl(t) { return (Number(t.pnl) || 0) - (Number(t.commission) || 0); }
+  _netPnl(t) { return this._n(t.pnl) - this._n(t.commission); }
   // a copy of the trades with pnl already net of commission — everything downstream
   // (equity, calendar, analytics, win-rate) then works off the true net figure
-  _withNet(list) { return (list || []).map(t => (Number(t.commission) || 0) ? { ...t, pnl: this._netPnl(t) } : t); }
+  // Always hand downstream a finite net pnl. (It used to rewrite the row only when a
+  // commission was present, which let a non-finite or non-numeric pnl through untouched.)
+  _withNet(list) { return (list || []).map(t => { const net = this._netPnl(t); return t.pnl === net ? t : { ...t, pnl: net }; }); }
   // ----- excursion (MAE/MFE) & timeframe alignment -----
   // MAE = worst heat this position took ($), MFE = best unrealised profit ($). Both magnitudes.
-  _maeUsd(t) { return Math.abs(Number(t.mae) || 0); }
+  _maeUsd(t) { return Math.abs(this._n(t.mae)); }
   // MFE $ — prefer the value auto-derived from prices (how far the peak ran vs your avg entry,
   // calibrated by the realized move → $/point); fall back to a manually-typed $ for older trades.
-  _mfeUsd(t) { const a = this._autoMfe(t); return a != null ? a : Math.abs(Number(t.mfe) || 0); }
+  _mfeUsd(t) { const a = this._autoMfe(t); return a != null ? a : Math.abs(this._n(t.mfe)); }
   // Derive full MFE $ from the peak price with no need for the instrument's contract size:
   //   $/point = |pnl| / |exitPrice − avgEntry|   (the move you actually realized calibrates it)
   //   MFE $   = $/point × |peakPrice − avgEntry|  (entry → the furthest the trend ran)
   // Needs a TP/exit price, a peak price, a leg avg entry and a non-zero realized pnl.
   _autoMfe(t) {
-    const peak = Number(t.peakPrice), exit = Number(t.exitPrice), avg = this._legStats(t).avgEntry, pnl = Number(t.pnl) || 0;
+    const peak = Number(t.peakPrice), exit = Number(t.exitPrice), avg = this._legStats(t).avgEntry, pnl = this._n(t.pnl);
     if (!isFinite(peak) || !peak || !isFinite(exit) || !exit || avg == null || !isFinite(avg) || !avg || !pnl) return null;
     const capturedPts = Math.abs(exit - avg); if (capturedPts <= 0) return null;
-    return Math.abs(pnl) / capturedPts * Math.abs(peak - avg);
+    return this._n(Math.abs(pnl) / capturedPts * Math.abs(peak - avg));
   }
   // heat in R (how deep the position's drawdown ran vs the $ risked) — the "Max DD of this position"
   _maeR(t) { const r = this._posRisk(t); return r > 0 ? this._maeUsd(t) / r : null; }
@@ -1055,8 +1063,8 @@ class App extends React.Component {
   // how much of the best move you actually kept (0–100%). The rest is the "pig" left on the table.
   // NOTE: like _rMult, these expect t.pnl to already be the realized NET figure (callers pass netted
   // trades, or wrap a raw trade as {...t, pnl:_netPnl(t)}) — so we never re-subtract commission here.
-  _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round((Number(t.pnl) || 0) / mfe * 100))); }
-  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - (Number(t.pnl) || 0)); }
+  _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round(this._n(t.pnl) / mfe * 100))); }
+  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - this._n(t.pnl)); }
   // how many of the 3 timeframes were aligned with the trade
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
@@ -1073,9 +1081,9 @@ class App extends React.Component {
     const legs = this._legs(t);
     let cum = 0, maxLot = 0, maxDD = 0, wSum = 0, wLot = 0, anyUnder = false, totalRisk = 0;
     legs.forEach(l => {
-      const lot = Math.abs(Number(l.lot) || 0), price = Number(l.price) || 0, dd = Math.abs(Number(l.dd) || 0);
+      const lot = Math.abs(this._n(l.lot)), price = this._n(l.price), dd = Math.abs(this._n(l.dd));
       cum += lot; if (cum > maxLot) maxLot = cum; if (dd > maxDD) maxDD = dd;
-      totalRisk += Math.abs(Number(l.risk) || 0);
+      totalRisk += Math.abs(this._n(l.risk));
       if (lot > 0 && price > 0) { wSum += price * lot; wLot += lot; }
       if (/under/i.test(l.slBasis || '')) anyUnder = true;
     });
@@ -1282,21 +1290,24 @@ class App extends React.Component {
   // day-of-week helpers (Monday-first labelling everywhere)
   _DOW_SHORT() { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; }
   _DOW_FULL() { return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; }
-  _dowShort(dateStr) { if (!dateStr) return ''; return this._DOW_SHORT()[new Date(dateStr + 'T00:00').getDay()]; }
-  _dowFull(dateStr) { if (!dateStr) return ''; return this._DOW_FULL()[new Date(dateStr + 'T00:00').getDay()]; }
+  // A stored date can be malformed (hand-edited file, bad import). Parse once and let every
+  // label fall back to a dash rather than rendering "NaN undefined NaN".
+  _asDate(dateStr) { if (!dateStr) return null; const d = new Date(dateStr + 'T00:00'); return isNaN(d.getTime()) ? null : d; }
+  _dowShort(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_SHORT()[d.getDay()] : ''; }
+  _dowFull(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_FULL()[d.getDay()] : ''; }
   // a distinct colour per weekday (Sun..Sat) — Monday = gold, then blue/green/purple/amber, weekends muted
   _DOW_COLORS() { return ['#C77B7B', '#E2C588', '#7BA7D9', '#5FC08D', '#B79CE8', '#E39A6A', '#6E7686']; }
-  _dowColor(dateStr) { if (!dateStr) return '#9A9AA4'; return this._DOW_COLORS()[new Date(dateStr + 'T00:00').getDay()]; }
+  _dowColor(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_COLORS()[d.getDay()] : '#9A9AA4'; }
   // "8 Jul 2026 · Wed"
   _fullDateLabel(dateStr) {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr + 'T00:00'); const M = this._EN_MONS_SHORT();
-    return d.getDate() + ' ' + M[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + this._DOW_SHORT()[d.getDay()];
+    const d = this._asDate(dateStr); if (!d) return '—';
+    const M = this._EN_MONS_SHORT();
+    return d.getDate() + ' ' + M[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + this._DOW_SHORT()[dateStr ? d.getDay() : 0];
   }
   // aggregate win-rate / net / avg-R over an array of trades (closed only for win-rate)
   _aggStats(arr) {
     let net = 0, closed = 0, wins = 0, rSum = 0;
-    arr.forEach(t => { if (t.status !== 'OPEN') { const p = Number(t.pnl) || 0; net += p; closed++; if (p > 0) wins++; rSum += this._rMult(t); } });
+    arr.forEach(t => { if (t.status !== 'OPEN') { const p = this._n(t.pnl); net += p; closed++; if (p > 0) wins++; rSum += this._rMult(t); } });
     const wr = closed ? Math.round(wins / closed * 100) : 0;
     const avgR = closed ? rSum / closed : 0;
     return { n: arr.length, closed, wins, losses: closed - wins, wr, net, avgR };
@@ -1761,7 +1772,7 @@ class App extends React.Component {
     // เลขบนแท่งกราฟ: โชว์ค่าจริง (มี comma) ย่อเป็น k เฉพาะเมื่อ ≥ 100,000 เพื่อไม่ให้ล้น
     const barMoney = (n) => { const a = Math.abs(n), sign = n >= 0 ? '+$' : '−$'; return a >= 100000 ? (sign + (a / 1000).toFixed(0) + 'k') : (sign + Math.round(a).toLocaleString('en-US')); };
     // กันข้อมูลที่ pnl/rr เป็น string -> บังคับเป็นตัวเลขเสมอ
-    trades = (trades || []).map(t => ({ ...t, pnl: Number(t.pnl) || 0, rr: Number(t.rr) || 0 }));
+    trades = (trades || []).map(t => ({ ...t, pnl: this._n(t.pnl), rr: this._n(t.rr) }));
     const closed = trades.filter(t => t.status !== 'OPEN');
     const wins = closed.filter(t => (t.pnl || 0) > 0);
     const losses = closed.filter(t => (t.pnl || 0) < 0);
@@ -2051,12 +2062,12 @@ class App extends React.Component {
     // ---- trade row mapper ----
     const sessColor = (s) => s === 'Tokyo' ? BLUE : (s === 'London' ? GOLD : PURPLE);
     const mapTrade = (t0) => {
-      const t = { ...t0, pnl: Number(t0.pnl) || 0, rr: Number(t0.rr) || 0 };
+      const t = { ...t0, pnl: this._n(t0.pnl), rr: this._n(t0.rr) };
       const su = this._setupById(t.setupId);
       // cache รูปแบบวันที่ (toLocaleDateString แพง — วันที่ซ้ำกันเยอะ)
       if (!this._dShortCache) this._dShortCache = {};
       let dShort = this._dShortCache[t.date];
-      if (!dShort) { dShort = this._dShortCache[t.date] = new Date(t.date + 'T00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); }
+      if (!dShort) { const _d = this._asDate(t.date); dShort = this._dShortCache[t.date] = _d ? _d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'; }
       const chips = [];
       if (t.ltf) chips.push({ label: 'LTF · ' + t.ltf, color: '#9CC2E8' });
       if (t.mtf) chips.push({ label: 'MTF · ' + t.mtf, color: '#E2C588' });
@@ -2068,7 +2079,7 @@ class App extends React.Component {
         id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name, accent: su.accent,
         session: t.session, dateShort: dShort, chips,
         dowShort: this._dowShort(t.date), fullDate: this._fullDateLabel(t.date), dowColor: this._dowColor(t.date),
-        dateLong: (() => { const dt = new Date(t.date + 'T00:00'); return dt.getDate() + ' ' + this._EN_MONS_SHORT()[dt.getMonth()] + ' ' + dt.getFullYear(); })(),
+        dateLong: (() => { const dt = this._asDate(t.date); return dt ? (dt.getDate() + ' ' + this._EN_MONS_SHORT()[dt.getMonth()] + ' ' + dt.getFullYear()) : '—'; })(),
         ltf: t.ltf || '', mtf: t.mtf || '', htf: t.htf || '', retest: t.retest || '', fibo: t.fibo || '', entryType: t.entryType || '', slZone: t.slZone || '',
         sideColor: t.side === 'BUY' ? GREEN : RED,
         sessionColor: sessColor(t.session),
@@ -2143,8 +2154,8 @@ class App extends React.Component {
     });
     const so = st.logSort;
     if (so === 'date-asc') filteredRaw.sort((a, b) => a.date.localeCompare(b.date));
-    else if (so === 'pnl-desc') filteredRaw.sort((a, b) => (Number(b.pnl) || 0) - (Number(a.pnl) || 0));
-    else if (so === 'pnl-asc') filteredRaw.sort((a, b) => (Number(a.pnl) || 0) - (Number(b.pnl) || 0));
+    else if (so === 'pnl-desc') filteredRaw.sort((a, b) => this._n(b.pnl) - this._n(a.pnl));
+    else if (so === 'pnl-asc') filteredRaw.sort((a, b) => this._n(a.pnl) - this._n(b.pnl));
     // date-desc = ค่าเริ่มต้น (เรียงอยู่แล้ว)
     // แสดงเป็นหน้า: โชว์ตาม logLimit แล้วกด "โหลดเพิ่ม" — data เยอะแค่ไหนหน้าก็ไม่อืด
     const logTotal = filteredRaw.length;
@@ -2214,7 +2225,8 @@ class App extends React.Component {
     const groupAgg = {}; groupKeys.forEach(k => { groupAgg[k] = this._aggStats(groups[k]); });
     if (dimDef.order) groupKeys.sort((a, b) => { const ia = dimDef.order.indexOf(a), ib = dimDef.order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
     else groupKeys.sort((a, b) => groupAgg[b].net - groupAgg[a].net);
-    const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(groupAgg[k].net)));
+    // never let a rogue value make every bar width NaN
+    const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(this._n(groupAgg[k].net))));
     // "best edge" = highest win-rate among groups with a meaningful sample (≥3 closed) —
     // so on large data you instantly see which value of the compared factor wins most
     const SAMPLE_MIN = 3;
