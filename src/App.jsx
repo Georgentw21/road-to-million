@@ -863,6 +863,53 @@ class App extends React.Component {
     if (field === 'entryTime' && typeof v === 'string' && v.length >= 10) d.date = v.slice(0, 10);
     this._patchDraft(d);
   }
+  // ----- 24-hour time entry (server time 00:00–23:59) -----
+  // The stored shape stays "YYYY-MM-DDTHH:MM"; we just split it into a date field and a
+  // free-typed 24h time field so the browser locale can never render 12h AM/PM.
+  _dtDate(v) { const s = String(v || ''); return s.length >= 10 ? s.slice(0, 10) : ''; }
+  _dtHM(v) { const s = String(v || ''); return s.length >= 16 ? s.slice(11, 16) : ''; }
+  // progressive formatting while typing: "930" -> "9:30", "0930" -> "09:30" (no clamping mid-type)
+  _fmtHMInput(raw) {
+    const d = String(raw == null ? '' : raw).replace(/\D/g, '').slice(0, 4);
+    if (!d) return '';
+    if (d.length <= 2) return d;
+    return d.slice(0, d.length - 2).padStart(2, '0') + ':' + d.slice(-2);
+  }
+  // final normalise to a real 24h value ('' when nothing usable was typed)
+  _clampHM(raw) {
+    const d = String(raw == null ? '' : raw).replace(/\D/g, '');
+    if (!d) return '';
+    let hh, mm;
+    if (d.length <= 2) { hh = parseInt(d, 10); mm = 0; }
+    else { hh = parseInt(d.slice(0, d.length - 2), 10); mm = parseInt(d.slice(-2), 10); }
+    if (!isFinite(hh)) return '';
+    hh = Math.min(23, Math.max(0, hh)); mm = Math.min(59, Math.max(0, isFinite(mm) ? mm : 0));
+    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  }
+  // write one half (date | time) back into the combined field
+  _setDTPart(field, kind, v) {
+    const d = this.state.draft; if (!d) return;
+    const cur = String(d[field] || '');
+    const date = kind === 'date' ? v : (this._dtDate(cur) || d.date || '');
+    const hm = kind === 'time' ? v : this._dtHM(cur);
+    if (!date) { this.setD(field, ''); return; }          // clearing the date clears the stamp
+    this.setD(field, date + 'T' + (hm || '00:00'));
+  }
+  setDTDate(field, e) { this._setDTPart(field, 'date', e.target.value); }
+  // keep the raw keystrokes in a transient map so partial input ("09:3") isn't written to the trade
+  setDTTime(field, e) {
+    const raw = e.target.value;
+    this.setState({ hmDraft: { ...(this.state.hmDraft || {}), [field]: this._fmtHMInput(raw) } });
+    if (String(raw).replace(/\D/g, '').length >= 3) this._setDTPart(field, 'time', this._clampHM(raw));
+  }
+  commitDTTime(field) {
+    const cur = (this.state.hmDraft || {})[field];
+    if (cur == null) return;
+    const hm = this._clampHM(cur);
+    if (hm) this._setDTPart(field, 'time', hm);
+    const next = { ...(this.state.hmDraft || {}) }; delete next[field]; this.setState({ hmDraft: next });
+  }
+  _hmValue(field) { const t = (this.state.hmDraft || {})[field]; return t != null ? t : this._dtHM(this.state.draft && this.state.draft[field]); }
   addImg() { const d = this.state.draft; if (d.imgCount < 6) this._patchDraft({ ...d, imgCount: d.imgCount + 1 }); }
   // ----- multi-leg "เบิ้ล" editor -----
   addLeg() {
@@ -2403,6 +2450,12 @@ class App extends React.Component {
         addTagKey: (e) => { if (e.key === 'Enter') { this.addTag(e.target.value); e.target.value = ''; } },
         setStatus: (e) => this.setD('status', e.target.value), setEntryTime: (e) => this.setD('entryTime', e.target.value),
         setExitTime: (e) => this.setD('exitTime', e.target.value), setNotes: (e) => this.setD('notes', e.target.value),
+        // 24h server-time entry: date half + free-typed HH:MM half (never locale AM/PM)
+        dEntryDate: this._dtDate(d.entryTime), dExitDate: this._dtDate(d.exitTime),
+        dEntryHM: this._hmValue('entryTime'), dExitHM: this._hmValue('exitTime'),
+        setEntryDate: (e) => this.setDTDate('entryTime', e), setExitDate: (e) => this.setDTDate('exitTime', e),
+        setEntryHM: (e) => this.setDTTime('entryTime', e), setExitHM: (e) => this.setDTTime('exitTime', e),
+        blurEntryHM: () => this.commitDTTime('entryTime'), blurExitHM: () => this.commitDTTime('exitTime'),
         setBuy: () => this.setD('side', 'BUY'), setSell: () => this.setD('side', 'SELL'),
         buyStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'BUY' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
         sellStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'SELL' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
@@ -3574,8 +3627,8 @@ class App extends React.Component {
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><select value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></select></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened</div><input type="datetime-local" value={V.dEntryTime} onChange={V.setEntryTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Exit — closed</div><input type="datetime-local" value={V.dExitTime} onChange={V.setExitTime} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><input type="date" value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Exit — closed <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><input type="date" value={V.dExitDate} onChange={V.setExitDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dExitHM} onChange={V.setExitHM} onBlur={V.blurExitHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
             </div>
             <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E2C588" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3937,12 +3990,14 @@ class App extends React.Component {
     ];
     const curView = this.state.view;
     return (
-      <div style={css('position:fixed;inset:0;display:flex;background:#000')}>
+      <div style={css('position:fixed;inset:0;display:flex;background:radial-gradient(125% 85% at 50% -12%,rgba(201,166,95,.075),transparent 58%),linear-gradient(180deg,#0b0b0e 0%,#070709 52%,#000 100%)')}>
 
         <div style={css('position:absolute;inset:0;pointer-events:none;overflow:hidden')}>
-          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(255,255,255,.05),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(255,255,255,.035),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.028),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(226,197,136,.055),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(123,167,217,.032),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.026),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
+          {/* fine light seam along the very top — the "polished edge" of the surface */}
+          <div style={css('position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(226,197,136,.34) 22%,rgba(226,197,136,.5) 50%,rgba(226,197,136,.34) 78%,transparent)')}></div>
         </div>
 
         {/* MAIN COLUMN */}

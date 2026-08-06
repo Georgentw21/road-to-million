@@ -161,6 +161,34 @@ select option{background:#0c0c0e;color:#ECEAE3}
 /* equity hover dot pops in */
 @keyframes dotIn{from{r:2}to{r:6}}
 .rtm-hoverdot{animation:dotIn .18s cubic-bezier(.34,1.5,.5,1) both}
+
+/* ===== craft pass — the details that read as "expensive" ===== */
+/* 1. Figures line up in columns. Every monospace number gets tabular, slashed-zero digits,
+      so P&L / R / times form clean vertical rules instead of ragged text. */
+[style*="JetBrains Mono"],[style*="JetBrains Mono"] *{font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"tnum" 1,"zero" 1}
+/* 2. Serif headings: optical tightening + crisper rendering at display sizes. */
+[style*="Instrument Serif"]{letter-spacing:-.012em;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+/* 3. Gold selection instead of the browser's blue. */
+::selection{background:rgba(201,166,95,.32);color:#FFF8E7}
+::-moz-selection{background:rgba(201,166,95,.32);color:#FFF8E7}
+/* 4. Real elevation: cards cast a soft shadow so they sit above the surface, and lift on hover. */
+.liquid-glass{box-shadow:inset 0 1px 1px rgba(255,255,255,.1),0 18px 42px -28px rgba(0,0,0,.9)}
+/* 5. Keyboard focus is visible and on-brand (mouse clicks stay clean via :focus-visible). */
+:focus-visible{outline:2px solid rgba(201,166,95,.55);outline-offset:2px;border-radius:8px}
+/* 6. Date/time pickers: dark, gold indicator — no bright white native chrome. */
+input[type="date"],input[type="datetime-local"],input[type="time"]{color-scheme:dark}
+input[type="date"]::-webkit-calendar-picker-indicator,input[type="datetime-local"]::-webkit-calendar-picker-indicator{filter:invert(78%) sepia(38%) saturate(420%) hue-rotate(1deg) brightness(92%);opacity:.75;cursor:pointer;transition:opacity .15s}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator{opacity:1}
+/* 7. Placeholders sit back so real values lead. */
+::placeholder{color:#5f5f68;opacity:1}
+/* 8. Inputs warm slightly on hover — the surface feels responsive before you click. */
+.hv-focus{transition:border-color .15s,box-shadow .15s,background-color .15s}
+.hv-focus:hover:not(:focus){border-color:rgba(201,166,95,.28)!important}
+/* 9. Respect reduced-motion: keep the information, drop the movement. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  .rtm-marquee{animation:ticker 32s linear infinite!important}
+}
 /* premium focus ring everywhere (keyboard users) */
 :focus-visible{outline:2px solid rgba(226,197,136,.65);outline-offset:2px;border-radius:4px}
 /* gold selection */
