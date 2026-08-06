@@ -84,10 +84,12 @@ function Sel({ value, onChange, children, style, className, title, disabled }) {
     const up = r.bottom + need + 10 > vh && r.top > need + 10;   // flip up when there's no room below
     setPos({ left: r.left, width: r.width, top: up ? null : r.bottom + 6, bottom: up ? (vh - r.top + 6) : null, up });
   };
+  const openedAt = React.useRef(0);
   const doOpen = () => {
     if (disabled) return;
     place();
     setHi(Math.max(0, opts.findIndex(o => String(o.v) === String(value == null ? '' : value))));
+    openedAt.current = Date.now();
     setOpen(true);
   };
   const close = () => { setOpen(false); setPress(false); };
@@ -103,8 +105,10 @@ function Sel({ value, onChange, children, style, className, title, disabled }) {
       if (p && p.contains && p.contains(e.target)) return;
       close();
     };
-    // a fixed panel would drift away from its trigger if the page scrolls underneath it
-    const onScroll = () => close();
+    // A fixed panel would drift away from its trigger if the page scrolls underneath it.
+    // The opening click can itself cause a scroll (the browser bringing the control into
+    // view), so ignore scrolls that land in the same instant we opened.
+    const onScroll = () => { if (Date.now() - openedAt.current < 300) return; close(); };
     document.addEventListener('mousedown', onDown, true);
     if (typeof window !== 'undefined' && window.addEventListener) {
       window.addEventListener('scroll', onScroll, true);
@@ -170,6 +174,114 @@ function Sel({ value, onChange, children, style, className, title, disabled }) {
           </div>
         );
       })}
+    </div>
+  );
+  return (<Fragment>{trigger}{ReactDOM.createPortal(panel, document.body)}</Fragment>);
+}
+
+/* ===== DateField — calendar we draw ourselves =============================
+   A native date input hands its calendar to the browser/OS for the same reason a
+   native <select> does, so it can't take weight or animate either. Same contract
+   as before (value "YYYY-MM-DD", onChange({target:{value}})), our own panel. */
+function DateField({ value, onChange, style, title, className }) {
+  const [open, setOpen] = React.useState(false);
+  const [press, setPress] = React.useState(false);
+  const [pos, setPos] = React.useState(null);
+  const [view, setView] = React.useState(null);   // month being browsed
+  const btnRef = React.useRef(null);
+  const panelRef = React.useRef(null);
+
+  const parse = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; };
+  const cur = parse(value);
+  const iso = (y, m, d) => y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const today = new Date();
+  const vw = view || (cur ? { y: cur.y, m: cur.m } : { y: today.getFullYear(), m: today.getMonth() });
+
+  const place = () => {
+    const el = btnRef.current; if (!el || !el.getBoundingClientRect) return;
+    const r = el.getBoundingClientRect();
+    const vh = (typeof window !== 'undefined' && window.innerHeight) || 800;
+    const need = 320;
+    const up = r.bottom + need + 10 > vh && r.top > need + 10;
+    setPos({ left: r.left, top: up ? null : r.bottom + 6, bottom: up ? (vh - r.top + 6) : null, up });
+  };
+  const openedAt = React.useRef(0);
+  const doOpen = () => { place(); setView(cur ? { y: cur.y, m: cur.m } : { y: today.getFullYear(), m: today.getMonth() }); openedAt.current = Date.now(); setOpen(true); };
+  const close = () => { setOpen(false); setPress(false); };
+  const pick = (d) => { close(); if (onChange) onChange({ target: { value: iso(vw.y, vw.m, d) } }); };
+  const shift = (n) => { const m = vw.m + n; setView({ y: vw.y + Math.floor(m / 12), m: ((m % 12) + 12) % 12 }); };
+
+  React.useEffect(() => {
+    if (!open || typeof document === 'undefined' || !document.addEventListener) return;
+    const onDown = (e) => {
+      const b = btnRef.current, p = panelRef.current;
+      if (b && b.contains && b.contains(e.target)) return;
+      if (p && p.contains && p.contains(e.target)) return;
+      close();
+    };
+    // ignore the scroll the opening click can itself trigger (see Sel)
+    const onScroll = () => { if (Date.now() - openedAt.current < 300) return; close(); };
+    document.addEventListener('mousedown', onDown, true);
+    if (typeof window !== 'undefined' && window.addEventListener) { window.addEventListener('scroll', onScroll, true); window.addEventListener('resize', onScroll); }
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      if (typeof window !== 'undefined' && window.removeEventListener) { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); }
+    };
+  }, [open]);
+
+  const onKeyDown = (e) => {
+    if (!open) {
+      if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); doOpen(); }
+      return;
+    }
+    e.stopPropagation();
+    if (e.key === 'Escape' || e.key === 'Tab') { if (e.key === 'Escape') e.preventDefault(); close(); }
+  };
+
+  const label = cur ? (String(cur.d).padStart(2, '0') + ' ' + MON[cur.m].slice(0, 3) + ' ' + cur.y) : 'เลือกวันที่';
+  const trigger = (
+    <div ref={btnRef} className={('rtm-sel ' + (className || '')).trim()} title={title} role="button" tabIndex={0}
+      data-open={open ? '1' : '0'} data-press={press ? '1' : '0'}
+      onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
+      onClick={() => (open ? close() : doOpen())} onKeyDown={onKeyDown}
+      style={{ ...style, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: cur ? (style && style.color) || '#ECEAE3' : '#6a6a72' }}>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.9" style={{ flex: 'none' }}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" strokeLinecap="round" /></svg>
+      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+    </div>
+  );
+  if (!open || !pos) return trigger;
+
+  const first = new Date(vw.y, vw.m, 1);
+  const lead = (first.getDay() + 6) % 7;                       // Monday-first
+  const days = new Date(vw.y, vw.m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(d);
+  const isToday = (d) => today.getFullYear() === vw.y && today.getMonth() === vw.m && today.getDate() === d;
+  const isSel = (d) => cur && cur.y === vw.y && cur.m === vw.m && cur.d === d;
+
+  const panel = (
+    <div ref={panelRef} className="rtm-selpanel" data-up={pos.up ? '1' : '0'}
+      style={{ position: 'fixed', left: pos.left, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), width: 286, zIndex: 9000, borderRadius: 14, padding: 12, background: 'rgba(18,18,22,.97)', border: '1px solid rgba(201,166,95,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+      <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:10px')}>
+        <span onClick={() => shift(-1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+        <span style={css('font-family:\'Instrument Serif\',serif;font-size:15px;color:#ECEAE3')}>{MON[vw.m]} {vw.y}</span>
+        <span onClick={() => shift(1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+      </div>
+      <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px')}>
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(w => (<div key={w} style={css('text-align:center;font-size:10px;color:#83838C;padding:4px 0')}>{w}</div>))}
+      </div>
+      <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:2px')}>
+        {cells.map((d, i) => d == null
+          ? <div key={'e' + i}></div>
+          : (<div key={d} className="rtm-day" onClick={() => pick(d)}
+              style={{ ...css('text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;font-size:12.5px;font-family:JetBrains Mono'), ...(isSel(d) ? { background: 'linear-gradient(180deg,#E2C588,#C9A65F)', color: '#1a1408', fontWeight: 700 } : { color: '#D8D8DE' }), ...(isToday(d) && !isSel(d) ? { boxShadow: 'inset 0 0 0 1px rgba(201,166,95,.55)' } : {}) }}>{d}</div>)
+        )}
+      </div>
+      <div onClick={() => { const t = new Date(); close(); if (onChange) onChange({ target: { value: iso(t.getFullYear(), t.getMonth(), t.getDate()) } }); }}
+        className="rtm-press" style={css('margin-top:10px;text-align:center;padding:8px;border-radius:9px;cursor:pointer;font-size:12px;color:#E2C588;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.08)')}>วันนี้ · Today</div>
     </div>
   );
   return (<Fragment>{trigger}{ReactDOM.createPortal(panel, document.body)}</Fragment>);
@@ -419,6 +531,7 @@ class App extends React.Component {
     this._onDocDown = () => { if (this.state.showPortMenu || this.state.showUserMenu) this.setState({ showPortMenu: false, showUserMenu: false }); };
     window.addEventListener('keydown', this._onKey);
     document.addEventListener('mousedown', this._onDocDown);
+    this._scanReveal();
   }
   async _fetchPrices() {
     try {
@@ -489,7 +602,40 @@ class App extends React.Component {
       this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); this._checkPlanReminder(); });
     }
   }
-  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); }
+  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); clearTimeout(this._rvSafety); if (this._io) this._io.disconnect(); }
+  // ----- scroll reveal -----
+  // Cards animate in as they come into view, so a page has motion while you read it and not
+  // only for half a second when it mounts. Each card is revealed once, then left alone.
+  componentDidUpdate() { this._scanReveal(); }
+  _scanReveal() {
+    const root = this._scrollRoot;
+    if (!root || typeof IntersectionObserver === 'undefined' || !root.querySelectorAll) return;
+    if (!this._io) {
+      this._io = new IntersectionObserver((entries) => {
+        entries.forEach(en => {
+          if (!en.isIntersecting) return;
+          en.target.classList.remove('rv-pre');
+          en.target.classList.add('rv-in');
+          this._io.unobserve(en.target);
+        });
+        // start the reveal a little before a card reaches the fold, so one peeking at the
+        // bottom edge is already fading in rather than sitting there blank
+      }, { root, rootMargin: '0px 0px 18% 0px', threshold: 0 });
+    }
+    const fresh = root.querySelectorAll('.liquid-glass:not([data-rv])');
+    if (!fresh.length) return;
+    // Only cards below the fold get hidden and revealed on scroll. Anything already on
+    // screen is left alone — hiding it would flash, and if the observer ever failed to
+    // fire the user would be staring at a blank card.
+    const edge = root.getBoundingClientRect ? root.getBoundingClientRect().bottom : 0;
+    fresh.forEach(el => {
+      el.setAttribute('data-rv', '1');
+      const top = el.getBoundingClientRect ? el.getBoundingClientRect().top : 0;
+      if (top <= edge) return;                    // visible now: keep its own entrance animation
+      el.classList.add('rv-pre');
+      this._io.observe(el);
+    });
+  }
 
   _now() {
     try { return new Date().toLocaleTimeString('en-GB', { hour12: false }); }
@@ -3754,8 +3900,8 @@ class App extends React.Component {
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><Sel value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></Sel></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><input type="date" value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Exit — closed <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><input type="date" value={V.dExitDate} onChange={V.setExitDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dExitHM} onChange={V.setExitHM} onBlur={V.blurExitHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Exit — closed <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dExitDate} onChange={V.setExitDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dExitHM} onChange={V.setExitHM} onBlur={V.blurExitHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
             </div>
             <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E2C588" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -4203,7 +4349,7 @@ class App extends React.Component {
           </div>
 
           {/* VIEWPORT */}
-          <div className="rtm-scroll" style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
+          <div className="rtm-scroll" ref={(el) => { this._scrollRoot = el; }} style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
             {V.isAccount && this.renderAccount(V)}
             {V.isDash && this.renderDashboard(V)}
             {V.isCal && this.renderCalendar(V)}
