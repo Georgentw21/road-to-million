@@ -1960,7 +1960,15 @@ class App extends React.Component {
       if (best) efRows.push({ factor: f.label, value: best.value, wr: Math.round(best.wr), n: best.n, record: best.w + 'W · ' + (best.n - best.w) + 'L', net: fm(best.net), netColor: pc(best.net), lift: Math.round(best.wr - winRate), w: (Math.min(100, best.wr)) + '%' });
     });
     efRows.sort((a, b) => b.lift - a.lift || b.wr - a.wr || b.n - a.n);
-    const edgeFinder = { baselineWr: Math.round(winRate), hasData: closed.length >= 8 && efRows.length > 0, minSample: efMin, rows: efRows.slice(0, 8) };
+    // An "edge" has to actually beat your average and win sometimes. A factor whose best value
+    // still sits at or below the baseline tells you nothing, and a 0% group is not an edge at all.
+    const efEdges = efRows.filter(r => r.lift > 0 && r.wr > 0);
+    const edgeFinder = {
+      baselineWr: Math.round(winRate), minSample: efMin,
+      hasData: closed.length >= 8 && efEdges.length > 0,
+      enoughTrades: closed.length >= 8,
+      rows: efEdges.slice(0, 8),
+    };
 
     const g = Number(goal) > 0 ? Number(goal) : 1000000;
     // milestone อิงกำไรสะสม (net P&L) → แพ้ก็ติดลบจริง, ไม่รวมเติม/ถอนเงิน จึงสะท้อนการเติบโตจากฝีมือเทรดล้วนๆ
@@ -2227,17 +2235,25 @@ class App extends React.Component {
     else groupKeys.sort((a, b) => groupAgg[b].net - groupAgg[a].net);
     // never let a rogue value make every bar width NaN
     const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(this._n(groupAgg[k].net))));
-    // "best edge" = highest win-rate among groups with a meaningful sample (≥3 closed) —
-    // so on large data you instantly see which value of the compared factor wins most
+    // "Best edge" means this value does BETTER THAN YOUR AVERAGE — not merely "highest of the
+    // groups". Ranking alone would crown a 0%-win-rate day as the best edge whenever every group
+    // is losing, which is the opposite of useful. So a group has to clear the filtered baseline
+    // win rate, and win at least sometimes, before we call it an edge.
     const SAMPLE_MIN = 3;
+    const baseWr = logAggRaw.closed ? logAggRaw.wr : 0;
     let bestKey = null, bestWr = -1;
     groupKeys.forEach(k => { const a = groupAgg[k]; if (a.closed >= SAMPLE_MIN && a.wr > bestWr) { bestWr = a.wr; bestKey = k; } });
     const edgeRows = groupKeys.filter(k => groupAgg[k].closed >= SAMPLE_MIN);
+    const hasRealEdge = bestKey != null && bestWr > 0 && bestWr > baseWr;
     const logBreakdown = {
       dim: dimKey, dimLabel: dimDef.label, hasCompare, filteredCount: logTotal,
       dims: dimAvail.map(k => ({ v: k, label: dimDefs[k].label })),
-      // headline edge callout: only when ≥2 comparable groups have enough sample
-      bestEdge: (bestKey && edgeRows.length >= 2) ? { name: bestKey, wr: groupAgg[bestKey].wr + '%', n: groupAgg[bestKey].closed, dim: dimDef.label } : null,
+      // headline edge callout: ≥2 comparable groups AND a value that genuinely beats the average
+      bestEdge: (hasRealEdge && edgeRows.length >= 2) ? { name: bestKey, wr: groupAgg[bestKey].wr + '%', n: groupAgg[bestKey].closed, dim: dimDef.label, baseWr: baseWr + '%', lift: Math.round(bestWr - baseWr) } : null,
+      // when nothing stands out, say so plainly instead of implying a winner
+      noEdgeNote: (!hasRealEdge && edgeRows.length >= 2)
+        ? (bestWr <= 0 ? 'ยังไม่มีปัจจัยไหนชนะเลยในชุดนี้ — ทุกกลุ่มยังขาดทุน' : 'ยังไม่มีกลุ่มไหนชนะเหนือค่าเฉลี่ยรวม (' + baseWr + '%) อย่างชัดเจน')
+        : null,
       rows: groupKeys.map(k => {
         const a = groupAgg[k];
         const dowI = dayFull.indexOf(k);
@@ -2248,7 +2264,7 @@ class App extends React.Component {
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
           w: (Math.abs(a.net) / bmax * 100) + '%', barColor: a.net >= 0 ? GREEN : RED,
-          best: k === bestKey,
+          best: hasRealEdge && k === bestKey,
         };
       }),
     };
@@ -3234,7 +3250,13 @@ class App extends React.Component {
             {V.logBreakdown.bestEdge && (
               <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:linear-gradient(100deg,rgba(95,192,141,.12),rgba(201,166,95,.06));border:1px solid rgba(95,192,141,.28);font-size:12px;color:#B7E6CE')}>
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5FC08D" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z" strokeLinejoin="round"/></svg>
-                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> win rate <span style={css('color:#83838C')}>({V.logBreakdown.bestEdge.n} trades)</span></span>
+                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> win rate <span style={css('color:#83838C')}>({V.logBreakdown.bestEdge.n} trades · เหนือค่าเฉลี่ย {V.logBreakdown.bestEdge.baseWr} อยู่ +{V.logBreakdown.bestEdge.lift} จุด)</span></span>
+              </div>
+            )}
+            {V.logBreakdown.noEdgeNote && (
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);font-size:12px;color:#9A9AA4')}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#83838C" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01" strokeLinecap="round"/></svg>
+                <span>{V.logBreakdown.noEdgeNote}</span>
               </div>
             )}
             {V.logBreakdown.hasCompare ? (
@@ -3353,7 +3375,11 @@ class App extends React.Component {
               <div style={css('font-size:11px;color:#6f6f78;margin-top:4px;line-height:1.5')}>อ่านว่า: ปัจจัยไหน <b style={css('color:#9CD3C0')}>+pts</b> มาก = ตอนมีเงื่อนไขนั้น ชนะมากกว่าค่าเฉลี่ยรวม — โฟกัสเข้าไม้เฉพาะตอนปัจจัยเข้าทางจะรีดวินเรตขึ้นได้</div>
             </div>
           ) : (
-            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4')}>บันทึกเทรดที่ปิดแล้วอย่างน้อย <b style={css('color:#E2C588')}>8 ไม้</b> พร้อมข้อมูล TF / retest / fibo แล้วระบบจะหาว่าปัจจัยไหนดันวินเรตให้คุณ</div>
+            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4')}>
+              {V.edgeFinder.enoughTrades
+                ? (<span>ยังไม่มีปัจจัยไหนชนะเหนือค่าเฉลี่ยรวม (<b style={css('color:#E2C588')}>{V.edgeFinder.baselineWr}%</b>) อย่างชัดเจน — ยังไม่เจอ edge ในชุดนี้ ลองเก็บข้อมูลเพิ่มหรือกรองช่วงอื่นดู</span>)
+                : (<span>บันทึกเทรดที่ปิดแล้วอย่างน้อย <b style={css('color:#E2C588')}>8 ไม้</b> พร้อมข้อมูล TF / retest / fibo แล้วระบบจะหาว่าปัจจัยไหนดันวินเรตให้คุณ</span>)}
+            </div>
           )}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
