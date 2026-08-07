@@ -1064,7 +1064,9 @@ class App extends React.Component {
   // NOTE: like _rMult, these expect t.pnl to already be the realized NET figure (callers pass netted
   // trades, or wrap a raw trade as {...t, pnl:_netPnl(t)}) — so we never re-subtract commission here.
   _captureP(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return null; return Math.max(-100, Math.min(100, Math.round(this._n(t.pnl) / mfe * 100))); }
-  _pigUsd(t) { const mfe = this._mfeUsd(t); if (mfe <= 0) return 0; return Math.max(0, mfe - this._n(t.pnl)); }
+  // "ran after TP" only means something on a trade closed in profit — a loss had no TP to run
+  // past, so reporting a pig there would be misleading.
+  _pigUsd(t) { const mfe = this._mfeUsd(t); const p = this._n(t.pnl); if (mfe <= 0 || p <= 0) return 0; return Math.max(0, mfe - p); }
   // how many of the 3 timeframes were aligned with the trade
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
@@ -2653,11 +2655,14 @@ class App extends React.Component {
         // the modal and the log disagree about capture % for the very same trade.
         dMfeAuto: this._autoMfe({ ...d, pnl: this._netPnl(d) }) != null,
         dExc: (() => {
-          const mfe = this._mfeUsd({ ...d, pnl: this._netPnl(d) });                 // auto from prices (net-calibrated), else the manual $
-          const net = (parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0);
+          // Work from one netted copy and the shared helpers — the log, analytics and the exports
+          // all read these same functions, so the modal cannot report a different number.
+          const netTrade = { ...d, pnl: this._netPnl(d) };
+          const mfe = this._mfeUsd(netTrade);                                       // auto from prices, else the manual $
+          const net = this._netPnl(d);
           if (!mfe) return null;
-          const cap = Math.max(-20, Math.min(100, Math.round(net / mfe * 100)));   // % of the peak run you kept
-          const pig = net > 0 ? Math.max(0, mfe - net) : 0;                         // $ that ran AFTER you exited (winners only)
+          const cap = this._captureP(netTrade);                                     // % of the peak run you kept
+          const pig = this._pigUsd(netTrade);                                       // $ that ran AFTER your TP (winners only)
           // bar geometry: entry at 0 (left) → peak (MFE) at right; exit marker where you closed
           let exit = Math.max(0, Math.min(100, net / mfe * 100));
           let cls = 'good', msg = '';
