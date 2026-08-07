@@ -464,6 +464,7 @@ class App extends React.Component {
     // ui
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
+    edgeMetric: 'r',   // 'r' = expectancy (avg R) · 'wr' = win rate — see _edgeRules()
     logLimit: 30, // จำนวนแถวที่โชว์ใน trade log (กด "โหลดเพิ่ม" เพื่อขยาย) — กันหน้าอืดเมื่อออเดอร์เยอะมาก
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
@@ -1020,6 +1021,24 @@ class App extends React.Component {
   // number. `Number(x) || 0` already handles "abc", but Infinity is truthy and sails straight
   // through — poisoning every total, average and axis it touches.
   _n(v) { const x = Number(v); return isFinite(x) ? x : 0; }
+  /* ===== how much evidence before we call something an edge =====================
+     Splitting a journal by many factors is a multiple-comparisons trap: with ~40 groups,
+     pure noise will hand you a couple of "65% win rate" pockets every time. Two guards:
+       1. SAMPLE — a group needs real weight before its rate means anything. Detecting a
+          20-point win-rate difference needs roughly 100 trades per side; 30 is the floor
+          at which a large gap stops being coin-flipping. Below that we show the row but
+          refuse to call it an edge.
+       2. MARGIN — the gap must be big, not 2-3 points of drift.
+     Expectancy (avg R) is the default lens: a scale-in, let-it-run system can profit at a
+     low win rate, so ranking by win rate alone would bury its best conditions. */
+  _edgeRules() { return { minSample: 30, strongSample: 100, minLiftWr: 15, minLiftR: 0.3 }; }
+  // how much a group's numbers can be trusted, from its closed-trade count
+  _edgeConf(n) {
+    const R = this._edgeRules();
+    if (n >= R.strongSample) return { level: 'strong', label: 'น่าเชื่อถือ', color: '#5FC08D' };
+    if (n >= R.minSample) return { level: 'ok', label: 'พอประเมินได้', color: '#E2C588' };
+    return { level: 'low', label: 'ยังไม่พอ', color: '#83838C' };
+  }
   _rMult(t) {
     if (t.status === 'OPEN') return 0;
     const p = this._n(t.pnl);
@@ -1767,7 +1786,7 @@ class App extends React.Component {
   closeTxns() { this.setState({ txnPort: null }); }
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
-  _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange) {
+  _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange, metric) {
     const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
@@ -1938,11 +1957,14 @@ class App extends React.Component {
     const tagStats = tagSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + ' trades · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
     const tagMore = Math.max(0, tagSorted.length - LIST_CAP);
 
-    // ---- Edge finder — which confluence factors actually lift your win-rate ----
-    // Group closed trades by each factor's value, take each factor's strongest value
-    // (highest win-rate with a real sample), and rank by "lift" over the baseline win-rate.
-    // This is the "know your edge" read: e.g. TF 3/3 aligned + retest ✓ → +18 pts.
-    const efMin = 4; // a group needs at least this many trades before we trust its win-rate
+    // ---- Edge finder — which conditions actually improve your result ----
+    // For each factor, take its strongest value and measure the LIFT over your own baseline.
+    // Two lenses (see _edgeRules): expectancy in R — the honest one for a scale-in system that
+    // can profit at a low win rate — or plain win rate. A value only counts as an edge when it
+    // clears the sample floor AND beats the baseline by a real margin.
+    const EF = this._edgeRules();
+    const efMetric = metric === 'wr' ? 'wr' : 'r';
+    const baseAvgR = closed.length ? closed.reduce((a, t) => a + this._rMult(t), 0) / closed.length : 0;
     const efFactors = [
       { label: 'TF alignment', get: t => this._alignN(t) + '/3 aligned' },
       { label: 'Retest', get: t => { const r = this._legRetest(t); return r === 'yes' ? 'Retest ✓' : (r === 'no' ? 'No retest' : ''); } },
@@ -1954,21 +1976,50 @@ class App extends React.Component {
       { label: 'Setup', get: t => this._setupById(t.setupId).name },
     ];
     const efRows = [];
+    let efBestSample = 0;   // biggest group we saw, so we can say how far off the floor you are
     efFactors.forEach(f => {
       const grp = {};
-      closed.forEach(t => { const v = f.get(t); if (!v) return; const m = grp[v] || (grp[v] = { n: 0, w: 0, net: 0 }); m.n++; if (t.pnl > 0) m.w++; m.net += t.pnl || 0; });
+      closed.forEach(t => { const v = f.get(t); if (!v) return; const m = grp[v] || (grp[v] = { n: 0, w: 0, net: 0, rSum: 0 }); m.n++; if (t.pnl > 0) m.w++; m.net += t.pnl || 0; m.rSum += this._rMult(t); });
       let best = null;
-      Object.keys(grp).forEach(v => { const m = grp[v]; if (m.n < efMin) return; const wr = m.w / m.n * 100; if (!best || wr > best.wr || (wr === best.wr && m.n > best.n)) best = { value: v, wr, n: m.n, w: m.w, net: m.net }; });
-      if (best) efRows.push({ factor: f.label, value: best.value, wr: Math.round(best.wr), n: best.n, record: best.w + 'W · ' + (best.n - best.w) + 'L', net: fm(best.net), netColor: pc(best.net), lift: Math.round(best.wr - winRate), w: (Math.min(100, best.wr)) + '%' });
+      Object.keys(grp).forEach(v => {
+        const m = grp[v];
+        if (m.n > efBestSample) efBestSample = m.n;
+        if (m.n < EF.minSample) return;                       // too thin to mean anything
+        const wr = m.w / m.n * 100, avgR = m.rSum / m.n;
+        const score = efMetric === 'wr' ? wr : avgR;
+        if (!best || score > best.score || (score === best.score && m.n > best.n)) best = { value: v, wr, avgR, score, n: m.n, w: m.w, net: m.net };
+      });
+      if (!best) return;
+      const lift = efMetric === 'wr' ? (best.wr - winRate) : (best.avgR - baseAvgR);
+      const conf = this._edgeConf(best.n);
+      efRows.push({
+        factor: f.label, value: best.value, n: best.n,
+        wr: Math.round(best.wr), avgR: best.avgR,
+        metric: efMetric,
+        valueStr: efMetric === 'wr' ? (Math.round(best.wr) + '%') : ((best.avgR >= 0 ? '+' : '−') + Math.abs(best.avgR).toFixed(2) + 'R'),
+        lift: efMetric === 'wr' ? Math.round(lift) : lift,
+        liftStr: efMetric === 'wr' ? ((lift > 0 ? '+' : '') + Math.round(lift) + ' pts') : ((lift > 0 ? '+' : '−') + Math.abs(lift).toFixed(2) + 'R'),
+        record: best.w + 'W · ' + (best.n - best.w) + 'L',
+        net: fm(best.net), netColor: pc(best.net),
+        conf: conf.level, confLabel: conf.label, confColor: conf.color,
+        w: (efMetric === 'wr' ? Math.min(100, best.wr) : Math.min(100, Math.max(4, (best.avgR + 1) / 3 * 100))) + '%',
+      });
     });
-    efRows.sort((a, b) => b.lift - a.lift || b.wr - a.wr || b.n - a.n);
-    // An "edge" has to actually beat your average and win sometimes. A factor whose best value
-    // still sits at or below the baseline tells you nothing, and a 0% group is not an edge at all.
-    const efEdges = efRows.filter(r => r.lift > 0 && r.wr > 0);
+    efRows.sort((a, b) => b.lift - a.lift || b.n - a.n);
+    // An edge must beat the baseline by a real margin — and, on the win-rate lens, actually win.
+    const minLift = efMetric === 'wr' ? EF.minLiftWr : EF.minLiftR;
+    const efEdges = efRows.filter(r => r.lift >= minLift && (efMetric === 'wr' ? r.wr > 0 : true));
     const edgeFinder = {
-      baselineWr: Math.round(winRate), minSample: efMin,
-      hasData: closed.length >= 8 && efEdges.length > 0,
-      enoughTrades: closed.length >= 8,
+      metric: efMetric,
+      baselineWr: Math.round(winRate),
+      baselineR: baseAvgR,
+      baselineStr: efMetric === 'wr' ? (Math.round(winRate) + '%') : ((baseAvgR >= 0 ? '+' : '−') + Math.abs(baseAvgR).toFixed(2) + 'R'),
+      minSample: EF.minSample, strongSample: EF.strongSample,
+      minLiftStr: efMetric === 'wr' ? (EF.minLiftWr + ' จุด') : ('+' + EF.minLiftR.toFixed(2) + 'R'),
+      closedN: closed.length, bestSample: efBestSample,
+      // is any group even big enough to judge? (drives which empty-state message to show)
+      sampleReady: efBestSample >= EF.minSample,
+      hasData: efEdges.length > 0,
       rows: efEdges.slice(0, 8),
     };
 
@@ -2066,7 +2117,7 @@ class App extends React.Component {
     const txnModal = st.txnPort ? portfolioStats.find(p => p.id === st.txnPort) : null;
 
     // ---- stats computed from real trades ----
-    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange);
+    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange, st.edgeMetric);
     const setupBars = S.setupBars;
 
     // ---- trade row mapper ----
@@ -2237,36 +2288,69 @@ class App extends React.Component {
     else groupKeys.sort((a, b) => groupAgg[b].net - groupAgg[a].net);
     // never let a rogue value make every bar width NaN
     const bmax = Math.max(1, ...groupKeys.map(k => Math.abs(this._n(groupAgg[k].net))));
-    // "Best edge" means this value does BETTER THAN YOUR AVERAGE — not merely "highest of the
-    // groups". Ranking alone would crown a 0%-win-rate day as the best edge whenever every group
-    // is losing, which is the opposite of useful. So a group has to clear the filtered baseline
-    // win rate, and win at least sometimes, before we call it an edge.
-    const SAMPLE_MIN = 3;
+    // An edge must (a) have enough trades behind it, and (b) beat YOUR OWN baseline by a real
+    // margin — see _edgeRules() for why. Ranking alone would crown a 0%-win-rate day whenever
+    // every group is losing; a 3-trade sample would crown noise. Both are now refused.
+    const EB = this._edgeRules();
+    const bMetric = st.edgeMetric === 'wr' ? 'wr' : 'r';
     const baseWr = logAggRaw.closed ? logAggRaw.wr : 0;
-    let bestKey = null, bestWr = -1;
-    groupKeys.forEach(k => { const a = groupAgg[k]; if (a.closed >= SAMPLE_MIN && a.wr > bestWr) { bestWr = a.wr; bestKey = k; } });
-    const edgeRows = groupKeys.filter(k => groupAgg[k].closed >= SAMPLE_MIN);
-    const hasRealEdge = bestKey != null && bestWr > 0 && bestWr > baseWr;
+    const baseR = logAggRaw.closed ? logAggRaw.avgR : 0;
+    const score = (a) => bMetric === 'wr' ? a.wr : a.avgR;
+    const baseScore = bMetric === 'wr' ? baseWr : baseR;
+    const minLift = bMetric === 'wr' ? EB.minLiftWr : EB.minLiftR;
+    let bestKey = null, bestScore = -Infinity, biggest = 0;
+    groupKeys.forEach(k => {
+      const a = groupAgg[k];
+      if (a.closed > biggest) biggest = a.closed;
+      if (a.closed >= EB.minSample && score(a) > bestScore) { bestScore = score(a); bestKey = k; }
+    });
+    const edgeRows = groupKeys.filter(k => groupAgg[k].closed >= EB.minSample);
+    const bestLift = bestKey != null ? (bestScore - baseScore) : 0;
+    // on the win-rate lens a group that never wins can never be an edge, whatever the margin
+    const winsSometimes = bestKey == null ? false : (bMetric === 'wr' ? groupAgg[bestKey].wr > 0 : true);
+    const hasRealEdge = bestKey != null && winsSometimes && bestLift >= minLift;
+    const fmtScore = (v) => bMetric === 'wr' ? (Math.round(v) + '%') : ((v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + 'R');
+    const fmtLift = (v) => bMetric === 'wr' ? ((v > 0 ? '+' : '') + Math.round(v) + ' จุด') : ((v > 0 ? '+' : '−') + Math.abs(v).toFixed(2) + 'R');
     const logBreakdown = {
       dim: dimKey, dimLabel: dimDef.label, hasCompare, filteredCount: logTotal,
       dims: dimAvail.map(k => ({ v: k, label: dimDefs[k].label })),
-      // headline edge callout: ≥2 comparable groups AND a value that genuinely beats the average
-      bestEdge: (hasRealEdge && edgeRows.length >= 2) ? { name: bestKey, wr: groupAgg[bestKey].wr + '%', n: groupAgg[bestKey].closed, dim: dimDef.label, baseWr: baseWr + '%', lift: Math.round(bestWr - baseWr) } : null,
-      // when nothing stands out, say so plainly instead of implying a winner
-      noEdgeNote: (!hasRealEdge && edgeRows.length >= 2)
-        ? (bestWr <= 0 ? 'ยังไม่มีปัจจัยไหนชนะเลยในชุดนี้ — ทุกกลุ่มยังขาดทุน' : 'ยังไม่มีกลุ่มไหนชนะเหนือค่าเฉลี่ยรวม (' + baseWr + '%) อย่างชัดเจน')
-        : null,
+      metric: bMetric,
+      metricLabel: bMetric === 'wr' ? 'Win rate' : 'Expectancy (R)',
+      metrics: [{ v: 'r', label: 'Expectancy (avg R)' }, { v: 'wr', label: 'Win rate' }],
+      minSample: EB.minSample, strongSample: EB.strongSample,
+      baselineStr: fmtScore(baseScore),
+      // headline callout: enough sample, ≥2 comparable groups, and a genuine margin over baseline
+      bestEdge: (hasRealEdge && edgeRows.length >= 2) ? {
+        name: bestKey, dim: dimDef.label,
+        wr: fmtScore(bestScore), n: groupAgg[bestKey].closed,
+        baseWr: fmtScore(baseScore), lift: fmtLift(bestLift),
+        conf: this._edgeConf(groupAgg[bestKey].closed),
+      } : null,
+      // when nothing qualifies, say exactly why instead of implying a winner
+      noEdgeNote: (edgeRows.length < 2)
+        ? (biggest >= EB.minSample
+            ? null
+            : 'ยังสรุปไม่ได้ — ต้องมีอย่างน้อย ' + EB.minSample + ' ไม้ต่อกลุ่ม (ตอนนี้กลุ่มใหญ่สุดมี ' + biggest + ' ไม้) ไม่งั้นตัวเลขคือ noise')
+        : (!hasRealEdge
+            ? (bMetric === 'wr' && bestKey != null && groupAgg[bestKey].wr <= 0
+                ? 'ยังไม่มีปัจจัยไหนชนะเลยในชุดนี้ — ทุกกลุ่มยังขาดทุน'
+                : 'ยังไม่มีกลุ่มไหนดีกว่าค่าเฉลี่ยรวม (' + fmtScore(baseScore) + ') ถึงเกณฑ์ ' + fmtLift(minLift) + ' — ยังไม่ถือว่าเป็น edge')
+            : null),
       rows: groupKeys.map(k => {
         const a = groupAgg[k];
         const dowI = dayFull.indexOf(k);
+        const conf = this._edgeConf(a.closed);
         return {
-          name: k, nStr: a.n + (a.n === 1 ? ' trade' : ' trades'),
+          name: k, nStr: a.n + (a.n === 1 ? ' trade' : ' trades'), n: a.closed,
           dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#C9A65F',
           wr: a.closed ? a.wr + '%' : '—', wrColor: a.closed ? (a.wr >= 50 ? GREEN : RED) : '#9A9AA4',
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
+          avgRColor: a.avgR > 0 ? GREEN : (a.avgR < 0 ? RED : '#9A9AA4'),
           w: (Math.abs(a.net) / bmax * 100) + '%', barColor: a.net >= 0 ? GREEN : RED,
           best: hasRealEdge && k === bestKey,
+          conf: conf.level, confLabel: conf.label, confColor: conf.color,
+          thin: a.closed < EB.minSample,      // rendered dimmed: not enough evidence yet
         };
       }),
     };
@@ -2905,6 +2989,7 @@ class App extends React.Component {
       logFieldFilters, logAgg, logBreakdown,
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
+      setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }),
       clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
@@ -3244,18 +3329,22 @@ class App extends React.Component {
           </div>
           <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
-              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare win rate by</div>
+              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare</div>
               {V.logBreakdown.hasCompare && (
                 <Sel value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                   {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
                 </Sel>
               )}
+              <span style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>by</span>
+              <Sel value={V.logBreakdown.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร — Expectancy เหมาะกับระบบที่ปล่อยให้กำไรวิ่ง" className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(123,167,217,.4);border-radius:9px;padding:7px 12px;color:#9CC2E8;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+                {V.logBreakdown.metrics.map((m) => (<option key={m.v} value={m.v}>{m.label}</option>))}
+              </Sel>
             </div>
-            <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>Splits the same {V.filteredCount} filtered {V.filteredCount === 1 ? 'trade' : 'trades'} by one factor — so you can see which value wins most. The headline win rate above is the whole filtered set combined.</div>
+            <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>แบ่ง {V.filteredCount} ไม้ที่กรองอยู่ตามปัจจัยเดียว แล้วเทียบกับค่าเฉลี่ยรวมของคุณ (<b style={css('color:#9A9AA4')}>{V.logBreakdown.baselineStr}</b>) — กลุ่มที่มีน้อยกว่า <b style={css('color:#9A9AA4')}>{V.logBreakdown.minSample}</b> ไม้จะถูกหรี่ไว้ เพราะยังเป็น noise</div>
             {V.logBreakdown.bestEdge && (
               <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:linear-gradient(100deg,rgba(95,192,141,.12),rgba(201,166,95,.06));border:1px solid rgba(95,192,141,.28);font-size:12px;color:#B7E6CE')}>
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5FC08D" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z" strokeLinejoin="round"/></svg>
-                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> win rate <span style={css('color:#83838C')}>({V.logBreakdown.bestEdge.n} trades · เหนือค่าเฉลี่ย {V.logBreakdown.bestEdge.baseWr} อยู่ +{V.logBreakdown.bestEdge.lift} จุด)</span></span>
+                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> ({V.logBreakdown.metricLabel}) <span style={css('color:#83838C')}>· {V.logBreakdown.bestEdge.n} ไม้ · เหนือค่าเฉลี่ย {V.logBreakdown.bestEdge.baseWr} อยู่ {V.logBreakdown.bestEdge.lift}</span> <span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px'), color: V.logBreakdown.bestEdge.conf.color, border: '1px solid ' + V.logBreakdown.bestEdge.conf.color + '55' }}>{V.logBreakdown.bestEdge.conf.label}</span></span>
               </div>
             )}
             {V.logBreakdown.noEdgeNote && (
@@ -3268,14 +3357,14 @@ class App extends React.Component {
               <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:15px;max-height:340px;overflow-y:auto;padding-right:4px')}>
                 <div style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6a6a72;padding-right:2px')}><span></span><span style={css('text-align:right')}>Win rate</span><span style={css('text-align:right')}>Net · record</span><span style={css('text-align:right')}>Avg R</span></div>
                 {V.logBreakdown.rows.map((r, i) => (
-                  <div key={i} style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;align-items:center')}>
+                  <div key={i} style={{ ...css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;align-items:center'), opacity: r.thin ? 0.45 : 1 }}>
                     <div>
-                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}{r.best && <span title="Highest win rate (≥3 trades)" style={css('font-size:9px;font-weight:700;letter-spacing:.04em;color:#5FC08D;border:1px solid rgba(95,192,141,.4);background:rgba(95,192,141,.12);padding:1px 6px;border-radius:5px')}>BEST</span>}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
+                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}{r.best && <span title={'ดีกว่าค่าเฉลี่ยรวมอย่างมีนัย และมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้'} style={css('font-size:9px;font-weight:700;letter-spacing:.04em;color:#5FC08D;border:1px solid rgba(95,192,141,.4);background:rgba(95,192,141,.12);padding:1px 6px;border-radius:5px')}>BEST</span>}{r.thin && <span title={'ต้องมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้ถึงจะเชื่อตัวเลขนี้ได้'} style={css('font-size:9px;font-weight:600;color:#83838C;border:1px solid rgba(255,255,255,.16);padding:1px 6px;border-radius:5px')}>ยังไม่พอ</span>}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
                       <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
                     </div>
-                    <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.wrColor }}>{r.wr}</div>
+                    <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.wrColor, opacity: V.logBreakdown.metric === 'wr' ? 1 : 0.55 }}>{r.wr}</div>
                     <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13.5px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#83838C;margin-top:2px')}>{r.record}</div></div>
-                    <div style={css('text-align:right;font-family:JetBrains Mono;font-size:12.5px;color:#9A9AA4')}>{r.avgR}</div>
+                    <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: V.logBreakdown.metric === 'r' ? r.avgRColor : '#9A9AA4', opacity: V.logBreakdown.metric === 'r' ? 1 : 0.6 }}>{r.avgR}</div>
                   </div>
                 ))}
               </div>
@@ -3363,27 +3452,33 @@ class App extends React.Component {
         {/* Edge finder — which confluence factors actually lift the win-rate (the "know your edge" panel) */}
         <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);margin-bottom:16px;animation:rise .5s .12s both;transition:.18s')}>
           <div style={css('display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;flex-wrap:wrap;gap:8px')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Edge finder <span style={css('font-style:italic;color:#E2C588')}>— where your win-rate comes from</span></div>
-            <div style={css('font-size:11.5px;color:#83838C')}>Baseline win-rate <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.baselineWr}%</b> · แต่ละปัจจัยจับค่าที่ชนะบ่อยสุด (≥{V.edgeFinder.minSample} ไม้)</div>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Edge finder <span style={css('font-style:italic;color:#E2C588')}>— เงื่อนไขไหนทำให้ผลดีขึ้นจริง</span></div>
+            <div style={css('display:flex;align-items:center;gap:10px;flex-wrap:wrap')}>
+              <Sel value={V.edgeFinder.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร" className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(123,167,217,.4);border-radius:9px;padding:6px 11px;color:#9CC2E8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
+                <option value="r">Expectancy (avg R)</option>
+                <option value="wr">Win rate</option>
+              </Sel>
+              <div style={css('font-size:11.5px;color:#83838C')}>ค่าเฉลี่ยคุณ <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.baselineStr}</b> · ต้องดีกว่านี้อย่างน้อย <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.minLiftStr}</b> และมี ≥<b style={css('color:#C9CAD2')}>{V.edgeFinder.minSample}</b> ไม้</div>
+            </div>
           </div>
           {V.edgeFinder.hasData ? (
             <div style={css('margin-top:14px;display:flex;flex-direction:column;gap:7px')}>
               {V.edgeFinder.rows.map((r, i) => (
-                <div key={i} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:132px 1fr 62px 74px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)'), animationDelay: (i * 0.06) + 's' }}>
+                <div key={i} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:132px 1fr 74px 84px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)'), animationDelay: (i * 0.06) + 's' }}>
                   <div style={css('min-width:0')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>{r.factor}</div><div style={css('font-size:13px;font-weight:600;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={r.value}>{r.value}</div></div>
-                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)', animationDelay: (0.1 + i * 0.06) + 's' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.record}</span></div>
-                  <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.wr >= 50 ? '#5FC08D' : '#E0B15A' }}>{r.wr}%</div>
-                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: r.lift > 0 ? '#5FC08D' : (r.lift < 0 ? '#DC6A63' : '#9A9AA4'), background: r.lift > 0 ? 'rgba(95,192,141,.12)' : (r.lift < 0 ? 'rgba(220,106,99,.1)' : 'rgba(255,255,255,.04)') }}>{(r.lift > 0 ? '+' : '') + r.lift} pts</span></div>
-                  <div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;text-align:right'), color: r.netColor }}>{r.net}</div>
+                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)', animationDelay: (0.1 + i * 0.06) + 's' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.n} ไม้ · {r.record}</span></div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.lift > 0 ? '#5FC08D' : '#E0B15A' }}>{r.valueStr}</div>
+                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: '#5FC08D', background: 'rgba(95,192,141,.12)' }}>{r.liftStr}</span></div>
+                  <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600'), color: r.netColor }}>{r.net}</div><div style={{ ...css('font-size:9px;font-weight:600;margin-top:2px'), color: r.confColor }}>{r.confLabel}</div></div>
                 </div>
               ))}
-              <div style={css('font-size:11px;color:#6f6f78;margin-top:4px;line-height:1.5')}>อ่านว่า: ปัจจัยไหน <b style={css('color:#9CD3C0')}>+pts</b> มาก = ตอนมีเงื่อนไขนั้น ชนะมากกว่าค่าเฉลี่ยรวม — โฟกัสเข้าไม้เฉพาะตอนปัจจัยเข้าทางจะรีดวินเรตขึ้นได้</div>
+              <div style={css('font-size:11px;color:#6f6f78;margin-top:4px;line-height:1.55')}>อ่านว่า: ตัวเลขสีเขียวคือ<b style={css('color:#9CD3C0')}>ส่วนที่ดีกว่าค่าเฉลี่ยของคุณเอง</b> — เข้าไม้เฉพาะตอนเงื่อนไขเหล่านี้ครบ จะดันผลรวมขึ้น · ป้าย <b style={css('color:#E2C588')}>พอประเมินได้</b> = {V.edgeFinder.minSample}+ ไม้, <b style={css('color:#5FC08D')}>น่าเชื่อถือ</b> = {V.edgeFinder.strongSample}+ ไม้ · เจอแล้วอย่าเพิ่งเชื่อ เก็บอีก 30 ไม้ยืนยันก่อน</div>
             </div>
           ) : (
-            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4')}>
-              {V.edgeFinder.enoughTrades
-                ? (<span>ยังไม่มีปัจจัยไหนชนะเหนือค่าเฉลี่ยรวม (<b style={css('color:#E2C588')}>{V.edgeFinder.baselineWr}%</b>) อย่างชัดเจน — ยังไม่เจอ edge ในชุดนี้ ลองเก็บข้อมูลเพิ่มหรือกรองช่วงอื่นดู</span>)
-                : (<span>บันทึกเทรดที่ปิดแล้วอย่างน้อย <b style={css('color:#E2C588')}>8 ไม้</b> พร้อมข้อมูล TF / retest / fibo แล้วระบบจะหาว่าปัจจัยไหนดันวินเรตให้คุณ</span>)}
+            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4;line-height:1.6')}>
+              {!V.edgeFinder.sampleReady
+                ? (<span>ยังสรุปไม่ได้ — ต้องมีอย่างน้อย <b style={css('color:#E2C588')}>{V.edgeFinder.minSample} ไม้ต่อกลุ่ม</b> ถึงจะแยก edge ออกจาก noise ได้<br/>ตอนนี้ปิดไปแล้ว <b style={css('color:#E2C588')}>{V.edgeFinder.closedN}</b> ไม้ · กลุ่มใหญ่สุดมี <b style={css('color:#E2C588')}>{V.edgeFinder.bestSample}</b> ไม้</span>)
+                : (<span>มีข้อมูลพอแล้ว แต่<b style={css('color:#E2C588')}>ยังไม่มีเงื่อนไขไหนดีกว่าค่าเฉลี่ยของคุณ ({V.edgeFinder.baselineStr}) ถึง {V.edgeFinder.minLiftStr}</b><br/>แปลว่ายังไม่เจอ edge ที่ชัดพอจะเอาไปกรองไม้ — เก็บต่อ หรือลองสลับไปดูอีกมุมหนึ่ง</span>)}
             </div>
           )}
         </div>
