@@ -2632,9 +2632,12 @@ class App extends React.Component {
         dPeakPrice: d.peakPrice != null ? String(d.peakPrice) : '', setPeakPrice: (e) => this.setD('peakPrice', e.target.value),
         dAvgEntry: (() => { const a = this._legStats(d).avgEntry; return a != null ? this._fmtPrice(a) : ''; })(),
         // did the price fields produce an auto MFE? (drives the "auto ✓" hint + hides the manual $ input)
-        dMfeAuto: this._autoMfe(d) != null,
+        // _autoMfe calibrates $/point from the realized P&L, and everywhere else in the app that
+        // value is already NET. The draft still holds the gross figure, so net it first — otherwise
+        // the modal and the log disagree about capture % for the very same trade.
+        dMfeAuto: this._autoMfe({ ...d, pnl: this._netPnl(d) }) != null,
         dExc: (() => {
-          const mfe = this._mfeUsd(d);                                              // auto from prices, else the manual $
+          const mfe = this._mfeUsd({ ...d, pnl: this._netPnl(d) });                 // auto from prices (net-calibrated), else the manual $
           const net = (parseFloat(d.pnl) || 0) - (parseFloat(d.commission) || 0);
           if (!mfe) return null;
           const cap = Math.max(-20, Math.min(100, Math.round(net / mfe * 100)));   // % of the peak run you kept
@@ -2685,7 +2688,9 @@ class App extends React.Component {
         setDdBaseline: (e) => this.setD('ddBaseline', e.target.value),
         // ----- round summary (final rollup): commission/swap + gross P&L -> net, total risk, total R -----
         dSummary: (() => {
-          const totalRisk = this._legStats({ legs: d.legs }).totalRisk;
+          // _posRisk covers both shapes: summed leg risk when scaled in, else the trade's own
+          // risk field (older single-entry rows) — matching what the log and exports use.
+          const totalRisk = this._posRisk(d);
           const gross = parseFloat(d.pnl) || 0, comm = parseFloat(d.commission) || 0;
           const net = gross - comm;
           const open = d.status === 'OPEN';
