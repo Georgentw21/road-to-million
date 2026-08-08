@@ -676,6 +676,10 @@ class App extends React.Component {
       habits: s.habits, habitLogs: s.habitLogs, yearGoals: s.yearGoals,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
       lastBackup: s.lastBackup,
+      // how you like to READ the analysis is a preference, not a transient filter — remember it.
+      // (Search, quick filters and sort stay transient on purpose: a stale filter on reload
+      // would silently hide trades.)
+      edgeMetric: s.edgeMetric, logDim: s.logDim, feelMoment: s.feelMoment,
       // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
       draft: s.draft, draftIsNew: s.draftIsNew, sDraft: s.sDraft, setupIsNew: s.setupIsNew,
     };
@@ -1286,7 +1290,7 @@ class App extends React.Component {
     this.setD(field, value);
   }
   setLogF(field, value) { this.setState({ logF: { ...this.state.logF, [field]: value }, logLimit: 30 }); }
-  setLogDim(v) { this.setState({ logDim: v }); }
+  setLogDim(v) { this.setState({ logDim: v }, () => this._save()); }   // remembered like the other analysis preferences
   // ----- manage analysis-field options (LTF/MTF/HTF/Fibo/Entry lists) -----
   openFieldCfg() { this.setState({ fieldCfg: true }); }
   closeFieldCfg() { this.setState({ fieldCfg: null }); this._save(); }
@@ -3035,7 +3039,9 @@ class App extends React.Component {
       logFieldFilters, logAgg, logBreakdown,
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
-      setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }),
+      // these are persisted preferences, so they must trigger a save — without it the choice
+      // only survives if some unrelated autosave happens to flush afterwards
+      setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }, () => this._save()),
       clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
@@ -3059,7 +3065,7 @@ class App extends React.Component {
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
       feelStats: S.feelStats, feelMoment: st.feelMoment || 'entry',
-      setFeelMoment: (e) => this.setState({ feelMoment: e.target.value }),
+      setFeelMoment: (e) => this.setState({ feelMoment: e.target.value }, () => this._save()),
       feelMoments: [{ v: 'entry', label: 'ตอนเข้า' }, { v: 'sl', label: 'ตอนวาง SL' }, { v: 'tp', label: 'ตอนออก / TP' }],
       feelRows: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).rows,
       feelMore: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).more,
