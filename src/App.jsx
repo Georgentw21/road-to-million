@@ -429,9 +429,11 @@ class App extends React.Component {
       fibo: ['Premium (0.5–0.79)', 'Discount (0.5–0.79)', 'OTE (0.62–0.79)', 'Equilibrium (0.5)', 'Below 0.79'],
       entryType: ['M5 Completed Stick', 'M15 Completed Stick', 'M5 Doji', 'M15 Doji'],
       slZone: [], // SL zone — add your own choices in "Edit options"
-      feelEntry: ['On plan · calm', 'Confident', 'Hesitant', 'Rushed / FOMO', 'Revenge'],
-      feelSL: ['Comfortable', 'Too tight', 'Too wide', 'Moved it (bad)'],
-      feelTP: ['Held to target', 'Cut early (fear)', 'Let it run', 'Greedy / gave back'],
+      // Feelings are picked from a list, not typed free-hand — otherwise every entry is its own
+      // one-trade "group" and P&L-by-feeling can never say anything.
+      feelEntry: ['ตามแผน · นิ่ง', 'มั่นใจ', 'ลังเล / ไม่แน่ใจ', 'รีบเข้า · FOMO', 'กดแบบไร้ใจ', 'แก้แค้น (revenge)'],
+      feelSL: ['สบายๆ ตามแผน', 'แน่นเกินไป', 'กว้างเกินไป', 'เสียดาย · ลังเล', 'ขยับ SL (ผิดแผน)'],
+      feelTP: ['ถือถึงเป้า', 'ออกเร็วเพราะกลัว', 'ปล่อยให้วิ่ง', 'ขายหมู', 'โลภ · คืนกำไร'],
       // ----- multi-leg "เบิ้ล" editable options -----
       // legTrigger = "จุดเข้า" ของแต่ละไม้ (ย้ายมาจาก Entry — M5/M15 เดิม) แก้ตัวเลือกเองได้
       legTrigger: ['M15 Completed Stick', 'M5 Completed Stick', 'M15 Doji', 'M5 Doji', 'Break confirm', 'Retest zone'],
@@ -440,7 +442,7 @@ class App extends React.Component {
       sotType: ['Saucer', 'H&S', 'V-shape (ไหล่ขวาเสร็จ)', 'V-shape → ข้าม', 'Double top/bottom'],
     },
     // trade-log analysis filters + breakdown lens
-    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all' },
+    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
@@ -1049,7 +1051,12 @@ class App extends React.Component {
   // the position's 1R in $ — sum of each leg's risk when scaled in, else the single risk field
   _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(this._n(t.risk)); }
   // entry model — now lives on the first real leg's "trigger"; falls back to the old per-trade entryType
-  _entryModel(t) { const legs = this._legs(t); const first = legs.find(l => (l.trigger || '').trim()); return (first && first.trigger) || t.entryType || ''; }
+  _entryModel(t) {
+    const legs = this._legs(t);
+    // ignore the old synthetic placeholder that older journals may still carry
+    const first = legs.find(l => (l.trigger || '').trim() && l.trigger !== 'First entry');
+    return (first && first.trigger) || t.entryType || '';
+  }
   // retest / fibo now live per-leg too — derive a trade-level read (first leg that has it, else the old field)
   _legRetest(t) { const l = this._legs(t).find(x => x.retest === 'yes' || x.retest === 'no'); return (l && l.retest) || t.retest || ''; }
   _legFibo(t) { const l = this._legs(t).find(x => (x.fibo || '').trim()); return (l && l.fibo) || t.fibo || ''; }
@@ -1094,7 +1101,9 @@ class App extends React.Component {
     if (raw.length) return raw;
     // backward-compat: synthesise one leg from the classic single-entry fields
     if ((t.entry != null && t.entry !== '') || (t.lot != null && t.lot !== '')) {
-      return [{ trigger: 'First entry', price: t.entry || '', lot: t.lot || '', slBasis: '', risk: t.risk || '', dd: '' }];
+      // carry the trade's own entry model, not a placeholder label — otherwise every classic
+      // trade reports its entry as the literal string "First entry" in the log and the analysis
+      return [{ trigger: t.entryType || '', price: t.entry || '', lot: t.lot || '', slBasis: '', risk: t.risk || '', dd: '' }];
     }
     return [];
   }
@@ -1948,14 +1957,37 @@ class App extends React.Component {
     const symbolBars = symSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + 't · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / symMaxAbs * 100) + '%' }));
     const symbolMore = Math.max(0, symSorted.length - LIST_CAP);
 
-    // by feeling on entry — the emotional read that used to be tags
-    const tagMap = {};
-    closed.forEach(t => { const f = (t.feelEntry || '').trim(); if (!f) return; const m = tagMap[f] || (tagMap[f] = { net: 0, n: 0, w: 0 }); m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; });
-    const tagArr = Object.keys(tagMap).map(tag => ({ name: tag, net: tagMap[tag].net, n: tagMap[tag].n, wr: tagMap[tag].n ? Math.round(tagMap[tag].w / tagMap[tag].n * 100) : 0 }));
-    let tagMaxAbs = 1; tagArr.forEach(s => { const a = Math.abs(s.net); if (a > tagMaxAbs) tagMaxAbs = a; });
-    const tagSorted = tagArr.sort((a, b) => a.net - b.net);
-    const tagStats = tagSorted.slice(0, LIST_CAP).map(s => ({ name: s.name, meta: s.n + ' trades · ' + s.wr + '% wr', pnl: fm(s.net), color: pc(s.net), w: (Math.abs(s.net) / tagMaxAbs * 100) + '%' }));
-    const tagMore = Math.max(0, tagSorted.length - LIST_CAP);
+    // ---- P&L by feeling, for all three moments of the trade ----
+    // Feelings are picked from a list, so these actually group; expectancy is carried alongside
+    // the money because "which mood costs me" is really "which mood lowers my avg R".
+    const feelBreak = (field) => {
+      const map = {};
+      closed.forEach(t => {
+        const f = (t[field] || '').trim(); if (!f) return;
+        const m = map[f] || (map[f] = { net: 0, n: 0, w: 0, rSum: 0 });
+        m.net += t.pnl || 0; m.n++; if (t.pnl > 0) m.w++; m.rSum += this._rMult(t);
+      });
+      const arr = Object.keys(map).map(k => ({ name: k, net: map[k].net, n: map[k].n,
+        wr: map[k].n ? Math.round(map[k].w / map[k].n * 100) : 0,
+        avgR: map[k].n ? map[k].rSum / map[k].n : 0 }));
+      let mx = 1; arr.forEach(x => { const a = Math.abs(x.net); if (a > mx) mx = a; });
+      arr.sort((a, b) => a.avgR - b.avgR);   // worst mood first — that is what you act on
+      return {
+        rows: arr.slice(0, LIST_CAP).map(x => ({
+          name: x.name, n: x.n,
+          meta: x.n + ' ไม้ · ' + x.wr + '% wr',
+          avgR: (x.avgR >= 0 ? '+' : '−') + Math.abs(x.avgR).toFixed(2) + 'R',
+          avgRColor: x.avgR > 0 ? GREEN : (x.avgR < 0 ? RED : '#9A9AA4'),
+          pnl: fm(x.net), color: pc(x.net), w: (Math.abs(x.net) / mx * 100) + '%',
+          conf: this._edgeConf(x.n).label, confColor: this._edgeConf(x.n).color,
+        })),
+        more: Math.max(0, arr.length - LIST_CAP),
+        total: arr.length,
+      };
+    };
+    const feelStats = { entry: feelBreak('feelEntry'), sl: feelBreak('feelSL'), tp: feelBreak('feelTP') };
+    const tagStats = feelStats.entry.rows;      // kept for anything still reading the old name
+    const tagMore = feelStats.entry.more;
 
     // ---- Edge finder — which conditions actually improve your result ----
     // For each factor, take its strongest value and measure the LIFT over your own baseline.
@@ -1974,6 +2006,9 @@ class App extends React.Component {
       { label: 'Session', get: t => (t.session || '').trim() },
       { label: 'Day of week', get: t => this._dowFull(t.date) },
       { label: 'Setup', get: t => this._setupById(t.setupId).name },
+      { label: 'Feeling · เข้า', get: t => (t.feelEntry || '').trim() },
+      { label: 'Feeling · SL', get: t => (t.feelSL || '').trim() },
+      { label: 'Feeling · TP', get: t => (t.feelTP || '').trim() },
     ];
     const efRows = [];
     let efBestSample = 0;   // biggest group we saw, so we can say how far off the floor you are
@@ -2029,7 +2064,7 @@ class App extends React.Component {
     return {
       edgeFinder,
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
-      consistencyStr, tradeDaysN, greenDaysN,
+      consistencyStr, tradeDaysN, greenDaysN, feelStats,
       ddLine, ddArea, symbolBars, tagStats, symbolMore, tagMore,
       maxWinStreak: String(mw), maxLossStreak: String(ml),
       kEquity: '$' + Math.round(equity).toLocaleString('en-US'),
@@ -2165,6 +2200,12 @@ class App extends React.Component {
         alignN: this._alignN(t), alignStr: this._alignN(t) + '/3',
         alignColor: this._alignN(t) >= 3 ? '#5FC08D' : (this._alignN(t) === 2 ? '#E2C588' : '#9A9AA4'),
         feelEntry: t.feelEntry || '', feelSL: t.feelSL || '', feelTP: t.feelTP || '',
+        // edge factors surfaced straight in the log, so a scan of the table shows the conditions
+        entryModel: this._entryModel(t),
+        retestStr: (() => { const r = this._legRetest(t); return r === 'yes' ? '✓' : (r === 'no' ? '✗' : '—'); })(),
+        retestColor: (() => { const r = this._legRetest(t); return r === 'yes' ? GREEN : (r === 'no' ? RED : '#5a5a62'); })(),
+        // "OTE (0.62–0.79)" -> "OTE" — the zone name is what you compare, not the numbers
+        fiboShort: (() => { const f = (this._legFibo(t) || '').trim(); if (!f) return '—'; const m = /^([^(]+)/.exec(f); return (m ? m[1] : f).trim(); })(),
         ...(() => { const ls = this._legStats(t); return { legN: ls.count, isMulti: ls.isMulti, legMaxLot: ls.maxLot ? ls.maxLot.toFixed(2) : '', legAvgEntry: ls.avgEntry != null ? this._fmtPrice(ls.avgEntry) : '', legMaxDD: ls.maxDD || 0 }; })(),
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         open: () => this.openTrade(t.id),
@@ -2210,6 +2251,7 @@ class App extends React.Component {
       if (LF.retest && LF.retest !== 'all' && this._legRetest(t) !== LF.retest) return false;
       if (LF.fibo && LF.fibo !== 'all' && this._legFibo(t) !== LF.fibo) return false;
       if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType')) return false;
+      if (!fieldMatch(t, 'feelEntry') || !fieldMatch(t, 'feelSL') || !fieldMatch(t, 'feelTP')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
     });
@@ -2233,7 +2275,7 @@ class App extends React.Component {
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['sotType', 'SOT']];
+    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['sotType', 'SOT'], ['feelEntry', 'Feeling · เข้า'], ['feelSL', 'Feeling · SL'], ['feelTP', 'Feeling · TP']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
     // entry model / fibo now live on the legs; build their option lists from the leg-derived values
     const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
@@ -2271,6 +2313,9 @@ class App extends React.Component {
       session: { label: 'Session', get: t => t.session || '—' },
       align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
       sotType: { label: 'ประเภทเทรนด์ (SOT)', get: t => (t.sotType || '').trim() || '—' },
+      feelEntry: { label: 'Feeling · ตอนเข้า', get: t => (t.feelEntry || '').trim() || '—' },
+      feelSL: { label: 'Feeling · ตอนวาง SL', get: t => (t.feelSL || '').trim() || '—' },
+      feelTP: { label: 'Feeling · ตอนออก / TP', get: t => (t.feelTP || '').trim() || '—' },
     };
     // Only offer factors that actually VARY inside the current filter (≥2 distinct
     // values) — so the comparison is always meaningful and never a single-row echo
@@ -2835,6 +2880,7 @@ class App extends React.Component {
         // ----- feeling on entry / SL / TP (free text) -----
         dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
         setFeelEntry: (e) => this.setD('feelEntry', e.target.value), setFeelSL: (e) => this.setD('feelSL', e.target.value), setFeelTP: (e) => this.setD('feelTP', e.target.value),
+        optsFeelEntry: this._fieldOptsWith('feelEntry', d.feelEntry), optsFeelSL: this._fieldOptsWith('feelSL', d.feelSL), optsFeelTP: this._fieldOptsWith('feelTP', d.feelTP),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
@@ -2990,7 +3036,7 @@ class App extends React.Component {
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
       setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all' }, logLimit: 30 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
         { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
@@ -3000,6 +3046,9 @@ class App extends React.Component {
         { key: 'mtf', label: 'MTF condition', opts: this._fieldOpts('mtf') },
         { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
         { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
+        { key: 'feelEntry', label: 'Feeling · ตอนเข้า', opts: this._fieldOpts('feelEntry') },
+        { key: 'feelSL', label: 'Feeling · ตอนวาง SL', opts: this._fieldOpts('feelSL') },
+        { key: 'feelTP', label: 'Feeling · ตอนออก / TP', opts: this._fieldOpts('feelTP') },
       ],
       addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
@@ -3009,6 +3058,11 @@ class App extends React.Component {
       dowBars, sessionBars, rDist, anaStats, setupCards,
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
       ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
+      feelStats: S.feelStats, feelMoment: st.feelMoment || 'entry',
+      setFeelMoment: (e) => this.setState({ feelMoment: e.target.value }),
+      feelMoments: [{ v: 'entry', label: 'ตอนเข้า' }, { v: 'sl', label: 'ตอนวาง SL' }, { v: 'tp', label: 'ตอนออก / TP' }],
+      feelRows: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).rows,
+      feelMore: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).more,
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
       edgeFinder: S.edgeFinder,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
@@ -3048,7 +3102,7 @@ class App extends React.Component {
     const VAL = css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600');
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
 
         <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
@@ -3187,7 +3241,7 @@ class App extends React.Component {
         <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
           <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);animation:rise .55s .4s both;background:rgba(255,255,255,.02);padding:20px 22px')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Edge snapshot <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Analytics →</span></div>
-            <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
+            <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
               {[
                 { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588', s: 'avg $ per trade' },
                 { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9', s: 'gross win ÷ loss' },
@@ -3225,7 +3279,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><Sel value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</Sel></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><Sel value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</Sel></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
             <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#83838C;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
@@ -3258,15 +3312,15 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '140px 72px 72px 116px 52px 100px 82px 50px 62px 74px 80px 86px 58px 92px';
-    const gminw = 1340;
+    const gcols = '128px 92px 70px minmax(92px,1fr) 46px minmax(84px,1fr) 70px minmax(100px,1.1fr) 50px minmax(108px,1.2fr) 50px 60px 68px 56px 86px';
+    const gminw = 1500;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
           <div style={css('display:flex;gap:8px')}>
             <Sel value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
@@ -3376,21 +3430,25 @@ class App extends React.Component {
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้าออเดอร์">Time Entry</span><span title="เวลาออกออเดอร์">Time Exit</span><span>Symbol</span><span>Side</span><span>Setup</span><span>Hold</span><span title="Timeframes aligned">TF</span><span title="Max cumulative lot across legs">Max lot</span><span title="Max favourable excursion — how far price ran ($)">MFE</span><span title="Max drawdown of the position (legs DD in pip, else heat R)">Max DD</span><span title="Share of the peak run kept after TP">Captured</span><span>R</span><span>P&amp;L</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span><span>Symbol</span><span>Side</span><span>Setup</span><span title="Session ที่เทรด">Session</span><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
-                  <span title="เวลาเข้า" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.entryHM ? '#C9CAD2' : '#5a5a62' }}>{t.entryHM || '—'}</span>
-                  <span title="เวลาออก" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.exitHM ? '#8FBFA6' : '#5a5a62' }}>{t.exitHM || '—'}</span>
+                  <span title="เวลาเข้า → ออก" style={css('font-family:JetBrains Mono;font-size:11.5px;white-space:nowrap')}><span style={{ color: t.entryHM ? '#C9CAD2' : '#5a5a62' }}>{t.entryHM || '—'}</span><span style={css('color:#5a5a62')}> → </span><span style={{ color: t.exitHM ? '#8FBFA6' : '#5a5a62' }}>{t.exitHM || '—'}</span></span>
+                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:10.5px;color:#E2C588;padding:3px 7px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05);white-space:nowrap')}>{t.holdShort}</span>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
-                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:11px;color:#E2C588;padding:3px 8px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05)')}>{t.holdShort}</span>
+                  <span title={'เทรดช่วง ' + (t.session || '—')} style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session || '—'}</span>
+                  <span title={'จุดเข้า: ' + (t.entryModel || '—')} style={css('font-size:11.5px;color:#C9CAD2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.entryModel || '—'}</span>
                   <span title={t.alignN + ' of 3 timeframes aligned'} style={{ ...css('font-family:JetBrains Mono;font-size:12.5px;font-weight:600'), color: t.alignColor }}>{t.alignStr}</span>
+                  <span title={'Retest ' + (t.retestStr || '—') + ' · ' + (t.fiboShort || '—')} style={css('display:flex;align-items:center;gap:6px;min-width:0')}>
+                    <span style={{ ...css('font-size:11px;font-weight:700;flex:none'), color: t.retestColor }}>{t.retestStr}</span>
+                    <span style={css('font-size:11px;color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.fiboShort}</span>
+                  </span>
                   <span title="Max cumulative lot across legs" style={css('font-family:JetBrains Mono;font-size:12px;color:#C9CAD2')}>{t.maxLotStr}</span>
-                  <span title="Max favourable excursion — how far price ran ($)" style={css('font-family:JetBrains Mono;font-size:12px;color:#8FBFA6')}>{t.mfeStr}</span>
+                  <span title="ราคาวิ่งไปไกลสุด ($) — กรอกราคา TP + peak ในหน้าบันทึกเพื่อให้คำนวณอัตโนมัติ" style={css('font-family:JetBrains Mono;font-size:12px;color:#8FBFA6')}>{t.mfeStr}</span>
                   <span title="Max drawdown of the position" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
-                  <span title="How much of the best move you kept" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.captureColor }}>{t.captureStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.rColor }}>{t.rStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
                 </div>
@@ -3419,8 +3477,8 @@ class App extends React.Component {
   renderAnalytics(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
-        <div style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
+        <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
             { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588' },
             { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
@@ -3523,12 +3581,24 @@ class App extends React.Component {
         </div>
 
         <div className="hv-brd-gold liquid-glass" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by feeling <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— which entry emotion costs you</span></div></div>
-          <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:11px 24px')}>
-            {V.tagStats.length ? V.tagStats.map((s, i) => (
-              <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
-            )) : <div style={css('font-size:12.5px;color:#83838C')}>ยังไม่มีข้อมูล Feeling · Entry — กรอกช่อง “Feeling · Entry” ตอนบันทึกเทรด เพื่อดูว่าอารมณ์ไหนทำให้เสีย</div>}
-            {V.tagMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#83838C;text-align:center')}>+ {V.tagMore} more feelings (top 15)</div>}
+          <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by feeling <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— อารมณ์ไหนทำให้ผลออกมาแบบนั้น</span></div>
+            <Sel value={V.feelMoment} onChange={V.setFeelMoment} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(155,140,255,.4);border-radius:9px;padding:6px 11px;color:#B79CE8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
+              {V.feelMoments.map(m => (<option key={m.v} value={m.v}>{m.label}</option>))}
+            </Sel>
+          </div>
+          <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>เรียงจาก <b style={css('color:#9A9AA4')}>แย่สุดขึ้นก่อน</b> ตาม Expectancy — อารมณ์ที่ทำให้ avg R ติดลบคือสิ่งที่ต้องแก้ก่อน</div>
+          <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:13px 24px')}>
+            {V.feelRows.length ? V.feelRows.map((s, i) => (
+              <div key={i} className="rtm-cascade" style={{ animationDelay: (i * 0.05) + 's' }}>
+                <div style={css('display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:6px;gap:8px')}>
+                  <span style={css('color:#ECEAE3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span>
+                  <span style={css('display:flex;align-items:baseline;gap:9px;flex:none')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600'), color: s.avgRColor }}>{s.avgR}</span><span style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: s.color }}>{s.pnl}</span></span>
+                </div>
+                <div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div>
+              </div>
+            )) : <div style={css('grid-column:1/-1;font-size:12.5px;color:#83838C')}>ยังไม่มีข้อมูล Feeling ในช่วงนี้ — เลือกอารมณ์ตอนบันทึกเทรด แล้วระบบจะบอกว่าอารมณ์ไหนกินกำไรคุณ</div>}
+            {V.feelMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#83838C;text-align:center')}>+ อีก {V.feelMore} อารมณ์</div>}
           </div>
         </div>
       </div>
@@ -3539,7 +3609,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
           <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
@@ -3775,7 +3845,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
           <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
         </div>
 
@@ -3915,7 +3985,7 @@ class App extends React.Component {
   renderPlaybook(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
 
         <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
@@ -3967,7 +4037,7 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
           <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
         </div>
 
@@ -4135,9 +4205,9 @@ class App extends React.Component {
 
             {/* Feeling on Entry / SL / TP */}
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · Entry</div><input value={V.dFeelEntry} onChange={V.setFeelEntry} placeholder="เช่น มั่นใจ / รีบเข้า" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · SL</div><input value={V.dFeelSL} onChange={V.setFeelSL} placeholder="เช่น สบายๆ / แน่นไป" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · TP</div><input value={V.dFeelTP} onChange={V.setFeelTP} placeholder="เช่น ถือถึงเป้า / ขายหมู" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · Entry</div><Sel value={V.dFeelEntry} onChange={V.setFeelEntry} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelEntry ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelEntry.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · SL</div><Sel value={V.dFeelSL} onChange={V.setFeelSL} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelSL ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · TP</div><Sel value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelTP ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
             </div>
 
             {/* ⑤ MFE / capture — how far price ran, and how much you kept after TP. (Drawdown lives in the legs DD) */}

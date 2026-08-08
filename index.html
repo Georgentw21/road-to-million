@@ -117,7 +117,7 @@ select option{background:#0c0c0e;color:#ECEAE3}
 @keyframes drawLine{to{stroke-dashoffset:0}}
 .eq-line{stroke-dasharray:1100;stroke-dashoffset:1100;animation:drawLine 1.9s cubic-bezier(.4,.8,.3,1) .25s forwards;filter:drop-shadow(0 3px 7px rgba(226,197,136,.4))}
 /* view content gets a gentle pop+fade */
-@keyframes viewIn{from{opacity:.4;transform:translateY(8px) scale(.995)}to{opacity:1;transform:none}}
+@keyframes viewIn{from{opacity:0;transform:translateY(18px) scale(.99)}to{opacity:1;transform:none}}
 /* charts grow into place */
 @keyframes growBar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .bar-grow{transform-origin:bottom;animation:growBar .75s cubic-bezier(.2,.85,.3,1) both}
@@ -185,6 +185,52 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
 /* 8. Inputs warm slightly on hover — the surface feels responsive before you click. */
 .hv-focus{transition:border-color .15s,box-shadow .15s,background-color .15s}
 .hv-focus:hover:not(:focus){border-color:rgba(201,166,95,.28)!important}
+/* Reduced motion: drop the MOVEMENT, keep the fades. A blanket kill-switch (which is what
+   used to be here, twice) left the whole app looking static for anyone with the OS setting on —
+   including people who simply dislike parallax, not animation. Travel and loops go; opacity stays,
+   so content still arrives softly and the interface never feels frozen. */
+@media (prefers-reduced-motion:reduce){
+  @keyframes rise{from{opacity:0}to{opacity:1}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes revealIn{from{opacity:0}to{opacity:1}}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}
+  @keyframes selIn{from{opacity:0}to{opacity:1}}
+  @keyframes selInUp{from{opacity:0}to{opacity:1}}
+  @keyframes selOptIn{from{opacity:0}to{opacity:1}}
+  /* looping / decorative motion has no information in it — stop those entirely */
+  .hv-addbtn,.rtm-logo,.rtm-goldshine,.rtm-progress::after,
+  .hv-save::after,.hv-setbtn::after,.hv-addbtn::after{animation:none!important}
+  [style*="drift1"],[style*="drift2"]{animation:none!important}
+  .rtm-press:hover,.hv-nav:hover,.hv-row:hover,.hv-card:hover,.rtm-day:hover{transform:none!important}
+  .bar-grow,.bar-grow-x{animation-duration:.01ms!important}
+  html{scroll-behavior:auto!important}
+}
+
+
+/* ===== page motion — visible, staggered, and it replays on every view change ===== */
+/* section headings sweep in ahead of their content */
+@keyframes headIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+/* KPI tiles arrive one after another rather than all at once */
+@keyframes tileIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+.rtm-stagger > *{animation:tileIn .58s cubic-bezier(.2,.8,.3,1) both}
+.rtm-stagger > *:nth-child(1){animation-delay:.04s}
+.rtm-stagger > *:nth-child(2){animation-delay:.10s}
+.rtm-stagger > *:nth-child(3){animation-delay:.16s}
+.rtm-stagger > *:nth-child(4){animation-delay:.22s}
+.rtm-stagger > *:nth-child(5){animation-delay:.28s}
+.rtm-stagger > *:nth-child(6){animation-delay:.34s}
+.rtm-stagger > *:nth-child(7){animation-delay:.40s}
+.rtm-stagger > *:nth-child(8){animation-delay:.46s}
+.rtm-head{animation:headIn .55s cubic-bezier(.2,.8,.3,1) both}
+/* the gold underline under a page title draws itself */
+@keyframes ruleIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.rtm-rule{transform-origin:left;animation:ruleIn .7s cubic-bezier(.2,.8,.3,1) .12s both}
+@media (prefers-reduced-motion:reduce){
+  @keyframes headIn{from{opacity:0}to{opacity:1}}
+  @keyframes tileIn{from{opacity:0}to{opacity:1}}
+  .rtm-rule{animation:none}
+}
+
 /* ===== dropdown (Sel) — a real panel we control, with weight ===== */
 /* trigger: takes weight as you press, lights up while open */
 .rtm-sel{transition:transform .13s cubic-bezier(.2,.7,.3,1),box-shadow .16s,border-color .16s,background-color .16s;will-change:transform}
@@ -206,19 +252,16 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
 
 /* scroll reveal — cards rise in as they enter the viewport, so pages move while you read
    them. !important because most cards carry an inline entrance animation to override. */
-@keyframes revealIn{from{opacity:0;transform:translateY(26px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes revealIn{from{opacity:0;transform:translateY(34px) scale(.978)}to{opacity:1;transform:none}}
 .rv-pre{opacity:0!important}
-.rv-in{animation:revealIn .66s cubic-bezier(.2,.75,.3,1) both!important}
+.rv-in{animation:revealIn .78s cubic-bezier(.16,.8,.28,1) both!important}
 /* calendar day cells */
 .rtm-day{transition:background .13s,transform .13s,color .13s}
 .rtm-day:hover{background:rgba(201,166,95,.16);transform:scale(1.08)}
 .rtm-day:active{transform:scale(.94)}
 
 /* 9. Respect reduced-motion: keep the information, drop the movement. */
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
-  .rtm-marquee{animation:ticker 32s linear infinite!important}
-}
+
 /* premium focus ring everywhere (keyboard users) */
 :focus-visible{outline:2px solid rgba(226,197,136,.65);outline-offset:2px;border-radius:4px}
 /* gold selection */
@@ -257,10 +300,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
 .rtm-press:active{transform:translateY(1px) scale(.96);box-shadow:inset 0 2px 5px rgba(0,0,0,.5)}
 
 /* respect reduced-motion preferences (but keep the price marquee scrolling — it conveys info) */
-@media (prefers-reduced-motion: reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-  .rtm-marquee{animation:ticker 32s linear infinite!important}
-}
+
 </style>
 </head>
 <body>
