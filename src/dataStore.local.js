@@ -68,6 +68,11 @@ async function imgReadAll() {
 async function imgSync(images) {
   const db = await openDB();
   const want = images || {};
+  // Deleting is the only irreversible thing this file does, so refuse the one case that is
+  // almost never a real instruction: "keep nothing". An empty map next to a populated store
+  // means the journal failed to load (or has not loaded yet) — writing that through would
+  // erase every screenshot the user has. A genuine wipe still happens trade-by-trade.
+  const wantEmpty = Object.keys(want).length === 0;
   return new Promise((resolve, reject) => {
     try {
       const tx = db.transaction(IMG_STORE, 'readwrite');
@@ -82,6 +87,10 @@ async function imgSync(images) {
           if (!have.has(k) || imgFp.get(k) !== fp(v)) { st.put(v, k); imgFp.set(k, fp(v)); }
           have.delete(k);
         });
+        if (wantEmpty && have.size) {
+          console.warn('[local imgSync] refusing to delete ' + have.size + ' stored images for an empty set');
+          return;
+        }
         have.forEach(k => { st.delete(k); imgFp.delete(k); });   // slot cleared / trade deleted
       };
       tx.oncomplete = () => resolve();
