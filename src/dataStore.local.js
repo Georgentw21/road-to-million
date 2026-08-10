@@ -65,14 +65,18 @@ async function imgReadAll() {
   });
 }
 // write only what changed; drop what the journal no longer references
-async function imgSync(images) {
+async function imgSync(images, allowEmpty) {
   const db = await openDB();
   const want = images || {};
   // Deleting is the only irreversible thing this file does, so refuse the one case that is
-  // almost never a real instruction: "keep nothing". An empty map next to a populated store
-  // means the journal failed to load (or has not loaded yet) — writing that through would
-  // erase every screenshot the user has. A genuine wipe still happens trade-by-trade.
-  const wantEmpty = Object.keys(want).length === 0;
+  // almost never a real instruction: "keep nothing" from a caller that never managed to read
+  // the journal. Writing that through would erase every screenshot the user has. When the app
+  // says it does know its images (allowEmpty), an empty map is genuine — you deleted the last
+  // trade that had a chart — and wipeImages() covers the deliberate factory reset.
+  // Until then this stays write-only: a caller that does not know what it holds may add
+  // images, never remove them. Worst case that strands a few records until the next reload,
+  // which the next real save clears — the other way round loses work permanently.
+  const readOnlyAdds = !allowEmpty;
   return new Promise((resolve, reject) => {
     try {
       const tx = db.transaction(IMG_STORE, 'readwrite');
@@ -87,8 +91,8 @@ async function imgSync(images) {
           if (!have.has(k) || imgFp.get(k) !== fp(v)) { st.put(v, k); imgFp.set(k, fp(v)); }
           have.delete(k);
         });
-        if (wantEmpty && have.size) {
-          console.warn('[local imgSync] refusing to delete ' + have.size + ' stored images for an empty set');
+        if (readOnlyAdds && have.size) {
+          console.warn('[local imgSync] keeping ' + have.size + ' stored image(s): the journal was never read back');
           return;
         }
         have.forEach(k => { st.delete(k); imgFp.delete(k); });   // slot cleared / trade deleted
@@ -132,12 +136,14 @@ export async function loadJournal() {
   try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; }
   catch (e) { return null; }
 }
-export async function saveJournal(blob) {
+export async function saveJournal(blob, opts) {
   if (idbOK) {
     try {
       // images go to their own records; the journal keeps everything else and stays small
       const { images, ...rest } = blob || {};
-      await imgSync(images);
+      // opts.imagesKnown: the caller has really read (or replaced) the journal, so an empty
+      // image map is an instruction rather than the symptom of a load that never happened.
+      await imgSync(images, !!(opts && opts.imagesKnown));
       await idbPut(KEY, rest);
       return;
     } catch (e) { console.error('[local saveJournal idb]', e); }
@@ -160,9 +166,25 @@ function fileToDataURL(file) {
 }
 export async function uploadImage(slotId, file) { return await fileToDataURL(file); }
 export function getImageUrl(path) { return path || null; }
-// Inline images vanish with their trade (App drops them from state.images), so
-// there is nothing extra to delete.
+// Image records vanish with their trade (App drops the slot from state.images and the
+// next save diffs it away), so there is nothing extra to delete by path.
 export async function deleteImages(_paths) { /* no-op in local mode */ }
+
+// Factory reset: the one place that really does mean "keep nothing". Explicit, so the
+// safety guard in imgSync never has to decide whether an empty map was an accident.
+export async function wipeImages() {
+  if (!idbOK) return;
+  try {
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IMG_STORE, 'readwrite');
+      tx.objectStore(IMG_STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    imgFp.clear();
+  } catch (e) { console.error('[local wipeImages]', e); }
+}
 
 // Rough storage meter for the account panel — sum of inlined image data.
 export async function imageUsage() {

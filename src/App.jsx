@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { ImageSlot } from './ImageSlot.jsx';
-import { loadJournal, saveJournal, getImageUrl, deleteImages, imageUsage } from './dataStore.js';
+import { loadJournal, saveJournal, getImageUrl, deleteImages, wipeImages, imageUsage } from './dataStore.js';
 import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
@@ -602,6 +602,7 @@ class App extends React.Component {
     try { data = await loadJournal(); } catch (e) { console.error(e); }
     if (data && Object.keys(data).length) {
       data = this._stripDemoHabits(data);
+      this._imgOk = true;   // we really read the journal, so state.images is the truth from here on
       this.setState({ ...data, images: data.images || {} }, () => { this._loaded = true; if (this._demoCleaned) this._persist(); this._checkPlanReminder(); });
     } else {
       this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); this._checkPlanReminder(); });
@@ -689,7 +690,9 @@ class App extends React.Component {
   _persist() {
     if (!this._loaded) return;
     clearTimeout(this._saveTimer);
-    this._saveTimer = setTimeout(() => { saveJournal(this._blob()); }, 500);
+    // imagesKnown says whether state.images is the truth or just an empty default: without a
+    // journal actually read back, an empty map means "not loaded", never "delete my charts".
+    this._saveTimer = setTimeout(() => { saveJournal(this._blob(), { imagesKnown: !!this._imgOk }); }, 500);
   }
   _save() { this._persist(); }
   setImage(slotId, path) {
@@ -705,6 +708,22 @@ class App extends React.Component {
     keys.forEach(k => delete next[k]);
     return { images: next, paths };
   }
+  // เก็บเฉพาะรูปที่ยังมีเจ้าของอยู่จริง (ใช้ตอน restore ไฟล์สำรองแบบไม่มีรูป)
+  // Keys look like trade-<id>-…, setup-<id>-…, vision-<id>; anything else is left alone.
+  _pruneImages(imgs, data) {
+    const alive = {
+      trade: new Set((data.trades || []).map(t => String(t.id))),
+      setup: new Set((data.setups || []).map(s => String(s.id))),
+      vision: new Set((data.visionItems || []).map(v => String(v.id))),
+    };
+    const out = {};
+    Object.keys(imgs || {}).forEach(k => {
+      const m = k.match(/^(trade|setup|vision)-([^-]+)/);
+      if (m && !alive[m[1]].has(m[2])) return;      // owner is gone with the restore
+      out[k] = imgs[k];
+    });
+    return out;
+  }
 
   // ===== portfolios =====
   selectPortfolio(id) { this.setState({ currentPortfolioId: id, showPortMenu: false }); }
@@ -715,8 +734,11 @@ class App extends React.Component {
   resetJournal() {
     const paths = Object.values(this.state.images || {}).filter(Boolean);
     const d = JSON.parse(JSON.stringify(this._pristine));
+    this._imgOk = true;
     this.setState({ ...d, showReset: false, showUserMenu: false, view: 'dashboard' }, () => { this._loaded = true; this._persist(); });
-    deleteImages(paths);
+    // the reset dialog promises the images go too — say so explicitly, because an empty
+    // journal is exactly the shape the storage layer refuses to treat as "delete everything"
+    deleteImages(paths); wipeImages();
   }
   // ===== สำรอง / กู้คืน / เก็บถาวร =====
   // ดาวน์โหลดข้อมูลทั้งหมดเป็นไฟล์ .json (กู้คืนได้ทีหลัง) — กันข้อมูลหายก่อนล้างพื้นที่
@@ -766,7 +788,15 @@ class App extends React.Component {
       const data = (parsed && parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
       if (!data || typeof data !== 'object' || !Array.isArray(data.trades)) throw new Error('Invalid backup file');
       if (!window.confirm('Restore from this file? All current data will be replaced.')) return;
-      this.setState({ ...data, images: data.images || {}, showUserMenu: false }, () => { this._loaded = true; this._persist(); });
+      // A numbers-only backup deliberately carries no screenshots. Keep the ones this browser
+      // already holds — they belong to the same trade ids — instead of blanking them, which
+      // would leave them orphaned in storage and destroy them on the next image you save.
+      const fromFile = (data.images && typeof data.images === 'object') ? data.images : {};
+      const images = (parsed && parsed.images === true) || Object.keys(fromFile).length
+        ? fromFile
+        : this._pruneImages(this.state.images, data);
+      this._imgOk = true;   // an explicit replacement of everything — images included
+      this.setState({ ...data, images, showUserMenu: false }, () => { this._loaded = true; this._persist(); });
       window.alert('Restore complete');
     } catch (e) { window.alert('Restore failed: ' + (e && e.message ? e.message : e)); }
   }

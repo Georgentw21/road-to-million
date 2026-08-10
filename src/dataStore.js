@@ -44,6 +44,10 @@ export async function deleteImages(paths) {
   try { await supabase.storage.from('images').remove(list); } catch (e) { console.error('[deleteImages]', e); }
 }
 
+// Factory reset. Online the files are already removed by path in deleteImages(), so there is
+// no separate store to clear — this exists so App.jsx can call the same thing in both builds.
+export async function wipeImages() { /* no-op online */ }
+
 // รวมขนาดไฟล์รูปทั้งหมดของผู้ใช้ (ไว้โชว์มาตรวัดพื้นที่ใช้งาน Storage)
 export async function imageUsage() {
   const { data: { user } } = await supabase.auth.getUser();
