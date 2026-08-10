@@ -484,6 +484,8 @@ class App extends React.Component {
     exportRange: 'all', // ช่วงข้อมูลที่จะส่งออก: all | week | month
     txnPort: null, // พอร์ตที่กำลังเปิดดูประวัติฝาก/ถอนเต็ม
     lastBackup: null, // เวลาที่สำรองข้อมูลครั้งล่าสุด
+    lastBackupCount: 0, // จำนวนไม้ ณ ตอนสำรอง — ใช้บอกว่ามีของใหม่ที่ยังไม่ได้สำรองกี่ไม้
+    backupSnooze: 0,    // เลื่อนเตือนถึงเวลานี้
     // ===== Habit tracker (Loop-style grid) =====
     // Log daily; each habit measured against a per-period target (weekly / monthly only).
     // Starts empty — you add your own habits. Yearly ambitions live in yearGoals below.
@@ -675,7 +677,7 @@ class App extends React.Component {
       goal: s.goal, tags: s.tags, tradeFieldOpts: s.tradeFieldOpts,
       habits: s.habits, habitLogs: s.habitLogs, yearGoals: s.yearGoals,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
-      lastBackup: s.lastBackup,
+      lastBackup: s.lastBackup, lastBackupCount: s.lastBackupCount, backupSnooze: s.backupSnooze,
       // how you like to READ the analysis is a preference, not a transient filter — remember it.
       // (Search, quick filters and sort stay transient on purpose: a stale filter on reload
       // would silently hide trades.)
@@ -718,17 +720,43 @@ class App extends React.Component {
   }
   // ===== สำรอง / กู้คืน / เก็บถาวร =====
   // ดาวน์โหลดข้อมูลทั้งหมดเป็นไฟล์ .json (กู้คืนได้ทีหลัง) — กันข้อมูลหายก่อนล้างพื้นที่
-  backupJournal() {
+  // withImages=false writes the numbers only. That file is a few hundred KB instead of tens of
+  // megabytes, which is what makes a weekly habit realistic; take the full one occasionally.
+  backupJournal(withImages = true) {
     try {
-      const payload = { app: 'road-to-million', v: 1, ts: new Date().toISOString(), data: this._blob() };
+      const data = this._blob();
+      if (!withImages) data.images = {};
+      const payload = { app: 'road-to-million', v: 1, ts: new Date().toISOString(), images: !!withImages, data };
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'rtm-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.href = url; a.download = 'rtm-backup-' + new Date().toISOString().slice(0, 10) + (withImages ? '' : '-data') + '.json';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      this.setState({ lastBackup: Date.now() }); this._save();
+      // remember the trade count too, so the reminder can tell "new work" from "just time passing"
+      this.setState({ lastBackup: Date.now(), lastBackupCount: (this.state.trades || []).length, backupSnooze: 0 }, () => this._save());
     } catch (e) { window.alert('Backup failed: ' + (e && e.message ? e.message : e)); }
+  }
+  // A journal is only as safe as its last copy — and in the offline build this browser holds the
+  // only one. Nag only when there is something to lose: unbacked-up trades, not merely elapsed time.
+  _backupWarn() {
+    const st = this.state;
+    const trades = st.trades || [];
+    if (!trades.length) return null;
+    if (st.backupSnooze && Date.now() < st.backupSnooze) return null;
+    const since = trades.length - (st.lastBackupCount || 0);
+    if (!st.lastBackup) {
+      return trades.length >= 10
+        ? { level: 'high', n: trades.length, msg: 'ยังไม่เคยสำรองข้อมูลเลย — ' + trades.length + ' ไม้นี้มีอยู่ที่เดียวในเบราว์เซอร์นี้ ถ้าล้างข้อมูลเว็บคือหายถาวร' }
+        : null;
+    }
+    if (since <= 0) return null;
+    const days = Math.floor((Date.now() - st.lastBackup) / 86400000);
+    if (since >= 20 || days >= 7) {
+      return { level: since >= 40 || days >= 21 ? 'high' : 'warn', n: since,
+        msg: 'มี ' + since + ' ไม้ที่ยังไม่ได้สำรอง' + (days >= 1 ? ' · สำรองครั้งล่าสุด ' + days + ' วันที่แล้ว' : '') };
+    }
+    return null;
   }
   async restoreJournal(file) {
     if (!file) return;
@@ -3016,6 +3044,10 @@ class App extends React.Component {
       showReset: st.showReset, openReset: () => this.openReset(), closeReset: () => this.closeReset(), doReset: () => this.resetJournal(),
       backupJournal: () => this.backupJournal(), restoreJournal: (f) => this.restoreJournal(f), archiveOldTrades: (m) => this.archiveOldTrades(m),
       lastBackupStr: st.lastBackup ? new Date(st.lastBackup).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never',
+      backupWarn: this._backupWarn(),
+      doBackup: () => this.backupJournal(true),
+      doBackupLight: () => this.backupJournal(false),
+      snoozeBackup: () => this.setState({ backupSnooze: Date.now() + 3 * 86400000 }, () => this._save()),
       exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
       exportRange: st.exportRange, setExportRange: (e) => this.setState({ exportRange: e.target.value }),
       stop: (e) => e.stopPropagation(),
@@ -4549,7 +4581,8 @@ class App extends React.Component {
                         </div>
                       )}
                     </div>
-                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Back up (download)<span style={{ fontSize: 10.5, color: '#83838C' }}>{V.lastBackupStr}</span></div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(false); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>สำรองข้อมูล · เฉพาะตัวเลข<span style={{ fontSize: 10.5, color: '#83838C' }}>เล็ก · ทำบ่อยได้</span></div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(true); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>สำรองข้อมูล · รวมรูปทั้งหมด<span style={{ fontSize: 10.5, color: '#83838C' }}>{V.lastBackupStr}</span></div>
                     <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Account &amp; portfolios</div>
                     <div onClick={V.openReset} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63', borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 4 }}>Reset all data</div>
                     <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>Sign out</div>
@@ -4569,6 +4602,18 @@ class App extends React.Component {
 
           {/* VIEWPORT */}
           <div className="rtm-scroll" ref={(el) => { this._scrollRoot = el; }} style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
+            {V.backupWarn && (
+              <div style={{ ...css('display:flex;align-items:center;gap:12px;margin:14px 28px 0;padding:11px 15px;border-radius:12px;font-size:12.5px;animation:rise .5s both'),
+                background: V.backupWarn.level === 'high' ? 'linear-gradient(100deg,rgba(220,106,99,.16),rgba(255,255,255,.02))' : 'linear-gradient(100deg,rgba(224,177,90,.14),rgba(255,255,255,.02))',
+                border: '1px solid ' + (V.backupWarn.level === 'high' ? 'rgba(220,106,99,.42)' : 'rgba(224,177,90,.4)'),
+                color: V.backupWarn.level === 'high' ? '#FFC2C9' : '#F0C98A' }}>
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke={V.backupWarn.level === 'high' ? '#DC6A63' : '#E0B15A'} strokeWidth="1.8" style={{ flex: 'none' }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span style={css('flex:1;min-width:0;line-height:1.5')}>{V.backupWarn.msg}</span>
+                <span onClick={V.doBackupLight} className="rtm-press" style={css('flex:none;font-size:12px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F)')}>สำรองเลย</span>
+                <span onClick={V.doBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#9A9AA4;white-space:nowrap')}>รวมรูป</span>
+                <span onClick={V.snoozeBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#83838C;white-space:nowrap')}>ไว้ก่อน</span>
+              </div>
+            )}
             {V.isAccount && this.renderAccount(V)}
             {V.isDash && this.renderDashboard(V)}
             {V.isCal && this.renderCalendar(V)}
