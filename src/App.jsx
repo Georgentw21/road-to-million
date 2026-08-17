@@ -2117,9 +2117,6 @@ class App extends React.Component {
       rows: efEdges.slice(0, 8),
     };
 
-    const g = Number(goal) > 0 ? Number(goal) : 1000000;
-    // milestone อิงกำไรสะสม (net P&L) → แพ้ก็ติดลบจริง, ไม่รวมเติม/ถอนเงิน จึงสะท้อนการเติบโตจากฝีมือเทรดล้วนๆ
-    const progPct = Math.max(0, Math.min(100, net / g * 100));
     return {
       edgeFinder,
       expectancyStr: fm(expectancy), curStreakStr, curStreakColor,
@@ -2147,10 +2144,6 @@ class App extends React.Component {
       balanceStr: '$' + Math.round(equity).toLocaleString('en-US'),
       netProfitStr: fm(net), netProfitColor: pc(net),
       dowBars, sessionBars, rDist, anaStats,
-      milestoneEquity: fm(net),
-      milestonePct: progPct.toFixed(1) + '%', milestoneWidth: progPct.toFixed(1) + '%',
-      goalStr: '$' + Math.round(g).toLocaleString('en-US'), goalNum: g,
-      milestoneMarks: ['$0', '$' + Math.round(g / 3).toLocaleString('en-US'), '$' + Math.round(2 * g / 3).toLocaleString('en-US'), '$' + Math.round(g).toLocaleString('en-US') + ' 🏁'],
     };
   }
 
@@ -2212,6 +2205,25 @@ class App extends React.Component {
 
     // ---- stats computed from real trades ----
     const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange, st.edgeMetric);
+
+    // ---- milestone: the one number that never follows the portfolio switch ----
+    // The road to a million is the whole account. Everything else on the page respects the
+    // switcher; this deliberately does not, so the goal cannot appear to shrink just because
+    // you looked at one broker. Cumulative net P&L (+ archived), never deposits.
+    const gNum = this._n(st.goal) > 0 ? this._n(st.goal) : 1000000;
+    const closedNetOf = (list) => list.reduce((s, t) => s + (t.status !== 'OPEN' ? this._n(t.pnl) : 0), 0);
+    const milestoneNet = closedNetOf(netAll) + st.portfolios.reduce((s, p) => s + this._n(p.archivedPnl), 0);
+    const milePct = Math.max(0, Math.min(100, gNum > 0 ? milestoneNet / gNum * 100 : 0));
+    const usd = (v) => '$' + Math.round(v).toLocaleString('en-US');
+
+    // Deleting a portfolio keeps its trades — "they stay but are no longer grouped" — so the
+    // accounts on their own no longer add up to the whole. Total the way the dashboard does
+    // (every closed trade), and show the leftovers instead of quietly dropping them.
+    const liveIds = new Set(st.portfolios.map(p => p.id));
+    const orphans = netAll.filter(t => t.portfolioId && !liveIds.has(t.portfolioId));
+    const allCapital = st.portfolios.reduce((s, p) => s + this._n(p.startBalance)
+      + (p.deposits || []).reduce((a, d) => a + this._n(d.amount), 0), 0);
+    const allBal = allCapital + milestoneNet;
     const setupBars = S.setupBars;
 
     // ---- trade row mapper ----
@@ -3060,7 +3072,8 @@ class App extends React.Component {
       currentPortfolioName: cpId === 'all' ? 'All portfolio' : this._portfolioName(cpId),
       // the switcher doubles as a balance sheet: every account's current equity, and the sum
       portMenu: portfolioStats.map(p => ({ id: p.id, name: p.name, balStr: p.equityStr, tint: portTint[p.id] || '#9A9AA4' })),
-      allBalStr: '$' + Math.round(portfolioStats.reduce((a, p) => a + this._n(p.equity), 0)).toLocaleString('en-US'),
+      allBalStr: usd(allBal),
+      orphanRow: orphans.length ? { n: orphans.length, netStr: this._fmtMoney(closedNetOf(orphans)) } : null,
       // a portfolio column only earns its width when several accounts are mixed in one view
       showPort: cpId === 'all' && st.portfolios.length > 1,
       showPortMenu: st.showPortMenu, togglePortMenu: () => this.setState({ showPortMenu: !st.showPortMenu, showUserMenu: false }),
@@ -3095,8 +3108,12 @@ class App extends React.Component {
       equityLine: S.equityLine, equityArea: S.equityArea, equityLastY: S.equityLastY, equityPoints: S.equityPoints, equityZeroY: S.equityZeroY,
       equityPeakStr: S.equityPeakStr, equityGrowthStr: S.equityGrowthStr, equityGrowthColor: S.equityGrowthColor,
       capitalInStr: S.capitalInStr, depositedStr: S.depositedStr, cashOutStr: S.cashOutStr, hasCashFlow: S.hasCashFlow, balanceStr: S.balanceStr, netProfitStr: S.netProfitStr, netProfitColor: S.netProfitColor,
-      milestoneEquity: S.milestoneEquity, milestonePct: S.milestonePct, milestoneWidth: S.milestoneWidth,
-      goalStr: S.goalStr, goalNum: S.goalNum, editGoal: st.editGoal, milestoneMarks: S.milestoneMarks,
+      milestoneEquity: this._fmtMoney(milestoneNet),
+      milestonePct: milePct.toFixed(1) + '%', milestoneWidth: milePct.toFixed(1) + '%',
+      goalStr: usd(gNum), goalNum: gNum, editGoal: st.editGoal,
+      milestoneMarks: ['$0', usd(gNum / 3), usd(2 * gNum / 3), usd(gNum) + ' 🏁'],
+      // say so, so the number never looks like a bug when a single portfolio is selected
+      milestoneScope: st.portfolios.length > 1 ? 'ทุกพอร์ตรวมกัน · all portfolios' : 'cumulative P&L',
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
       setupBars, recent, edge, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: logTotal,
       logShownN, logHasMore, logRemaining: logTotal - logShownN,
@@ -4124,7 +4141,7 @@ class App extends React.Component {
         <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
           <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· cumulative P&amp;L</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span title="เป้าหมายนับรวมทุกพอร์ตเสมอ ไม่เปลี่ยนตามพอร์ตที่เลือก" style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· {V.milestoneScope}</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
               <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
               <span onClick={V.startGoal} title="Click to edit goal" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
@@ -4607,6 +4624,12 @@ class App extends React.Component {
                         </span>
                       </div>
                     ))}
+                    {V.orphanRow && (
+                      <div title="ออเดอร์ของพอร์ตที่ถูกลบไปแล้ว — ยังนับใน P&L รวม แต่ไม่มีพอร์ตเป็นเจ้าของ" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 11px', borderRadius: 8, fontSize: 12, color: '#83838C' }}>
+                        <span>ไม่ได้จัดกลุ่ม · {V.orphanRow.n} ไม้</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5 }}>{V.orphanRow.netStr}</span>
+                      </div>
+                    )}
                     <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ Add / manage portfolios</div>
                   </div>
                 )}
