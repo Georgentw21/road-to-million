@@ -438,11 +438,9 @@ class App extends React.Component {
       // legTrigger = "จุดเข้า" ของแต่ละไม้ (ย้ายมาจาก Entry — M5/M15 เดิม) แก้ตัวเลือกเองได้
       legTrigger: ['M15 Completed Stick', 'M5 Completed Stick', 'M15 Doji', 'M5 Doji', 'Break confirm', 'Retest zone'],
       legSL: ['Dow / structure', 'รวมแท่ง (group candle)', 'ใต้แท่ง (under candle)', 'Fixed pips', 'Breakeven'],
-      // ----- round metadata options -----
-      sotType: ['Saucer', 'H&S', 'V-shape (ไหล่ขวาเสร็จ)', 'V-shape → ข้าม', 'Double top/bottom'],
     },
     // trade-log analysis filters + breakdown lens
-    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' },
+    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
@@ -889,7 +887,7 @@ class App extends React.Component {
           entry: t.entry, stop: t.stop, target: t.target, riskUsd: this._n(t.risk),
           hold: this._fmtDur(t.entryTime, t.exitTime), entryTime: t.entryTime, exitTime: t.exitTime,
           ltf: t.ltf, mtf: t.mtf, htf: t.htf, retest: this._legRetest(t), fibo: this._legFibo(t), entryType: this._entryModel(t), slZone: t.slZone,
-          sotType: t.sotType, entryKind: t.entryKind, hhllCount: t.hhllCount, tfMeta: t.tfMeta || {}, tfImages,
+          entryKind: t.entryKind, tfMeta: t.tfMeta || {}, tfImages,
           feelEntry: t.feelEntry, feelSL: t.feelSL, feelTP: t.feelTP,
           mae: this._maeUsd(t), mfe: this._mfeUsd(t),
           heatStr: heatR != null ? heatR.toFixed(1) + 'R' : (this._maeUsd(t) > 0 ? '$' + Math.round(this._maeUsd(t)) : ''),
@@ -1207,7 +1205,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, sotType: '', entryKind: '', hhllCount: '', bias: '', exitPrice: '', peakPrice: '' },
+      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -2064,7 +2062,6 @@ class App extends React.Component {
       { label: 'Retest', get: t => { const r = this._legRetest(t); return r === 'yes' ? 'Retest ✓' : (r === 'no' ? 'No retest' : ''); } },
       { label: 'Fibo M15', get: t => this._legFibo(t) },
       { label: 'Entry model', get: t => this._entryModel(t) },
-      { label: 'Trend · SOT', get: t => (t.sotType || '').trim() },
       { label: 'Session', get: t => (t.session || '').trim() },
       { label: 'Day of week', get: t => this._dowFull(t.date) },
       { label: 'Setup', get: t => this._setupById(t.setupId).name },
@@ -2200,7 +2197,7 @@ class App extends React.Component {
         avgRColor: (rrN ? rrSum / rrN : 0) >= 0 ? GREEN : RED,
         startBalance: start,
         netCapStr: money(netCap), depositedStr: money(grossDep), withdrawnStr: wOut > 0 ? ('−' + money(wOut)) : '$0', hasCashFlow: (depIn > 0 || wOut > 0),
-        equityStr: money(bal),
+        equity: bal, equityStr: money(bal),
         setBalance: (e) => this.setPortfolioBalance(p.id, e.target.value),
         deposit: () => this.addFunds(p.id, false), withdraw: () => this.addFunds(p.id, true),
         movements, txnCount: movements.length, openTxns: (e) => { if (e) e.stopPropagation(); this.openTxns(p.id); },
@@ -2219,6 +2216,10 @@ class App extends React.Component {
 
     // ---- trade row mapper ----
     const sessColor = (s) => s === 'Tokyo' ? BLUE : (s === 'London' ? GOLD : PURPLE);
+    // one stable colour per portfolio, so a mixed "All portfolio" log is readable at a glance
+    const PORT_TINT = ['#E2C588', '#7BA7D9', '#5FC08D', '#C9A6E8', '#E0A15A', '#8FBFA6', '#DC9A9A'];
+    const portTint = {};
+    st.portfolios.forEach((p, i) => { portTint[p.id] = PORT_TINT[i % PORT_TINT.length]; });
     const mapTrade = (t0) => {
       const t = { ...t0, pnl: this._n(t0.pnl), rr: this._n(t0.rr) };
       const su = this._setupById(t.setupId);
@@ -2270,6 +2271,9 @@ class App extends React.Component {
         fiboShort: (() => { const f = (this._legFibo(t) || '').trim(); if (!f) return '—'; const m = /^([^(]+)/.exec(f); return (m ? m[1] : f).trim(); })(),
         ...(() => { const ls = this._legStats(t); return { legN: ls.count, isMulti: ls.isMulti, legMaxLot: ls.maxLot ? ls.maxLot.toFixed(2) : '', legAvgEntry: ls.avgEntry != null ? this._fmtPrice(ls.avgEntry) : '', legMaxDD: ls.maxDD || 0 }; })(),
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
+        // which account this order belongs to — only surfaced when viewing every portfolio at once
+        portName: this._portfolioName(t.portfolioId || firstPf),
+        portColor: portTint[t.portfolioId || firstPf] || '#9A9AA4',
         open: () => this.openTrade(t.id),
       };
     };
@@ -2312,7 +2316,7 @@ class App extends React.Component {
       if (LF.entryType && LF.entryType !== 'all' && this._entryModel(t) !== LF.entryType) return false;
       if (LF.retest && LF.retest !== 'all' && this._legRetest(t) !== LF.retest) return false;
       if (LF.fibo && LF.fibo !== 'all' && this._legFibo(t) !== LF.fibo) return false;
-      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'slZone') || !fieldMatch(t, 'sotType')) return false;
+      if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'slZone')) return false;
       if (!fieldMatch(t, 'feelEntry') || !fieldMatch(t, 'feelSL') || !fieldMatch(t, 'feelTP')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
@@ -2337,7 +2341,7 @@ class App extends React.Component {
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['sotType', 'SOT'], ['feelEntry', 'Feeling · เข้า'], ['feelSL', 'Feeling · SL'], ['feelTP', 'Feeling · TP']];
+    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['feelEntry', 'Feeling · เข้า'], ['feelSL', 'Feeling · SL'], ['feelTP', 'Feeling · TP']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
     // entry model / fibo now live on the legs; build their option lists from the leg-derived values
     const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
@@ -2374,7 +2378,6 @@ class App extends React.Component {
       setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
       session: { label: 'Session', get: t => t.session || '—' },
       align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
-      sotType: { label: 'ประเภทเทรนด์ (SOT)', get: t => (t.sotType || '').trim() || '—' },
       feelEntry: { label: 'Feeling · ตอนเข้า', get: t => (t.feelEntry || '').trim() || '—' },
       feelSL: { label: 'Feeling · ตอนวาง SL', get: t => (t.feelSL || '').trim() || '—' },
       feelTP: { label: 'Feeling · ตอนออก / TP', get: t => (t.feelTP || '').trim() || '—' },
@@ -2936,8 +2939,6 @@ class App extends React.Component {
           };
         }),
         // ----- round metadata (Ble Yup section 01) -----
-        dSotType: d.sotType || '', optsSotType: this._fieldOptsWith('sotType', d.sotType), setSotType: (e) => this.setDField('sotType', e.target.value),
-        dHhll: d.hhllCount || '', setHhll: (v) => this.setD('hhllCount', d.hhllCount === v ? '' : v),
         dBias: d.bias || d.side || '', setBias: (v) => this.setD('bias', v),
         // ----- feeling on entry / SL / TP (free text) -----
         dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
@@ -3057,6 +3058,11 @@ class App extends React.Component {
       tickerA: this._ticker(), tickerB: this._ticker(),
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'All portfolio' : this._portfolioName(cpId),
+      // the switcher doubles as a balance sheet: every account's current equity, and the sum
+      portMenu: portfolioStats.map(p => ({ id: p.id, name: p.name, balStr: p.equityStr, tint: portTint[p.id] || '#9A9AA4' })),
+      allBalStr: '$' + Math.round(portfolioStats.reduce((a, p) => a + this._n(p.equity), 0)).toLocaleString('en-US'),
+      // a portfolio column only earns its width when several accounts are mixed in one view
+      showPort: cpId === 'all' && st.portfolios.length > 1,
       showPortMenu: st.showPortMenu, togglePortMenu: () => this.setState({ showPortMenu: !st.showPortMenu, showUserMenu: false }),
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
@@ -3104,7 +3110,7 @@ class App extends React.Component {
       // these are persisted preferences, so they must trigger a save — without it the choice
       // only survives if some unrelated autosave happens to flush afterwards
       setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }, () => this._save()),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', sotType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logLimit: 30 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logLimit: 30 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
         { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
@@ -3113,7 +3119,6 @@ class App extends React.Component {
         { key: 'ltf', label: 'LTF condition', opts: this._fieldOpts('ltf') },
         { key: 'mtf', label: 'MTF condition', opts: this._fieldOpts('mtf') },
         { key: 'htf', label: 'HTF condition', opts: this._fieldOpts('htf') },
-        { key: 'sotType', label: 'ประเภทเทรนด์ (SOT)', opts: this._fieldOpts('sotType') },
         { key: 'feelEntry', label: 'Feeling · ตอนเข้า', opts: this._fieldOpts('feelEntry') },
         { key: 'feelSL', label: 'Feeling · ตอนวาง SL', opts: this._fieldOpts('feelSL') },
         { key: 'feelTP', label: 'Feeling · ตอนออก / TP', opts: this._fieldOpts('feelTP') },
@@ -3380,8 +3385,14 @@ class App extends React.Component {
 
   renderTradeLog(V) {
     // one wide row per order (horizontally scrollable) — full overview at a glance
-    const gcols = '128px 92px 70px minmax(92px,1fr) 46px minmax(84px,1fr) 70px minmax(100px,1.1fr) 50px minmax(108px,1.2fr) 50px 60px 68px 56px 86px';
-    const gminw = 1500;
+    // Header cells, grid tracks and row cells are generated from one list: they can never drift
+    // apart and silently put a value under the wrong heading.
+    const PORT_COL = 'minmax(120px,1.05fr)';
+    const gcols = ['128px', '92px', '70px', 'minmax(92px,1fr)', '46px']
+      .concat(V.showPort ? [PORT_COL] : [])
+      .concat(['minmax(84px,1fr)', '70px', 'minmax(100px,1.1fr)', '50px', 'minmax(108px,1.2fr)', '50px', '60px', '68px', '56px', '86px'])
+      .join(' ');
+    const gminw = V.showPort ? 1632 : 1500;
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
@@ -3498,7 +3509,7 @@ class App extends React.Component {
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span><span>Symbol</span><span>Side</span><span>Setup</span><span title="Session ที่เทรด">Session</span><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span><span>R</span><span>P&amp;L</span></div>
+              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span><span>Symbol</span><span>Side</span>{V.showPort && (<span title="ออเดอร์นี้อยู่พอร์ตไหน">Port</span>)}<span>Setup</span><span title="Session ที่เทรด">Session</span><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span><span>R</span><span>P&amp;L</span></div>
               {V.filteredTrades.map((t, i) => (
                 <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
@@ -3506,6 +3517,7 @@ class App extends React.Component {
                   <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:10.5px;color:#E2C588;padding:3px 7px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05);white-space:nowrap')}>{t.holdShort}</span>
                   <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
+                  {V.showPort && (<span title={'พอร์ต: ' + t.portName} style={{ ...css('font-size:11px;font-weight:600;width:fit-content;max-width:100%;padding:3px 8px;border-radius:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.portColor, border: '1px solid ' + t.portColor + '44', background: t.portColor + '14' }}>{t.portName}</span>)}
                   <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
                   <span title={'เทรดช่วง ' + (t.session || '—')} style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session || '—'}</span>
                   <span title={'จุดเข้า: ' + (t.entryModel || '—')} style={css('font-size:11.5px;color:#C9CAD2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.entryModel || '—'}</span>
@@ -4194,14 +4206,10 @@ class App extends React.Component {
               <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
               <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
             </div>
-            {/* ① รอบเทรด · Round context */}
-            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>①</b> รอบเทรด · Round context</div>
-            <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ประเภทเทรนด์ (SOT)</div><Sel value={V.dSotType} onChange={V.setSotType} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dSotType ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsSotType.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>เข้าที่ HH/LL ครั้งที่</div><div style={css('display:flex;gap:8px')}>{['1', '2', '3', '4+'].map(n => (<div key={n} onClick={() => V.setHhll(n)} className="rtm-press" style={css('flex:1;text-align:center;padding:12px 0;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (V.dHhll === n ? 'background:rgba(201,166,95,.16);border:1px solid rgba(201,166,95,.5);color:#E2C588' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'))}>{n}</div>))}</div></div>
-            </div>
-            {/* ② ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
-            <div style={css('font-size:12px;color:#9A9AA4;margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#C9A65F')}>②</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#E2C588')}>{V.dAlignN}/3 aligned</span></div>
+            {/* ① ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
+            {/* "รอบเทรด · Round context" (SOT + HH/LL ครั้งที่) ถูกตัดออก: ตอบยากเมื่อดูหลาย timeframe
+               พร้อมกัน ค่าที่ได้จึงไม่น่าเชื่อถือพอจะเอาไปหา edge */}
+            <div style={css('font-size:12px;color:#9A9AA4;margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#C9A65F')}>①</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#E2C588')}>{V.dAlignN}/3 aligned</span></div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px')}>
               {V.tfCards.map((c) => (
                 <div key={c.tf} className="liquid-glass" style={{ ...css('border-radius:13px;padding:12px'), background: c.aligned ? 'rgba(95,192,141,.06)' : 'rgba(255,255,255,.02)', border: '1px solid ' + (c.aligned ? 'rgba(95,192,141,.4)' : 'rgba(255,255,255,.1)') }}>
@@ -4216,9 +4224,9 @@ class App extends React.Component {
                 </div>
               ))}
             </div>
-            {/* ③ ไม้ที่เบิ้ล · Entry legs (multi-leg scaling-in) */}
+            {/* ② ไม้ที่เบิ้ล · Entry legs (multi-leg scaling-in) */}
             <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:4px')}>
-              <div style={css('font-size:11px;color:#9A9AA4')}><b style={css('color:#C9A65F')}>③</b> ไม้ที่เบิ้ล · Entry legs</div>
+              <div style={css('font-size:11px;color:#9A9AA4')}><b style={css('color:#C9A65F')}>②</b> ไม้ที่เบิ้ล · Entry legs</div>
               <span onClick={V.addLeg} className="rtm-press hv-addbtn" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มไม้ (เบิ้ล)</span>
             </div>
             {V.dLegs.anyUnder && (
@@ -4278,7 +4286,7 @@ class App extends React.Component {
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · TP</div><Sel value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelTP ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
             </div>
 
-            {/* ⑤ MFE / capture — how far price ran, and how much you kept after TP. (Drawdown lives in the legs DD) */}
+            {/* MFE / capture — how far price ran, and how much you kept after TP. (Drawdown lives in the legs DD) */}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div style={css('font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M4 14l5-5 4 3 7-8" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>MFE · เก็บกำไร <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:11px')}>· ใส่ราคา TP + ราคาสุดเทรนด์ แล้วระบบคำนวณ MFE ให้เอง</span></div>
             {/* price-driven MFE: exit(TP) price + peak price → system derives how far the trend ran, no contract size needed */}
@@ -4308,9 +4316,9 @@ class App extends React.Component {
                 <div style={{ ...css('margin-top:12px;border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.55'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.12)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.4)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
               </div>
             )}
-            {/* ⑥ สรุปรอบ · Round summary — cost + result roll up here (entries & risk live in the legs) */}
+            {/* ③ สรุปรอบ · Round summary — cost + result roll up here (entries & risk live in the legs) */}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>⑤</b> สรุปรอบ · Round summary</div>
+            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>③</b> สรุปรอบ · Round summary</div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Commission / Swap <span style={css('color:#83838C')}>(รวมทุกไม้)</span></div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>P&amp;L (USD) <span style={css('color:#83838C')}>ก่อนหักค่าธรรมเนียม</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
@@ -4581,12 +4589,22 @@ class App extends React.Component {
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
-                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 210, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
-                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>All portfolio</div>
-                    {V.portfolios.map((p) => (
-                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
-                        <span>{p.name}</span>
-                        <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#83838C', cursor: 'pointer', paddingLeft: 10 }}>✕</span>
+                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 288, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 11px 6px', fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase', color: '#6a6a72' }}><span>Portfolio</span><span>คงเหลือ</span></div>
+                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>
+                      <span>All portfolio</span>
+                      <span title="รวมทุกพอร์ต" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 600, color: '#E2C588', whiteSpace: 'nowrap' }}>{V.allBalStr}</span>
+                    </div>
+                    {V.portMenu.map((p) => (
+                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', flex: 'none', background: p.tint }}></span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+                          <span title="ยอดคงเหลือปัจจุบัน" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#B7A981', whiteSpace: 'nowrap' }}>{p.balStr}</span>
+                          <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#83838C', cursor: 'pointer' }}>✕</span>
+                        </span>
                       </div>
                     ))}
                     <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ Add / manage portfolios</div>
@@ -4596,7 +4614,7 @@ class App extends React.Component {
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
-                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(19,19,22,.88)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
                     <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'My account'}</div>
                     {/* มาตรวัดพื้นที่ใช้งาน */}
                     <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4 }}>

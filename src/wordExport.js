@@ -137,11 +137,11 @@ export async function exportWeeklyWord(rows, accountName) {
       h += `</table>`;
     }
 
-    // Round context
-    if (r.sotType || r.entryKind || r.hhllCount) {
+    // Round context (SOT / HH-LL count retired — ตอบยากเมื่อดูหลาย timeframe)
+    if (r.entryKind) {
       h += `<div style="font-family:Arial;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:${GOLD};margin:8px 0 2px;font-weight:bold">รอบเทรด · Round context</div>`;
       h += `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse">`;
-      h += fieldRow([field('ประเภทเทรนด์ (SOT)', r.sotType), field('ประเภทจุดเข้า', r.entryKind), field('เข้าที่ HH/LL ครั้งที่', r.hhllCount)]);
+      h += fieldRow([field('ประเภทจุดเข้า', r.entryKind)]);
       h += `</table>`;
     }
 
