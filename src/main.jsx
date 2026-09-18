@@ -148,7 +148,7 @@ function Login() {
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <span style={{ color: '#fff', fontWeight: 600, fontSize: 16.5, whiteSpace: 'nowrap' }}>Road to Million</span>
               <div className="hide-m" style={{ display: 'flex', gap: 26, marginLeft: 26 }}>
-                {['The Journal', 'Discipline', 'Manifesto'].map((t) => (
+                {['Trade Journal', 'Analytics', 'Playbook'].map((t) => (
                   <span key={t} onClick={goManifesto} className="hv-op" style={{ color: 'rgba(255,255,255,.8)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>{t}</span>
                 ))}
               </div>
@@ -163,11 +163,17 @@ function Login() {
         {/* hero content */}
         <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', textAlign: 'center', transform: 'translateY(-3%)' }}>
           <h1 style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(52px, 8.5vw, 118px)', letterSpacing: '-.02em', color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.05, marginBottom: 16, textShadow: '0 4px 40px rgba(0,0,0,.5)' }}>
-            Chase the <em style={{ fontStyle: 'italic' }}>dream</em>.
+            Trade with <em style={{ fontStyle: 'italic' }}>clarity</em>.
           </h1>
           <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 14, lineHeight: 1.75, maxWidth: 540, marginBottom: 30, padding: '0 12px' }}>
-            Every trade logged. Every habit kept. A private journal for the road to your first million — discipline today, freedom tomorrow.
+            Capture every decision, measure your edge, and turn real trading data into a repeatable process — one reviewed trade at a time.
           </p>
+
+          <div className="hide-m" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 9, margin: '-12px 0 24px' }}>
+            {['Structured trade journal', 'Performance analytics', 'Risk & emotion review'].map((item) => (
+              <span key={item} className="liquid-glass" style={{ borderRadius: 999, padding: '8px 14px', color: 'rgba(255,255,255,.78)', fontSize: 11.5, letterSpacing: '.01em' }}>{item}</span>
+            ))}
+          </div>
 
           <form onSubmit={submit} style={{ width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="liquid-glass" style={pill}>
@@ -210,10 +216,10 @@ function Login() {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at top, rgba(255,255,255,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div className="rv" style={{ color: 'rgba(255,255,255,.4)', fontSize: 13, letterSpacing: '.3em', textTransform: 'uppercase', marginBottom: 28 }}>The Manifesto</div>
         <h2 className="rv" style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(34px, 5.5vw, 68px)', color: '#fff', lineHeight: 1.14, letterSpacing: '-.01em', maxWidth: 920, margin: '0 auto' }}>
-          Pioneering <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>discipline</em> for<br className="hide-m" /> minds that <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>dream, trade, and build.</em>
+          Build an <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>edge</em> you can explain,<br className="hide-m" /> trust, and <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>repeat.</em>
         </h2>
         <p className="rv" style={{ color: 'rgba(255,255,255,.55)', fontSize: 15, lineHeight: 1.85, maxWidth: 620, margin: '34px auto 0' }}>
-          A million is not found — it is built, one honest journal entry at a time. Log the trade. Keep the habit. Review the week. The dream is chased daily, or not at all.
+          Results improve when decisions become visible. Log the setup, risk, execution, emotion, and outcome. Review the evidence, find the leak, and take the next trade with a clearer plan.
         </p>
         <span onClick={() => scrollerRef.current && scrollerRef.current.scrollTo({ top: 0, behavior: 'smooth' })} className="rv liquid-glass hv-op" style={{ display: 'inline-block', borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 44 }}>Start the chase ↑</span>
       </section>

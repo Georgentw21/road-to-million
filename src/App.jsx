@@ -4504,7 +4504,7 @@ class App extends React.Component {
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
           <div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3;margin-bottom:10px')}>Reset all data?</div>
-          <div style={css('font-size:13.5px;color:#9A9AA4;line-height:1.6;margin-bottom:22px')}>Trades, portfolios, habits and referenced images will be deleted and reset to defaults. <b style={css('color:#DC6A63')}>This cannot be undone.</b></div>
+          <div style={css('font-size:13.5px;color:#9A9AA4;line-height:1.6;margin-bottom:22px')}>Trades, portfolios, playbooks and referenced images will be deleted and reset to defaults. <b style={css('color:#DC6A63')}>This cannot be undone.</b></div>
           <div style={css('display:flex;gap:12px')}>
             <div onClick={V.closeReset} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.14);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>Cancel</div>
             <div onClick={V.doReset} className="hv-deloutline" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(220,106,99,.5);background:rgba(220,106,99,.12);color:#DC6A63;font-size:14px;font-weight:700;cursor:pointer;transition:.14s')}>Confirm reset</div>
@@ -4562,10 +4562,10 @@ class App extends React.Component {
     const V = this.renderVals();
     // top-bar nav: labelled links, hero-navbar style (active = lit glass pill)
     const NAV_LINKS = [
-      ['vision', 'Vision Board', V.goVision], ['dashboard', 'Dashboard', V.goDash],
-      ['playbook', 'Playbook', V.goPlay], ['checklist', 'Habits', V.goCheck],
-      ['calendar', 'Calendar', V.goCal], ['log', 'Trade Log', V.goLog],
-      ['analytics', 'Analytics', V.goAna], ['setups', 'Setups', V.goSet],
+      ['dashboard', 'Dashboard', V.goDash], ['log', 'Trade Journal', V.goLog],
+      ['analytics', 'Analytics', V.goAna], ['calendar', 'Calendar', V.goCal],
+      ['setups', 'Setups', V.goSet], ['playbook', 'Playbook', V.goPlay],
+      ['vision', 'Vision', V.goVision],
     ];
     const curView = this.state.view;
     return (
@@ -4691,7 +4691,6 @@ class App extends React.Component {
             {V.isLog && this.renderTradeLog(V)}
             {V.isAna && this.renderAnalytics(V)}
             {V.isSet && this.renderSetups(V)}
-            {V.isCheck && this.renderChecklist(V)}
             {V.isPlay && this.renderPlaybook(V)}
             {V.isVision && this.renderVisionBoard(V)}
           </div>
