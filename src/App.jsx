@@ -458,14 +458,14 @@ class App extends React.Component {
     showUserMenu: false,
     storage: null, storageLoading: false, // มาตรวัดพื้นที่รูปภาพ (โหลดตอนเปิดเมนู G)
     // live prices
-    livePrices: null,
     // trades
     trades: [],
     // ui
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
     edgeMetric: 'r',   // 'r' = expectancy (avg R) · 'wr' = win rate — see _edgeRules()
-    logLimit: 30, // จำนวนแถวที่โชว์ใน trade log (กด "โหลดเพิ่ม" เพื่อขยาย) — กันหน้าอืดเมื่อออเดอร์เยอะมาก
+    logPage: 0, // pagination จริง: จำกัด DOM ไว้ที่ 50 แถว แม้มีข้อมูลหลายพันไม้
+    logToolsOpen: false, // ซ่อนเครื่องมือวิเคราะห์ขั้นสูงไว้ก่อน เพื่อลดความแน่นของหน้า Journal
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
     // เลื่อนดู period ย้อนหลัง/อนาคตใน checklist
@@ -523,8 +523,6 @@ class App extends React.Component {
     this._tick();
     this._clock = setInterval(() => this._tick(), 1000);
     this._loadFromCloud();
-    this._fetchPrices();
-    this._priceTimer = setInterval(() => this._fetchPrices(), 30000);
     this._onKey = (e) => {
       if (e.key === 'Escape') { this.setState({ showTrade: false, showSetup: false, showDay: false, showReset: false, showPlan: false, showPortMenu: false, showUserMenu: false, txnPort: null }); return; }
       const tag = (e.target && e.target.tagName) || '';
@@ -535,19 +533,6 @@ class App extends React.Component {
     window.addEventListener('keydown', this._onKey);
     document.addEventListener('mousedown', this._onDocDown);
     this._scanReveal();
-  }
-  async _fetchPrices() {
-    try {
-      const r = await fetch('/api/prices');
-      if (!r.ok) return;
-      const j = await r.json();
-      if (!j || !j.data || !j.data.length) return;
-      // รวมกับราคาเดิม: ตัวไหนรอบนี้ดึงไม่ได้ (ok=false) ให้คงค่าล่าสุดไว้ ไม่ให้กลายเป็น '—'
-      const prev = this.state.livePrices || [];
-      const prevMap = {}; prev.forEach(p => { prevMap[p.label] = p; });
-      const merged = j.data.map(p => (p.ok === false && prevMap[p.label]) ? prevMap[p.label] : p);
-      this.setState({ livePrices: merged });
-    } catch (e) { /* fallback ใช้ราคา default */ }
   }
   // คำนวณพื้นที่รูปที่ใช้ไป (เรียกตอนเปิดเมนูโลโก้ G)
   async _loadStorageUsage() {
@@ -606,7 +591,7 @@ class App extends React.Component {
       this.setState({ trades: this._seedTrades() }, () => { this._loaded = true; this._persist(); this._checkPlanReminder(); });
     }
   }
-  componentWillUnmount() { clearInterval(this._clock); clearInterval(this._priceTimer); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); clearTimeout(this._rvSafety); if (this._io) this._io.disconnect(); }
+  componentWillUnmount() { clearInterval(this._clock); clearTimeout(this._saveTimer); window.removeEventListener('keydown', this._onKey); document.removeEventListener('mousedown', this._onDocDown); clearTimeout(this._rvSafety); if (this._io) this._io.disconnect(); }
   // ----- scroll reveal -----
   // Cards animate in as they come into view, so a page has motion while you read it and not
   // only for half a second when it mounts. Each card is revealed once, then left alone.
@@ -1345,7 +1330,7 @@ class App extends React.Component {
     }
     this.setD(field, value);
   }
-  setLogF(field, value) { this.setState({ logF: { ...this.state.logF, [field]: value }, logLimit: 30 }); }
+  setLogF(field, value) { this.setState({ logF: { ...this.state.logF, [field]: value }, logPage: 0 }); }
   setLogDim(v) { this.setState({ logDim: v }, () => this._save()); }   // remembered like the other analysis preferences
   // ----- manage analysis-field options (LTF/MTF/HTF/Fibo/Entry lists) -----
   openFieldCfg() { this.setState({ fieldCfg: true }); }
@@ -2338,15 +2323,19 @@ class App extends React.Component {
     else if (so === 'pnl-desc') filteredRaw.sort((a, b) => this._n(b.pnl) - this._n(a.pnl));
     else if (so === 'pnl-asc') filteredRaw.sort((a, b) => this._n(a.pnl) - this._n(b.pnl));
     // date-desc = ค่าเริ่มต้น (เรียงอยู่แล้ว)
-    // แสดงเป็นหน้า: โชว์ตาม logLimit แล้วกด "โหลดเพิ่ม" — data เยอะแค่ไหนหน้าก็ไม่อืด
+    // Pagination จริง — ต่อให้มีหลายพันไม้ DOM จะมีแค่ 50 แถวเสมอ
+    // Analytics ด้านบนยังคำนวณจาก filteredRaw ทั้งหมด ไม่ได้คำนวณเฉพาะหน้าที่เห็น
     const logTotal = filteredRaw.length;
-    const logShownN = Math.min(logTotal, st.logLimit);
-    const logHasMore = logTotal > logShownN;
-    const filteredTrades = filteredRaw.slice(0, logShownN).map(mapTrade);
+    const logPageSize = 50;
+    const logPageCount = Math.max(1, Math.ceil(logTotal / logPageSize));
+    const logPage = Math.max(0, Math.min(st.logPage || 0, logPageCount - 1));
+    const logStart = logPage * logPageSize;
+    const logEnd = Math.min(logTotal, logStart + logPageSize);
+    const filteredTrades = filteredRaw.slice(logStart, logEnd).map(mapTrade);
     // no "All" button — it's just the un-selected state; clicking an active one toggles back to all
     const filterDefs = [['win', 'Win'], ['loss', 'Loss'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
-      label, click: () => this.setState({ logFilter: lf === k ? 'all' : k, logLimit: 30 }),
+      label, click: () => this.setState({ logFilter: lf === k ? 'all' : k, logPage: 0 }),
       fg: lf === k ? '#1a1408' : '#9A9AA4',
       bg: lf === k ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'rgba(255,255,255,.03)',
       border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
@@ -3054,20 +3043,19 @@ class App extends React.Component {
     return {
       navDash: this.navStyle('dashboard'), navCal: this.navStyle('calendar'), navLog: this.navStyle('log'),
       navAna: this.navStyle('analytics'), navSet: this.navStyle('setups'), navCheck: this.navStyle('checklist'),
-      navPlay: this.navStyle('playbook'), navVision: this.navStyle('vision'),
+      navPlay: this.navStyle('playbook'),
       goDash: () => this.setView('dashboard'), goCal: () => this.setView('calendar'), goLog: () => this.setView('log'),
       goAna: () => this.setView('analytics'), goSet: () => this.setView('setups'), goCheck: () => this.setView('checklist'),
-      goPlay: () => this.setView('playbook'), goVision: () => this.setView('vision'),
+      goPlay: () => this.setView('playbook'),
       isDash: st.view === 'dashboard', isCal: st.view === 'calendar', isLog: st.view === 'log',
       isAna: st.view === 'analytics', isSet: st.view === 'setups', isCheck: st.view === 'checklist',
-      isPlay: st.view === 'playbook', isVision: st.view === 'vision',
+      isPlay: st.view === 'playbook',
       accountName: st.accountName, editName: st.editName, notEditName: !st.editName,
       startName: () => this.startName(), commitName: (e) => this.commitName(e), onNameKey: (e) => this.onNameKey(e),
       affirmation: st.affirmation, editAffirm: st.editAffirm, notEditAffirm: !st.editAffirm,
       startAffirm: () => this.startAffirm(), commitAffirm: (e) => this.commitAffirm(e), onAffirmKey: (e) => this.onAffirmKey(e),
       affirmDetails, addAffirmDetail: () => this.addAffirmDetail(),
       clock: this._now(), tzAbbr: this._tzAbbr(), todayLabel: this._todayLabel(),
-      tickerA: this._ticker(), tickerB: this._ticker(),
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'All portfolio' : this._portfolioName(cpId),
       // the switcher doubles as a balance sheet: every account's current equity, and the sum
@@ -3116,18 +3104,24 @@ class App extends React.Component {
       milestoneScope: st.portfolios.length > 1 ? 'ทุกพอร์ตรวมกัน · all portfolios' : 'cumulative P&L',
       startGoal: () => this.startGoal(), commitGoal: (e) => this.commitGoal(e), onGoalKey: (e) => this.onGoalKey(e),
       setupBars, recent, edge, filteredTrades, logFilters, tradeCount: trades.length, filteredCount: logTotal,
-      logShownN, logHasMore, logRemaining: logTotal - logShownN,
-      loadMoreLog: () => this.setState({ logLimit: st.logLimit + 50 }),
-      showAllLog: () => this.setState({ logLimit: logTotal }),
-      logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value, logLimit: 30 }),
-      logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value, logLimit: 30 }),
+      logPage, logPageCount,
+      logRangeLabel: logTotal ? ((logStart + 1) + '–' + logEnd + ' of ' + logTotal) : '0 trades',
+      logPageLabel: 'Page ' + (logPage + 1) + ' / ' + logPageCount,
+      logCanPrev: logPage > 0, logCanNext: logPage < logPageCount - 1,
+      logFirst: () => { this.setState({ logPage: 0 }); if (this._scrollRoot) this._scrollRoot.scrollTo({ top: 0, behavior: 'smooth' }); },
+      logPrev: () => { this.setState({ logPage: Math.max(0, logPage - 1) }); if (this._scrollRoot) this._scrollRoot.scrollTo({ top: 0, behavior: 'smooth' }); },
+      logNext: () => { this.setState({ logPage: Math.min(logPageCount - 1, logPage + 1) }); if (this._scrollRoot) this._scrollRoot.scrollTo({ top: 0, behavior: 'smooth' }); },
+      logLast: () => { this.setState({ logPage: logPageCount - 1 }); if (this._scrollRoot) this._scrollRoot.scrollTo({ top: 0, behavior: 'smooth' }); },
+      logToolsOpen: st.logToolsOpen, toggleLogTools: () => this.setState({ logToolsOpen: !st.logToolsOpen }),
+      logSearch: st.logSearch, setLogSearch: (e) => this.setState({ logSearch: e.target.value, logPage: 0 }),
+      logSort: st.logSort, setLogSort: (e) => this.setState({ logSort: e.target.value, logPage: 0 }),
       logFieldFilters, logAgg, logBreakdown,
       setLogField: (key, val) => this.setLogF(key, val),
       setLogDim: (e) => this.setLogDim(e.target.value),
       // these are persisted preferences, so they must trigger a save — without it the choice
       // only survives if some unrelated autosave happens to flush afterwards
       setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }, () => this._save()),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logLimit: 30 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logPage: 0 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
         { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
@@ -3436,8 +3430,12 @@ class App extends React.Component {
             <option value="pnl-desc">Highest P&amp;L</option>
             <option value="pnl-asc">Lowest P&amp;L</option>
           </Sel>
+          <span onClick={V.toggleLogTools} className="hv-lift rtm-press" style={{ ...css('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s'), color: V.logToolsOpen || V.logAgg.anyFilter ? '#E2C588' : '#9A9AA4', background: V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(201,166,95,.1)' : 'rgba(255,255,255,.035)', border: '1px solid ' + (V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(201,166,95,.32)' : 'rgba(255,255,255,.12)') }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round"/></svg>
+            {V.logAgg.anyFilter ? 'Filters active' : 'Filters & analysis'} <span style={css('font-size:10px;opacity:.65')}>{V.logToolsOpen ? '▲' : '▼'}</span>
+          </span>
         </div>
-        <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:14px;animation:rise .5s .06s both')}>
+        {V.logToolsOpen && <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:14px;animation:rise .28s both')}>
           <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
             <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
               <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Filter &amp; analyse</div>
@@ -3522,8 +3520,18 @@ class App extends React.Component {
               <div style={css('font-size:12.5px;color:#83838C;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1)')}>{V.filteredCount <= 1 ? 'Only one trade in this selection — nothing to compare yet.' : 'These trades share the same value on every factor — widen the filter to compare (e.g. clear a factor).'}</div>
             )}
           </div>
-        </div>
+        </div>}
         <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
+          {V.filteredCount > 0 && (
+            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.018)')}>
+              <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
+              <div style={css('display:flex;align-items:center;gap:8px')}>
+                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);color:#9A9AA4'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>←</span>
+                <span style={css('font-size:11px;color:#E2C588;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
+                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);color:#9A9AA4'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>→</span>
+              </div>
+            </div>
+          )}
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
               <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span><span>Symbol</span><span>Side</span>{V.showPort && (<span title="ออเดอร์นี้อยู่พอร์ตไหน">Port</span>)}<span>Setup</span><span title="Session ที่เทรด">Session</span><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span><span>R</span><span>P&amp;L</span></div>
@@ -3559,11 +3567,17 @@ class App extends React.Component {
               <div style={css('font-size:12.5px;color:#83838C')}>{V.tradeCount === 0 ? 'Press “+ New trade” or N to start logging' : 'Try clearing the search / changing the filter'}</div>
             </div>
           )}
-          {V.logHasMore && (
-            <div style={css('display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <span onClick={V.loadMoreLog} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 20px;border-radius:9px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);transition:.14s')}>Load 50 more</span>
-              <span onClick={V.showAllLog} className="hv-cancel" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#9A9AA4;border:1px solid rgba(255,255,255,.12);transition:.14s')}>Show all</span>
-              <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>Showing {V.logShownN} / {V.filteredCount}</span>
+          {V.filteredCount > 0 && (
+            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.14)')}>
+              <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
+              <div style={css('display:flex;align-items:center;gap:7px')}>
+                <span onClick={V.logCanPrev ? V.logFirst : undefined} className="rtm-press" title="First page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>«</span>
+                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" title="Previous page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;font-size:12px'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>← Prev</span>
+                <span style={css('min-width:88px;text-align:center;font-size:11.5px;color:#E2C588;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
+                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" title="Next page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;font-size:12px'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>Next →</span>
+                <span onClick={V.logCanNext ? V.logLast : undefined} className="rtm-press" title="Last page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>»</span>
+              </div>
+              <span style={css('font-size:11px;color:#666670')}>50 trades / page</span>
             </div>
           )}
         </div>
@@ -4565,7 +4579,6 @@ class App extends React.Component {
       ['dashboard', 'Dashboard', V.goDash], ['log', 'Trade Journal', V.goLog],
       ['analytics', 'Analytics', V.goAna], ['calendar', 'Calendar', V.goCal],
       ['setups', 'Setups', V.goSet], ['playbook', 'Playbook', V.goPlay],
-      ['vision', 'Vision', V.goVision],
     ];
     const curView = this.state.view;
     return (
@@ -4663,14 +4676,6 @@ class App extends React.Component {
             </div>
           </div>
 
-          {/* TICKER */}
-          <div className="rtm-ticker" style={css('flex:none;height:32px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.25);display:flex;align-items:center')}>
-            <div className="rtm-marquee" style={css('display:flex;white-space:nowrap')}>
-              <span style={css('display:inline-flex;gap:30px;padding-right:30px;font-family:\'JetBrains Mono\';font-size:12px;align-items:center')}>{V.tickerA}</span>
-              <span style={css('display:inline-flex;gap:30px;padding-right:30px;font-family:\'JetBrains Mono\';font-size:12px;align-items:center')}>{V.tickerB}</span>
-            </div>
-          </div>
-
           {/* VIEWPORT */}
           <div className="rtm-scroll" ref={(el) => { this._scrollRoot = el; }} style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
             {V.backupWarn && (
@@ -4692,7 +4697,6 @@ class App extends React.Component {
             {V.isAna && this.renderAnalytics(V)}
             {V.isSet && this.renderSetups(V)}
             {V.isPlay && this.renderPlaybook(V)}
-            {V.isVision && this.renderVisionBoard(V)}
           </div>
         </div>
 

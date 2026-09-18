@@ -147,11 +147,7 @@ function Login() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <span style={{ color: '#fff', fontWeight: 600, fontSize: 16.5, whiteSpace: 'nowrap' }}>Road to Million</span>
-              <div className="hide-m" style={{ display: 'flex', gap: 26, marginLeft: 26 }}>
-                {['Trade Journal', 'Analytics', 'Playbook'].map((t) => (
-                  <span key={t} onClick={goManifesto} className="hv-op" style={{ color: 'rgba(255,255,255,.8)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>{t}</span>
-                ))}
-              </div>
+              <span onClick={goManifesto} className="hide-m hv-op" style={{ color: 'rgba(255,255,255,.68)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginLeft: 20 }}>Why journal</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
               <span onClick={() => { setMode('signup'); setMsg(''); }} className="hv-op" style={{ color: '#fff', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>Sign up</span>
@@ -199,16 +195,7 @@ function Login() {
           <span onClick={goManifesto} className="liquid-glass hv-op" style={{ borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 30 }}>Manifesto</span>
         </div>
 
-        {/* social row */}
-        <div style={{ position: 'relative', zIndex: 10, display: 'flex', justifyContent: 'center', gap: 14, paddingBottom: 42 }}>
-          {[
-            <svg key="ig" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.2" cy="6.8" r=".8" fill="currentColor" /></svg>,
-            <svg key="x" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M4 4l16 16M20 4L4 20" strokeLinecap="round" /></svg>,
-            <svg key="gl" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 3.9 5.7 3.9 9S14.6 18.4 12 21c-2.6-2.6-3.9-5.7-3.9-9S9.4 5.6 12 3z" /></svg>,
-          ].map((icon, i) => (
-            <span key={i} className="liquid-glass hv-op" style={{ borderRadius: '50%', padding: 15, color: 'rgba(255,255,255,.8)', cursor: 'pointer', display: 'flex' }}>{icon}</span>
-          ))}
-        </div>
+        <div style={{ position: 'relative', zIndex: 10, paddingBottom: 34, textAlign: 'center', color: 'rgba(255,255,255,.38)', fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase' }}>Private · Focused · Built for review</div>
       </section>
 
       {/* ===== MANIFESTO ===== */}
