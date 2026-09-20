@@ -96,6 +96,18 @@ select option{background:#0c0c0e;color:#ECEAE3}
 @keyframes glowSoft{0%,100%{box-shadow:0 10px 24px -10px rgba(201,166,95,.55)}50%{box-shadow:0 12px 32px -8px rgba(201,166,95,.95)}}
 @keyframes sheen2{0%{transform:translateX(-160%) skewX(-18deg)}55%,100%{transform:translateX(360%) skewX(-18deg)}}
 @keyframes floatSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes stageIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes mapOrb{0%,100%{transform:translate3d(0,0,0) scale(1);opacity:.72}50%{transform:translate3d(-24px,18px,0) scale(1.12);opacity:1}}
+@keyframes flowSignal{0%{transform:translateX(-120%);opacity:0}12%{opacity:1}82%{opacity:1}100%{transform:translateX(520%);opacity:0}}
+@keyframes stageBeat{0%,100%{transform:scale(.82);opacity:.62}50%{transform:scale(1.18);opacity:1}}
+.rtm-map-orb{animation:mapOrb 9s ease-in-out infinite}
+.rtm-stage-card{animation:stageIn .52s cubic-bezier(.18,.82,.28,1) both;box-shadow:inset 0 1px rgba(255,255,255,.035)}
+.rtm-stage-card:hover,.rtm-gate-card:hover{transform:translateY(-3px)!important;box-shadow:0 18px 36px -24px rgba(201,166,95,.7)!important}
+.rtm-stage-card.is-live{background:linear-gradient(145deg,rgba(17,17,22,.95),rgba(9,9,12,.78))!important}
+.rtm-stage-dot{animation:stageBeat 2.5s ease-in-out infinite}
+.rtm-flow-line{position:absolute;left:7%;right:7%;top:20px;height:1px;overflow:hidden;background:linear-gradient(90deg,rgba(123,167,217,.18),rgba(226,197,136,.42),rgba(95,192,141,.2));pointer-events:none}
+.rtm-flow-line::after{content:"";position:absolute;inset:-1px auto -1px 0;width:22%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);filter:blur(.2px);animation:flowSignal 5.4s ease-in-out infinite}
+@media(max-width:980px){.rtm-system-map [style*="repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important}.rtm-flow-line{display:none}}
 .hv-addbtn{animation:glowSoft 3.4s ease-in-out infinite}
 .hv-card{transition:transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s !important}
 .hv-nav{transition:transform .16s, color .16s, background .16s !important}
@@ -199,7 +211,7 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
   @keyframes selOptIn{from{opacity:0}to{opacity:1}}
   /* looping / decorative motion has no information in it — stop those entirely */
   .hv-addbtn,.rtm-logo,.rtm-goldshine,.rtm-progress::after,
-  .hv-save::after,.hv-setbtn::after,.hv-addbtn::after{animation:none!important}
+  .hv-save::after,.hv-setbtn::after,.hv-addbtn::after,.rtm-map-orb,.rtm-stage-dot,.rtm-flow-line::after{animation:none!important}
   [style*="drift1"],[style*="drift2"]{animation:none!important}
   .rtm-press:hover,.hv-nav:hover,.hv-row:hover,.hv-card:hover,.rtm-day:hover{transform:none!important}
   .bar-grow,.bar-grow-x{animation-duration:.01ms!important}
