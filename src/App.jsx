@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { ImageSlot } from './ImageSlot.jsx';
 import { loadJournal, saveJournal, getImageUrl, deleteImages, wipeImages, imageUsage } from './dataStore.js';
-import { exportWeeklyWord } from './wordExport.js';
 const { Fragment } = React;
 
 /* CSS string -> React style object (lets us copy the prototype's inline styles verbatim) */
@@ -343,6 +342,9 @@ class App extends React.Component {
   state = {
     images: {},
     view: 'dashboard',
+    // Legacy trades are treated as forward tests. Backtest results share the journal,
+    // but never change real portfolio equity or the financial goal.
+    journalMode: 'backtest',
     accountName: 'The Desk',
     affirmation: 'ฉันเทรดตามแผน ไม่เทรดตามอารมณ์ — I trade my plan, not my emotions.',
     affirmDetails: [
@@ -514,6 +516,7 @@ class App extends React.Component {
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
       habits: clone(s.habits), habitLogs: {}, yearGoals: {},
       goal: s.goal, tags: clone(s.tags), tradeFieldOpts: clone(s.tradeFieldOpts), trades: [], images: {},
+      journalMode: 'backtest',
       planReminders: s.planReminders, dismissedReminders: {},
       draft: null, draftIsNew: false, sDraft: null, setupIsNew: false, // ล้าง draft ที่ค้างด้วย
     };
@@ -665,7 +668,7 @@ class App extends React.Component {
       // how you like to READ the analysis is a preference, not a transient filter — remember it.
       // (Search, quick filters and sort stay transient on purpose: a stale filter on reload
       // would silently hide trades.)
-      edgeMetric: s.edgeMetric, logDim: s.logDim, feelMoment: s.feelMoment,
+      edgeMetric: s.edgeMetric, logDim: s.logDim, feelMoment: s.feelMoment, journalMode: s.journalMode,
       // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
       draft: s.draft, draftIsNew: s.draftIsNew, sDraft: s.sDraft, setupIsNew: s.setupIsNew,
     };
@@ -789,11 +792,11 @@ class App extends React.Component {
     const cutoff = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
     const firstPf = this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1';
     const keep = [], arch = [];
-    this.state.trades.forEach(t => { if (t.status !== 'OPEN' && String(t.date) < cutoff) arch.push(t); else keep.push(t); });
+    this.state.trades.forEach(t => { if (this._testMode(t) === 'forward' && t.status !== 'OPEN' && String(t.date) < cutoff) arch.push(t); else keep.push(t); });
     if (!arch.length) { window.alert('No closed trades older than ' + months + ' months'); return; }
     if (!window.confirm('Archive ' + arch.length + ' trades (before ' + cutoff + ')?\n• Their P&L is folded into the baseline so the milestone and Growth curve stay continuous\n• Trade details and images are removed to free space (cannot be undone)\n\nTip: press “Backup” first.')) return;
     const portfolios = this.state.portfolios.map(p => {
-      const mine = arch.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
+      const mine = arch.filter(t => this._testMode(t) === 'forward' && (t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf)));
       if (!mine.length) return p;
       const addPnl = mine.reduce((a, t) => a + this._netPnl(t), 0);
       return { ...p, archivedPnl: (Number(p.archivedPnl) || 0) + addPnl, archivedCount: (Number(p.archivedCount) || 0) + mine.length, archivedUntil: cutoff };
@@ -851,6 +854,7 @@ class App extends React.Component {
     const imgs = this.state.images || {};
     const inRange = this._exportRangePredicate(this.state.exportRange);
     const rows = this.state.trades
+      .filter(t => this._testMode(t) === (this.state.journalMode === 'backtest' ? 'backtest' : 'forward'))
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === (this.state.portfolios[0] && this.state.portfolios[0].id)))
       .filter(t => inRange(t.date))
       .map(t0 => {
@@ -886,7 +890,12 @@ class App extends React.Component {
       });
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
     this.setState({ exporting: true });
-    try { await exportWeeklyWord(rows, this.state.accountName); }
+    try {
+      // Word generation is a large dependency; load it only when requested so the journal
+      // stays fast for the everyday backtest / review flow.
+      const { exportWeeklyWord } = await import('./wordExport.js');
+      await exportWeeklyWord(rows, this.state.accountName);
+    }
     catch (e) { window.alert('Word export failed: ' + (e && e.message ? e.message : e)); }
     finally { this.setState({ exporting: false }); }
   }
@@ -895,23 +904,118 @@ class App extends React.Component {
     const firstPf = this.state.portfolios[0] && this.state.portfolios[0].id;
     const inRange = this._exportRangePredicate(this.state.exportRange);
     const rows = this.state.trades
+      .filter(t => this._testMode(t) === (this.state.journalMode === 'backtest' ? 'backtest' : 'forward'))
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
+    const headers = ['test_mode', 'date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
       // numeric columns go out sanitized, so a spreadsheet never opens on "NaN"/"not-a-number"
-      lines.push([t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? this._n(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([this._testMode(t), t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? this._n(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'trades-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.href = url; a.download = (this.state.journalMode === 'backtest' ? 'backtest' : 'forward-test') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // CSV import for large backtest datasets. The parser handles quoted commas/newlines and
+  // maps common broker / spreadsheet header names. Imports always enter the phase currently
+  // open in the UI, preventing a CSV column from silently contaminating real portfolio data.
+  _parseCSV(text) {
+    const rows = []; let row = [], cell = '', quoted = false;
+    const src = String(text || '').replace(/^\uFEFF/, '');
+    for (let i = 0; i <= src.length; i++) {
+      const ch = i < src.length ? src[i] : '\n';
+      if (quoted) {
+        if (ch === '"' && src[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') quoted = false;
+        else cell += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ',') { row.push(cell.trim()); cell = ''; }
+      else if (ch === '\n') { row.push(cell.trim()); if (row.some(v => v !== '')) rows.push(row); row = []; cell = ''; }
+      else if (ch !== '\r') cell += ch;
+    }
+    return rows;
+  }
+  async importCSV(file) {
+    if (!file) return;
+    try {
+      const rows = this._parseCSV(await file.text());
+      if (rows.length < 2) throw new Error('CSV ไม่มีแถวข้อมูล');
+      const key = (v) => String(v || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const headers = rows[0].map(key);
+      const get = (o, ...names) => { for (const n of names) { const v = o[key(n)]; if (v != null && String(v).trim() !== '') return String(v).trim(); } return ''; };
+      const num = (v) => { const n = parseFloat(String(v || '').replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? n : null; };
+      const isoDate = (v) => {
+        const s = String(v || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const d = new Date(s); if (Number.isNaN(d.getTime())) return '';
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      };
+      const mode = this.state.journalMode === 'backtest' ? 'backtest' : 'forward';
+      const accents = ['#5FC08D', '#7BA7D9', '#9B8CFF', '#E0A15A', '#DC6A63', '#5FD0C8'];
+      let setups = this.state.setups.slice();
+      const setupFor = (name, rawId) => {
+        if (rawId && setups.some(s => s.id === rawId)) return rawId;
+        const clean = String(name || '').trim();
+        if (!clean) return setups[0] ? setups[0].id : '';
+        let found = setups.find(s => String(s.name || '').toLowerCase() === clean.toLowerCase());
+        if (!found) {
+          found = { id: 's' + Date.now() + '-' + setups.length, name: clean, glyph: clean.charAt(0).toUpperCase() || '★', accent: accents[setups.length % accents.length], desc: 'Imported from CSV', usage: '', imgCount: 1 };
+          setups.push(found);
+        }
+        return found.id;
+      };
+      const existing = new Set(this.state.trades.map(t => [this._testMode(t), t.date, String(t.sym || '').toUpperCase(), t.entryTime || '', t.setupId || '', this._n(t.pnl)].join('|')));
+      const imported = []; let skipped = 0;
+      rows.slice(1).forEach((cells, i) => {
+        const o = {}; headers.forEach((h, j) => { o[h] = cells[j] == null ? '' : cells[j]; });
+        const date = isoDate(get(o, 'date', 'trade_date', 'entry_date'));
+        const sym = get(o, 'symbol', 'sym', 'ticker', 'instrument').toUpperCase();
+        if (!date || !sym) { skipped++; return; }
+        const setupId = setupFor(get(o, 'setup', 'setup_name', 'strategy'), get(o, 'setup_id'));
+        const risk = num(get(o, 'risk_usd', 'risk', 'initial_risk'));
+        const realizedR = num(get(o, 'realized_r', 'r_multiple', 'r'));
+        const netCell = get(o, 'net_pnl', 'net_profit');
+        const grossCell = get(o, 'gross_pnl', 'pnl', 'profit', 'profit_loss');
+        let pnl = num(netCell !== '' ? netCell : grossCell);
+        if (pnl == null && realizedR != null && risk != null) pnl = realizedR * risk;
+        if (pnl == null) pnl = 0;
+        const commission = netCell !== '' ? 0 : (num(get(o, 'commission', 'fees', 'fee', 'swap')) || 0);
+        const rawSide = get(o, 'side', 'direction', 'type').toUpperCase();
+        const side = /SELL|SHORT/.test(rawSide) ? 'SELL' : 'BUY';
+        const rawStatus = get(o, 'status').toUpperCase();
+        const status = rawStatus === 'OPEN' ? 'OPEN' : 'CLOSED';
+        const entryRaw = get(o, 'entry_time', 'opened_at', 'open_time');
+        const exitRaw = get(o, 'exit_time', 'closed_at', 'close_time');
+        const entryTime = entryRaw ? (entryRaw.includes('T') || entryRaw.includes(' ') ? entryRaw.replace(' ', 'T').slice(0, 16) : date + 'T' + entryRaw.slice(0, 5)) : date + 'T09:00';
+        const exitTime = exitRaw ? (exitRaw.includes('T') || exitRaw.includes(' ') ? exitRaw.replace(' ', 'T').slice(0, 16) : date + 'T' + exitRaw.slice(0, 5)) : '';
+        const t = {
+          id: 't' + Date.now() + '-' + i, testMode: mode, date, sym, side, setupId,
+          session: get(o, 'session') || 'London', entry: get(o, 'entry', 'entry_price'), stop: get(o, 'stop', 'stop_loss', 'sl'), target: get(o, 'target', 'take_profit', 'tp'),
+          rr: realizedR != null ? realizedR : (num(get(o, 'rr', 'planned_rr')) || 0), pnl: status === 'OPEN' ? 0 : pnl, commission, risk: risk == null ? '' : risk,
+          lot: get(o, 'lot', 'lots', 'size', 'quantity'), entryTime, exitTime, status, notes: get(o, 'notes', 'note', 'comment'),
+          tags: get(o, 'tags').split('|').map(x => x.trim()).filter(Boolean), imgCount: 2,
+          portfolioId: mode === 'forward' ? (get(o, 'portfolio_id') || (this.state.currentPortfolioId !== 'all' ? this.state.currentPortfolioId : (this.state.portfolios[0] && this.state.portfolios[0].id))) : '',
+          ltf: get(o, 'ltf'), mtf: get(o, 'mtf'), htf: get(o, 'htf'), retest: get(o, 'retest').toLowerCase(), fibo: get(o, 'fibo_m15', 'fibo'), entryType: get(o, 'entry_model', 'entry_type'), slZone: get(o, 'sl_zone'),
+          feelEntry: get(o, 'feel_entry', 'emotion'), feelSL: get(o, 'feel_sl'), feelTP: get(o, 'feel_tp'),
+          mae: get(o, 'mae'), mfe: get(o, 'mfe'), legs: [], tfMeta: {}, alignHTF: false, alignMTF: false, alignLTF: false,
+        };
+        const fp = [mode, t.date, t.sym, t.entryTime, t.setupId, this._n(t.pnl)].join('|');
+        if (existing.has(fp)) { skipped++; return; }
+        existing.add(fp); imported.push(t);
+      });
+      if (!imported.length) { window.alert('ไม่พบรายการใหม่สำหรับนำเข้า' + (skipped ? ' · ข้าม ' + skipped + ' แถว' : '')); return; }
+      const trades = imported.concat(this.state.trades).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      this.setState({ trades, setups, logPage: 0 }, () => this._save());
+      window.alert('นำเข้า ' + imported.length.toLocaleString() + ' ไม้เข้า ' + (mode === 'backtest' ? 'Backtest' : 'Forward Test') + ' สำเร็จ' + (skipped ? ' · ข้าม ' + skipped.toLocaleString() + ' แถวที่ข้อมูลไม่ครบ/ซ้ำ' : ''));
+    } catch (e) { window.alert('Import CSV ไม่สำเร็จ: ' + (e && e.message ? e.message : e)); }
   }
 
   _seedTrades() {
@@ -1171,6 +1275,7 @@ class App extends React.Component {
     return v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: dec });
   }
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
+  _testMode(t) { return t && t.testMode === 'backtest' ? 'backtest' : 'forward'; }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
   openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
   _hasDraftContent(d) {
@@ -1181,7 +1286,7 @@ class App extends React.Component {
   openNew(dateISO) {
     // ถ้ามี draft ใหม่ที่ยังพิมค้างไว้ (ยังไม่บันทึก) ให้กลับไปเขียนต่อ ไม่เริ่มใหม่ทับของเดิม
     if (this.state.draft && this.state.draftIsNew && this._hasDraftContent(this.state.draft)) {
-      this.setState({ showTrade: true, showDay: false }); return;
+      this.setState({ draft: { ...this.state.draft, testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward' }, showTrade: true, showDay: false }); return;
     }
     const n = new Date();
     const today = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
@@ -1190,7 +1295,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
+      draft: { id: 't' + Date.now(), testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward', date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
       draftIsNew: true, showTrade: true, showDay: false,
     }, () => this._save());
   }
@@ -2141,13 +2246,17 @@ class App extends React.Component {
     const firstPf = st.portfolios[0] ? st.portfolios[0].id : null;
     // fold commission/swap into P&L once, up front — every calculation below is net
     const netAll = this._withNet(st.trades);
-    const trades = (cpId === 'all')
-      ? netAll
-      : netAll.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
+    const forwardAll = netAll.filter(t => this._testMode(t) === 'forward');
+    const backtestAll = netAll.filter(t => this._testMode(t) === 'backtest');
+    const activeMode = st.journalMode === 'backtest' ? 'backtest' : 'forward';
+    const modeAll = activeMode === 'backtest' ? backtestAll : forwardAll;
+    const trades = (activeMode === 'backtest' || cpId === 'all')
+      ? modeAll
+      : modeAll.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
 
     // ---- per-portfolio stats (Account page) ----
     const portfolioStats = st.portfolios.map(p => {
-      const ts = netAll.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
+      const ts = forwardAll.filter(t => t.portfolioId === p.id || (!t.portfolioId && p.id === firstPf));
       let net = 0, wins = 0, closed = 0, rrSum = 0, rrN = 0;
       ts.forEach(t => { if (t.status !== 'OPEN') { net += (t.pnl || 0); closed++; if ((t.pnl || 0) > 0) wins++; rrSum += this._rMult(t); rrN++; } });
       net += (Number(p.archivedPnl) || 0); // รวมกำไรที่เก็บถาวรแล้ว
@@ -2188,8 +2297,67 @@ class App extends React.Component {
     // ---- transaction history modal (ฝาก/ถอนเต็ม) ----
     const txnModal = st.txnPort ? portfolioStats.find(p => p.id === st.txnPort) : null;
 
-    // ---- stats computed from real trades ----
-    const S = this._stats(trades, setups, st.portfolios, cpId, firstPf, st.goal, st.eqRange, st.edgeMetric);
+    // ---- stats for the selected research phase ----
+    // Backtest uses a zero-capital synthetic account, so archived/real cash flow can never
+    // leak into a simulated result. Forward keeps the real portfolio balance sheet.
+    const statPortfolios = activeMode === 'backtest'
+      ? st.portfolios.map(p => ({ ...p, startBalance: 0, archivedPnl: 0, archivedCount: 0, deposits: [] }))
+      : st.portfolios;
+    const S = this._stats(trades, setups, statPortfolios, activeMode === 'backtest' ? 'all' : cpId, firstPf, st.goal, st.eqRange, st.edgeMetric);
+
+    // ---- setup validation gates: discover in Backtest, verify out-of-sample in Forward ----
+    // R is the comparison unit so trades with different position sizes remain comparable.
+    const gateStats = (list) => {
+      const xs = list.filter(t => t.status !== 'OPEN');
+      const rs = xs.map(t => this._rMult(t)).filter(Number.isFinite);
+      const grossWin = rs.filter(r => r > 0).reduce((a, r) => a + r, 0);
+      const grossLoss = Math.abs(rs.filter(r => r < 0).reduce((a, r) => a + r, 0));
+      const avgR = rs.length ? rs.reduce((a, r) => a + r, 0) / rs.length : 0;
+      const pf = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? 99 : 0);
+      let curve = 0, peak = 0, maxDD = 0;
+      rs.forEach(r => { curve += r; peak = Math.max(peak, curve); maxDD = Math.max(maxDD, peak - curve); });
+      const quality = xs.length ? Math.round(xs.reduce((sum, t) => {
+        const context = !!((t.ltf || t.mtf || t.htf || this._legRetest(t) || this._legFibo(t) || this._entryModel(t)) + '').trim();
+        const checks = [!!t.setupId, !!String(t.sym || '').trim(), this._posRisk(t) > 0, !!t.date, Number.isFinite(this._rMult(t)), context];
+        return sum + checks.filter(Boolean).length / checks.length;
+      }, 0) / xs.length * 100) : 0;
+      return { n: xs.length, avgR, pf, maxDD, quality, wr: xs.length ? Math.round(xs.filter(t => this._n(t.pnl) > 0).length / xs.length * 100) : 0 };
+    };
+    const setupGates = setups.map(s => {
+      const bt = gateStats(backtestAll.filter(t => t.setupId === s.id));
+      const fw = gateStats(forwardAll.filter(t => t.setupId === s.id));
+      const btPass = bt.n >= 30 && bt.avgR > 0 && bt.pf >= 1.2 && bt.maxDD <= 10;
+      const fwPass = fw.n >= 30 && fw.avgR > 0 && fw.pf >= 1.1;
+      let stage = 'collect', stageLabel = 'Collecting samples', stageNote = Math.max(0, 30 - bt.n) + ' backtest trades to first review', color = '#7BA7D9';
+      if (bt.n >= 30 && !btPass) { stage = 'revise'; stageLabel = 'Revise setup'; stageNote = 'Backtest gate not passed'; color = '#DC6A63'; }
+      if (btPass && fw.n < 30) { stage = 'forward'; stageLabel = 'Ready for Forward'; stageNote = Math.max(0, 30 - fw.n) + ' forward trades to validate'; color = '#E2C588'; }
+      if (btPass && fw.n >= 30 && !fwPass) { stage = 'failed'; stageLabel = 'Not confirmed'; stageNote = 'Forward result did not retain the edge'; color = '#E0A15A'; }
+      if (btPass && fwPass) { stage = 'confirmed'; stageLabel = 'Edge confirmed'; stageNote = 'Positive out-of-sample expectancy'; color = '#5FC08D'; }
+      return {
+        id: s.id, name: s.name || '(untitled)', glyph: s.glyph, accent: s.accent, color, stage, stageLabel, stageNote,
+        bt, fw, btPass, fwPass,
+        btN: bt.n, fwN: fw.n, btProgress: Math.min(100, bt.n / 30 * 100) + '%', fwProgress: Math.min(100, fw.n / 30 * 100) + '%',
+        btR: (bt.avgR >= 0 ? '+' : '−') + Math.abs(bt.avgR).toFixed(2) + 'R', fwR: (fw.avgR >= 0 ? '+' : '−') + Math.abs(fw.avgR).toFixed(2) + 'R',
+        btPf: bt.pf >= 99 ? '∞' : bt.pf.toFixed(2), fwPf: fw.pf >= 99 ? '∞' : fw.pf.toFixed(2),
+        btDd: '−' + bt.maxDD.toFixed(1) + 'R', quality: bt.quality + '%', open: () => this.openSetup(s.id),
+      };
+    });
+    const readySetups = setupGates.filter(s => s.btPass).length;
+    const confirmedSetups = setupGates.filter(s => s.stage === 'confirmed').length;
+    const backtestClosed = backtestAll.filter(t => t.status !== 'OPEN').length;
+    const forwardClosed = forwardAll.filter(t => t.status !== 'OPEN').length;
+    const activeGate = gateStats(trades);
+    const selectedQuality = activeGate.quality;
+    const rDrawdownChart = (() => {
+      const xs = trades.filter(t => t.status !== 'OPEN').slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
+      let curve = 0, peak = 0;
+      let vals = [0];
+      xs.forEach(t => { curve += this._rMult(t); peak = Math.max(peak, curve); vals.push(peak - curve); });
+      if (vals.length > 640) { const step = (vals.length - 1) / 639; vals = Array.from({ length: 640 }, (_, i) => vals[Math.round(i * step)]); }
+      const max = Math.max(.0001, ...vals);
+      const line = vals.map((v, i) => (i ? 'L' : 'M') + (vals.length <= 1 ? 0 : i / (vals.length - 1) * 640).toFixed(1) + ' ' + (v / max * 110).toFixed(1)).join(' ');
+      return { line, area: line + ' L640 0 L0 0 Z' };
+    })();
 
     // ---- milestone: the one number that never follows the portfolio switch ----
     // The road to a million is the whole account. Everything else on the page respects the
@@ -2197,7 +2365,7 @@ class App extends React.Component {
     // you looked at one broker. Cumulative net P&L (+ archived), never deposits.
     const gNum = this._n(st.goal) > 0 ? this._n(st.goal) : 1000000;
     const closedNetOf = (list) => list.reduce((s, t) => s + (t.status !== 'OPEN' ? this._n(t.pnl) : 0), 0);
-    const milestoneNet = closedNetOf(netAll) + st.portfolios.reduce((s, p) => s + this._n(p.archivedPnl), 0);
+    const milestoneNet = closedNetOf(forwardAll) + st.portfolios.reduce((s, p) => s + this._n(p.archivedPnl), 0);
     const milePct = Math.max(0, Math.min(100, gNum > 0 ? milestoneNet / gNum * 100 : 0));
     const usd = (v) => '$' + Math.round(v).toLocaleString('en-US');
 
@@ -2205,7 +2373,7 @@ class App extends React.Component {
     // accounts on their own no longer add up to the whole. Total the way the dashboard does
     // (every closed trade), and show the leftovers instead of quietly dropping them.
     const liveIds = new Set(st.portfolios.map(p => p.id));
-    const orphans = netAll.filter(t => t.portfolioId && !liveIds.has(t.portfolioId));
+    const orphans = forwardAll.filter(t => t.portfolioId && !liveIds.has(t.portfolioId));
     const allCapital = st.portfolios.reduce((s, p) => s + this._n(p.startBalance)
       + (p.deposits || []).reduce((a, d) => a + this._n(d.amount), 0), 0);
     const allBal = allCapital + milestoneNet;
@@ -2822,9 +2990,14 @@ class App extends React.Component {
     let tradeVals = {};
     if (d) {
       const imgs = []; for (let i = 0; i < (d.imgCount || 2); i++) imgs.push({ tid: d.id, n: i });
+      const draftMode = this._testMode(d);
       tradeVals = {
-        tradeModalTag: st.draftIsNew ? 'New entry · autosaved' : 'Editing · autosaved',
+        tradeModalTag: (draftMode === 'backtest' ? 'Backtest sample' : 'Forward test') + (st.draftIsNew ? ' · new entry' : ' · editing') + ' · autosaved',
         tradeModalTitle: st.draftIsNew ? 'Log a trade' : ((d.sym || 'Trade') + ' · ' + d.date),
+        dTestMode: draftMode,
+        setBacktestMode: () => this.setD('testMode', 'backtest'),
+        setForwardMode: () => this.setD('testMode', 'forward'),
+        dSetupGate: setupGates.find(g => g.id === d.setupId) || null,
         dSym: d.sym, dSetup: d.setupId, dSession: d.session, dEntry: d.entry, dStop: d.stop, dTarget: d.target,
         dRR: String(d.rr), dPnl: String(d.pnl), dLot: d.lot != null ? String(d.lot) : '', dStatus: d.status, dEntryTime: d.entryTime, dExitTime: d.exitTime, dNotes: d.notes,
         setSym: (e) => this.setD('sym', e.target.value), setSetup: (e) => this.setD('setupId', e.target.value),
@@ -2965,7 +3138,10 @@ class App extends React.Component {
         buyStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'BUY' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
         sellStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'SELL' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
         holdingDur: this._fmtDur(d.entryTime, d.exitTime),
-        setupOptions: setups.map(s => ({ id: s.id, name: s.name || '(setup)' })),
+        setupOptions: setups.map(s => {
+          const gate = setupGates.find(g => g.id === s.id);
+          return { id: s.id, name: (s.name || '(setup)') + (draftMode === 'forward' ? (gate && gate.btPass ? ' · Ready ✓' : ' · Not validated') : '') };
+        }),
         dPortfolio: d.portfolioId || (st.portfolios[0] ? st.portfolios[0].id : ''),
         setPortfolio: (e) => this.setD('portfolioId', e.target.value),
         portfolioOptions: st.portfolios.map(p => ({ id: p.id, name: p.name })),
@@ -3047,6 +3223,17 @@ class App extends React.Component {
       goDash: () => this.setView('dashboard'), goCal: () => this.setView('calendar'), goLog: () => this.setView('log'),
       goAna: () => this.setView('analytics'), goSet: () => this.setView('setups'), goCheck: () => this.setView('checklist'),
       goPlay: () => this.setView('playbook'),
+      goBacktest: () => this.setState({ view: 'log', journalMode: 'backtest', logPage: 0 }, () => this._save()),
+      goForward: () => this.setState({ view: 'log', journalMode: 'forward', logPage: 0 }, () => this._save()),
+      showBacktestAnalytics: () => this.setState({ view: 'analytics', journalMode: 'backtest' }, () => this._save()),
+      showForwardAnalytics: () => this.setState({ view: 'analytics', journalMode: 'forward' }, () => this._save()),
+      selectBacktest: () => this.setState({ journalMode: 'backtest', logPage: 0 }, () => this._save()),
+      selectForward: () => this.setState({ journalMode: 'forward', logPage: 0 }, () => this._save()),
+      journalMode: activeMode, isBacktestMode: activeMode === 'backtest',
+      modeLabel: activeMode === 'backtest' ? 'Backtest' : 'Forward Test',
+      journalEyebrow: activeMode === 'backtest' ? 'Discovery lab' : 'Live validation',
+      journalTitle: activeMode === 'backtest' ? 'Backtest Journal' : 'Forward Test Journal',
+      journalSubtitle: activeMode === 'backtest' ? 'สร้าง sample ที่สะอาดเพื่อค้นหา setup ที่ทำซ้ำได้' : 'ทดสอบ edge เดิมกับตลาดจริง โดยไม่เปลี่ยนกติกากลางทาง',
       isDash: st.view === 'dashboard', isCal: st.view === 'calendar', isLog: st.view === 'log',
       isAna: st.view === 'analytics', isSet: st.view === 'setups', isCheck: st.view === 'checklist',
       isPlay: st.view === 'playbook',
@@ -3068,9 +3255,9 @@ class App extends React.Component {
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
       portfolioStats, newPortName: st.newPortName, setNewPortName: (e) => this.setNewPortName(e.target.value),
-      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
-      acctTotalNet: this._fmtMoney(netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
-      acctTotalNetColor: pc(netAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
+      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
+      acctTotalNet: this._fmtMoney(forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
+      acctTotalNetColor: pc(forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
       calToday: () => { const n = new Date(); this.setState({ calYear: n.getFullYear(), calMonth: n.getMonth() }); },
       addPortfolioNamed: () => this.addPortfolioNamed(), addPortKey: (e) => { if (e.key === 'Enter') this.addPortfolioNamed(); },
       showUserMenu: st.showUserMenu, toggleUserMenu: () => { const open = !st.showUserMenu; this.setState({ showUserMenu: open, showPortMenu: false }); if (open) this._loadStorageUsage(); },
@@ -3086,10 +3273,14 @@ class App extends React.Component {
       doBackupLight: () => this.backupJournal(false),
       snoozeBackup: () => this.setState({ backupSnooze: Date.now() + 3 * 86400000 }, () => this._save()),
       exportWord: () => this.exportWord(), exporting: st.exporting, exportCSV: () => this.exportCSV(),
+      importCSV: (f) => this.importCSV(f),
       exportRange: st.exportRange, setExportRange: (e) => this.setState({ exportRange: e.target.value }),
       stop: (e) => e.stopPropagation(),
       // KPI
-      kEquity: S.kEquity, kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR, kDD: S.kDD,
+      kEquity: activeMode === 'backtest' ? S.kNet : S.kEquity,
+      kEquityLabel: activeMode === 'backtest' ? 'Backtest net' : 'Equity',
+      kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR,
+      kDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD,
       donut: S.donut,
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr, archNote: S.archNote,
       eqRange: st.eqRange, setEqRange: (r) => this.setState({ eqRange: r }),
@@ -3139,15 +3330,22 @@ class App extends React.Component {
       calMonthLabel, calMonthShort, dashMonthShort, calPrev: () => this.calStep(-1), calNext: () => this.calStep(1),
       calYearNum: st.calYear, setCalYear: (e) => this.setState({ calYear: parseInt(e.target.value, 10) }),
       calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
-      dowBars, sessionBars, rDist, anaStats, setupCards,
+      dowBars, sessionBars, rDist, anaStats,
+      setupCards: setupCards.map(s => ({ ...s, gate: setupGates.find(g => g.id === s.id) })),
+      setupGates, readySetups, confirmedSetups, backtestClosed, forwardClosed,
+      selectedQuality: selectedQuality + '%',
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
-      ddLine: S.ddLine, ddArea: S.ddArea, symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
+      ddLine: activeMode === 'backtest' ? rDrawdownChart.line : S.ddLine,
+      ddArea: activeMode === 'backtest' ? rDrawdownChart.area : S.ddArea,
+      ddUnitLabel: activeMode === 'backtest' ? 'R below cumulative peak' : 'percent below equity peak',
+      symbolBars: S.symbolBars, tagStats: S.tagStats, symbolMore: S.symbolMore, tagMore: S.tagMore,
       feelStats: S.feelStats, feelMoment: st.feelMoment || 'entry',
       setFeelMoment: (e) => this.setState({ feelMoment: e.target.value }, () => this._save()),
       feelMoments: [{ v: 'entry', label: 'ตอนเข้า' }, { v: 'sl', label: 'ตอนวาง SL' }, { v: 'tp', label: 'ตอนออก / TP' }],
       feelRows: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).rows,
       feelMore: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).more,
-      maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf, anaDD: S.kDD, anaR: S.kR,
+      maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf,
+      anaDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD, anaR: S.kR,
       edgeFinder: S.edgeFinder,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
@@ -3276,19 +3474,49 @@ class App extends React.Component {
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 30px;border-radius:18px;background:linear-gradient(115deg,rgba(201,166,95,.18),rgba(155,140,255,.1) 50%,rgba(95,208,200,.1));border:1px solid rgba(201,166,95,.32);box-shadow:0 14px 50px -24px rgba(201,166,95,.6);animation:rise .55s both')}>
-          <div style={css('display:flex;align-items:center;gap:10px;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F')}><span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span>Trader Affirmation<span style={css('width:18px;height:1px;background:rgba(201,166,95,.5)')}></span></div>
-          <div onClick={V.goPlay} title="Edit in the Playbook page" style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-weight:500;font-size:26px;line-height:1.45;color:#F6EDD6;cursor:pointer;max-width:780px'), textShadow: '0 2px 18px rgba(201,166,95,.35)' }}>{V.affirmation}</div>
-          <div style={css('position:absolute;top:0;bottom:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
+        <div className="rtm-system-map liquid-glass" style={css('position:relative;overflow:hidden;padding:24px 26px 22px;border-radius:19px;background:linear-gradient(118deg,rgba(123,167,217,.105),rgba(255,255,255,.018) 45%,rgba(201,166,95,.09));border:1px solid rgba(201,166,95,.22);box-shadow:0 24px 70px -36px rgba(201,166,95,.75);animation:rise .55s both')}>
+          <div className="rtm-map-orb" style={css('position:absolute;width:280px;height:280px;right:-100px;top:-150px;border-radius:50%;background:radial-gradient(circle,rgba(226,197,136,.15),transparent 68%);pointer-events:none')}></div>
+          <div style={css('position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:20px')}>
+            <div><div style={css('font-size:10.5px;letter-spacing:.25em;text-transform:uppercase;color:#C9A65F;margin-bottom:7px')}>System development</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:29px;color:#F4F0E7;line-height:1.1')}>From hypothesis to <span style={css('font-style:italic;color:#E2C588')}>verified edge</span></div><div style={css('font-size:12px;color:#83838C;margin-top:7px')}>Backtest → ผ่านเกณฑ์ → Forward test → เติบโตด้วยระบบที่พิสูจน์แล้ว</div></div>
+            <div style={css('text-align:right;flex:none')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#6f6f78;margin-bottom:5px')}>Data quality · {V.modeLabel}</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#A9C9EB')}>{V.selectedQuality}</div></div>
+          </div>
+          <div style={css('position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
+            <div className="rtm-flow-line"></div>
+            {[
+              { n: '01', t: 'Backtest', v: V.backtestClosed + ' samples', s: 'ค้นหา pattern และกติกา', c: '#7BA7D9', click: V.goBacktest, live: V.backtestClosed > 0 },
+              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: '≥30 ไม้ · Avg R > 0 · PF ≥ 1.20', c: '#E2C588', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
+              { n: '03', t: 'Forward Test', v: V.forwardClosed + ' samples', s: 'ยืนยันผลแบบ out-of-sample', c: '#9B8CFF', click: V.goForward, live: V.readySetups > 0 },
+              { n: '04', t: 'Trading goal', v: V.milestonePct, s: V.confirmedSetups + ' confirmed edge · Forward only', c: '#5FC08D', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
+            ].map((x, i) => (
+              <div key={x.n} onClick={x.click} className={'rtm-stage-card rtm-press' + (x.live ? ' is-live' : '')} style={{ ...css('position:relative;z-index:1;padding:15px 15px 14px;border-radius:13px;cursor:pointer;background:rgba(9,9,12,.78);transition:.18s'), border: '1px solid ' + (x.live ? x.c + '66' : 'rgba(255,255,255,.08)'), animationDelay: (i * .08) + 's' }}>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}><span style={{ ...css('font-family:JetBrains Mono;font-size:10px;letter-spacing:.08em'), color: x.c }}>{x.n}</span><span className={x.live ? 'rtm-stage-dot' : ''} style={{ width: 7, height: 7, borderRadius: '50%', background: x.live ? x.c : '#3d3d45', boxShadow: x.live ? ('0 0 15px ' + x.c) : 'none' }}></span></div>
+                <div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;margin-bottom:5px')}>{x.t}</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;margin-bottom:7px'), color: x.c }}>{x.v}</div><div style={css('font-size:10.5px;color:#71717a;line-height:1.45')}>{x.s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={css('display:flex;align-items:center;justify-content:space-between;gap:14px')}>
+          <div style={css('font-size:11.5px;color:#83838C')}>Viewing metrics from <b style={css('color:#ECEAE3')}>{V.modeLabel}</b> data only</div>
+          <div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}>
+            <span onClick={V.selectBacktest} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? 'linear-gradient(180deg,#A9C9EB,#7BA7D9)' : 'transparent' }}>Backtest</span>
+            <span onClick={V.selectForward} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? 'linear-gradient(180deg,#8FD3B0,#5FC08D)' : 'transparent' }}>Forward</span>
+          </div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Equity</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
+          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>{V.kEquityLabel}</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
           <div className="hv-k-green liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
           <div className="hv-k-green liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
           <div className="hv-k-blue liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
           <div className="hv-k-purple liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(155,140,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
           <div className="hv-k-red liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(220,106,99,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
+        </div>
+
+        <div className="liquid-glass" style={css('display:grid;grid-template-columns:220px 1fr 120px;align-items:center;gap:20px;padding:16px 20px;border-radius:15px;background:linear-gradient(105deg,rgba(95,192,141,.06),rgba(201,166,95,.06));border:1px solid rgba(201,166,95,.16);animation:rise .5s .26s both')}>
+          <div><div style={css('font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward goal · real P&amp;L only</div><div style={css('font-family:Instrument Serif;font-size:20px;color:#ECEAE3')}>{V.milestoneEquity} <span style={css('font-family:Plus Jakarta Sans;font-size:10.5px;color:#83838C')}>of {V.goalStr}</span></div></div>
+          <div><div style={css('height:8px;border-radius:99px;background:rgba(0,0,0,.38);overflow:hidden;position:relative')}><div className="rtm-progress" style={{ height: '100%', borderRadius: 99, width: V.milestoneWidth, background: 'linear-gradient(90deg,#5FC08D,#E2C588)', transition: 'width .8s ease' }}></div></div><div style={css('display:flex;justify-content:space-between;font-size:9.5px;color:#5f5f67;margin-top:6px')}><span>Backtest excluded</span><span>{V.confirmedSetups} edge confirmed</span></div></div>
+          <div style={css('text-align:right')}><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:700;color:#E2C588')}>{V.milestonePct}</div>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={css('width:110px;margin-top:4px;background:rgba(0,0,0,.35);border:1px solid rgba(201,166,95,.45);border-radius:7px;padding:5px 7px;color:#ECEAE3;font-size:11px;font-family:JetBrains Mono;outline:none;text-align:right')} /> : <span onClick={V.startGoal} className="hv-op" style={css('font-size:9.5px;color:#83838C;cursor:pointer')}>Edit target</span>}</div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
@@ -3299,12 +3527,21 @@ class App extends React.Component {
               ))}
             </div></div>
             <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
-            <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
-              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
-              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
-              <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
-            </div>
+            {V.isBacktestMode ? (
+              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Closed samples</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#A9C9EB')}>{V.totalClosed}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative result</div><div style={{ ...css('font-family:JetBrains Mono;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Avg R</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#9B8CFF')}>{V.kR}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Data quality</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#E2C588')}>{V.selectedQuality}</div></div>
+              </div>
+            ) : (
+              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
+              </div>
+            )}
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
             <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
@@ -3409,9 +3646,11 @@ class App extends React.Component {
     );
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trade log</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade log <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} orders</span></div></div>
-          <div style={css('display:flex;gap:8px')}>
+        <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px;animation:rise .5s both')}>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>{V.journalEyebrow}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.journalTitle} <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} samples</span></div><div style={css('font-size:11.5px;color:#71717a;margin-top:4px')}>{V.journalSubtitle}</div></div>
+          <div style={css('display:flex;gap:8px;align-items:center;flex-wrap:wrap')}>
+            <div className="liquid-glass" style={css('display:flex;gap:3px;padding:3px;border-radius:9px')}><span onClick={V.goBacktest} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? '#7BA7D9' : 'transparent' }}>Backtest</span><span onClick={V.goForward} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? '#5FC08D' : 'transparent' }}>Forward</span></div>
+            <label className="hv-lift" title={'Import rows into ' + V.modeLabel} style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#A9C9EB;background:rgba(123,167,217,.08);border:1px solid rgba(123,167,217,.28);display:flex;align-items:center;gap:5px;transition:.14s;white-space:nowrap')}>⇧ Import CSV<input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.importCSV(f); e.target.value = ''; }} /></label>
             <Sel value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
               <option value="week">Export: This week</option>
@@ -3419,7 +3658,7 @@ class App extends React.Component {
             </Sel>
             <span onClick={V.exportCSV} className="hv-lift" title="Download as CSV (Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
             <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
-            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New trade</span>
+            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New sample</span>
           </div>
         </div>
         <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
@@ -3588,7 +3827,23 @@ class App extends React.Component {
   renderAnalytics(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Analytics</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Deep analytics <span style={css('font-style:italic;color:#E2C588')}>— know your edge &amp; your leaks</span></div></div>
+        <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;animation:rise .5s both')}><div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Edge lab · {V.modeLabel}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.isBacktestMode ? 'Discover the edge' : 'Validate the edge'} <span style={css('font-style:italic;color:#E2C588')}>— evidence before conviction</span></div></div><div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}><span onClick={V.showBacktestAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? '#7BA7D9' : 'transparent' }}>Backtest</span><span onClick={V.showForwardAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? '#5FC08D' : 'transparent' }}>Forward</span></div></div>
+        <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.07),rgba(255,255,255,.018));border:1px solid rgba(201,166,95,.2);margin-bottom:16px;animation:rise .5s .02s both')}>
+          <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Setup validation gates</div><div style={css('font-size:11px;color:#83838C;margin-top:4px;line-height:1.5')}>ผ่าน Backtest เมื่อ ≥30 ไม้, Avg R &gt; 0, PF ≥1.20 และ Max DD ≤10R · ยืนยันอีกครั้งด้วย Forward ≥30 ไม้และ PF ≥1.10</div></div><span style={css('flex:none;font-size:10.5px;color:#5FC08D;padding:5px 10px;border-radius:999px;background:rgba(95,192,141,.08);border:1px solid rgba(95,192,141,.24)')}>{V.confirmedSetups} confirmed</span></div>
+          <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px')}>
+            {V.setupGates.map((g, i) => (
+              <div key={g.id} onClick={g.open} className="rtm-gate-card rtm-press" style={{ ...css('padding:14px 15px;border-radius:13px;background:rgba(5,5,8,.46);cursor:pointer;transition:.17s;animation:rise .45s both'), border: '1px solid ' + g.color + '44', animationDelay: (i * .055) + 's' }}>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px')}><div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{g.name}</div><span style={{ ...css('font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap'), color: g.color, background: g.color + '14', border: '1px solid ' + g.color + '44' }}>{g.stageLabel}</span></div>
+                <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px')}>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(123,167,217,.06)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7BA7D9;margin-bottom:5px')}>Backtest</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.btN} · {g.btR}</div><div style={css('font-size:9.5px;color:#6f6f78;margin-top:3px')}>PF {g.btPf} · DD {g.btDd}</div></div>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(95,192,141,.05)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.fwN} · {g.fwR}</div><div style={css('font-size:9.5px;color:#6f6f78;margin-top:3px')}>PF {g.fwPf} · quality {g.quality}</div></div>
+                </div>
+                <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px')}><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.btProgress, height: '100%', borderRadius: 99, background: '#7BA7D9' }}></div></div><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.fwProgress, height: '100%', borderRadius: 99, background: '#5FC08D' }}></div></div></div>
+                <div style={{ ...css('font-size:10.5px;line-height:1.4'), color: g.color }}>{g.stageNote}</div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
             { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588' },
@@ -3672,7 +3927,7 @@ class App extends React.Component {
 
         <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px')}>
           <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#83838C')}>deeper = further from peak</span></div>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#83838C')}>{V.ddUnitLabel}</span></div>
             <svg viewBox="0 0 640 120" preserveAspectRatio="none" style={css('width:100%;height:120px;display:block')}>
               <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#DC6A63" stopOpacity="0"/><stop offset="100%" stopColor="#DC6A63" stopOpacity=".4"/></linearGradient></defs>
               <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(255,255,255,.1)"/>
@@ -3720,14 +3975,14 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Setups</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— keep only what gives an edge</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>System library</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— promote only proven rules</span></div></div>
           <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
           {V.setupCards.map((s) => (
             <div key={s.id} onClick={s.open} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:22px 24px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:pop .3s both;cursor:pointer;transition:.18s'), borderLeft: '3px solid ' + s.accent }}>
               <div onClick={s.del} title="Delete setup" className="hv-del" style={css('position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;transition:.14s;z-index:2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Instrument Serif\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:20px;color:#ECEAE3')}>{s.name}</div><div style={css('font-size:12px;color:#9A9AA4;margin-top:2px')}>{s.desc}</div></div></div>
+              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Instrument Serif\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0;flex:1')}><div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:20px;color:#ECEAE3')}>{s.name}</div>{s.gate && <span style={{ ...css('font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px'), color: s.gate.color, background: s.gate.color + '14', border: '1px solid ' + s.gate.color + '44' }}>{s.gate.stageLabel}</span>}</div><div style={css('font-size:12px;color:#9A9AA4;margin-top:2px')}>{s.desc}</div></div></div>
               <div style={css('display:flex;gap:24px;margin-bottom:16px')}>
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.wrStr}</div></div>
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Trades</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.tradesStr}</div></div>
@@ -3735,6 +3990,7 @@ class App extends React.Component {
                 <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.pnlColor }}>{s.pnlStr}</div></div>
               </div>
               <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:12px')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
+              {s.gate && <div style={{ ...css('font-size:10.5px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px'), color: s.gate.color }}><span>{s.gate.stageNote}</span><span style={css('font-family:JetBrains Mono;white-space:nowrap;color:#83838C')}>BT {s.gate.btN} · FW {s.gate.fwN}</span></div>}
               <div style={css('font-size:11.5px;color:#C9A65F;display:flex;align-items:center;gap:5px')}>View details &amp; example chart <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             </div>
           ))}
@@ -4214,11 +4470,22 @@ class App extends React.Component {
         <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:1040px;max-width:96vw;max-height:92vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:26px 34px 30px;display:flex;flex-direction:column;gap:17px')}>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><Sel value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
+            <div className="liquid-glass" style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08)')}>
+              <div onClick={V.setBacktestMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'backtest' ? 'linear-gradient(120deg,rgba(123,167,217,.2),rgba(123,167,217,.08))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'backtest' ? 'rgba(123,167,217,.46)' : 'transparent') }}>
+                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'backtest' ? '#A9C9EB' : '#9A9AA4' }}>Backtest sample</div>
+                <div style={css('font-size:10.5px;color:#6f6f78;line-height:1.45')}>ข้อมูลจำลองเพื่อค้นหา setup · ไม่รวมในยอดเงินจริง</div>
+              </div>
+              <div onClick={V.setForwardMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'forward' ? 'linear-gradient(120deg,rgba(95,192,141,.18),rgba(201,166,95,.06))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'forward' ? 'rgba(95,192,141,.42)' : 'transparent') }}>
+                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'forward' ? '#8FD3B0' : '#9A9AA4' }}>Forward test</div>
+                <div style={css('font-size:10.5px;color:#6f6f78;line-height:1.45')}>ผล out-of-sample · นับในพอร์ตและเป้าหมายจริง</div>
+              </div>
+            </div>
+            <div style={{ ...css('display:grid;gap:14px'), gridTemplateColumns: V.dTestMode === 'backtest' ? '1fr 1fr' : '1fr 1fr 1fr' }}>
+              {V.dTestMode === 'forward' && <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><Sel value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>}
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup</div><Sel value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
             </div>
+            {V.dTestMode === 'forward' && V.dSetupGate && !V.dSetupGate.btPass && <div style={css('display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:10px;background:rgba(224,161,90,.09);border:1px solid rgba(224,161,90,.3);font-size:11.5px;color:#E8B875')}><span style={css('font-size:15px')}>!</span><span>Setup นี้ยังไม่ผ่าน Backtest Gate — บันทึกได้ แต่ระบบจะยังไม่ถือว่าเป็น Forward validation ที่พร้อมเพิ่มขนาด</span></div>}
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><Sel value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></Sel></div>
@@ -4576,11 +4843,14 @@ class App extends React.Component {
     const V = this.renderVals();
     // top-bar nav: labelled links, hero-navbar style (active = lit glass pill)
     const NAV_LINKS = [
-      ['dashboard', 'Dashboard', V.goDash], ['log', 'Trade Journal', V.goLog],
-      ['analytics', 'Analytics', V.goAna], ['calendar', 'Calendar', V.goCal],
+      ['dashboard', 'Dashboard', V.goDash], ['backtest', 'Backtest', V.goBacktest],
+      ['forward', 'Forward', V.goForward], ['analytics', 'Edge Lab', V.goAna],
       ['setups', 'Setups', V.goSet], ['playbook', 'Playbook', V.goPlay],
     ];
     const curView = this.state.view;
+    const navActive = (k) => k === 'backtest' || k === 'forward'
+      ? curView === 'log' && V.journalMode === k
+      : curView === k;
     return (
       <div style={css('position:fixed;inset:0;display:flex;background:radial-gradient(125% 85% at 50% -12%,rgba(201,166,95,.075),transparent 58%),linear-gradient(180deg,#0b0b0e 0%,#070709 52%,#000 100%)')}>
 
@@ -4607,7 +4877,7 @@ class App extends React.Component {
             </div>
             <div className="liquid-glass" style={css('display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;flex-wrap:wrap;justify-content:center')}>
               {NAV_LINKS.map(([k, label, go]) => (
-                <span key={k} onClick={go} className="hv-navlink rtm-press" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: curView === k ? '#fff' : 'rgba(255,255,255,.55)', background: curView === k ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
+                <span key={k} onClick={go} className="hv-navlink rtm-press" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: navActive(k) ? '#fff' : 'rgba(255,255,255,.55)', background: navActive(k) ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
               ))}
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
@@ -4616,7 +4886,7 @@ class App extends React.Component {
                 <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
               </div>
               <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-              <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
+              {!V.isBacktestMode && <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
                   <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 288, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
@@ -4646,7 +4916,7 @@ class App extends React.Component {
                     <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ Add / manage portfolios</div>
                   </div>
                 )}
-              </div>
+              </div>}
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
                 <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
