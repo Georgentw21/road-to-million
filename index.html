@@ -311,6 +311,39 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator,input[type="datetime
 .rtm-press:hover{border-color:rgba(255,255,255,.28)!important;color:#ECEAE3!important}
 .rtm-press:active{transform:translateY(1px) scale(.96);box-shadow:inset 0 2px 5px rgba(0,0,0,.5)}
 
+/* ===== evidence-first premium dashboard ===== */
+@keyframes meshDriftA{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-34px,24px,0) scale(1.12)}}
+@keyframes meshDriftB{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(28px,-22px,0) scale(1.08)}}
+@keyframes livePip{0%,100%{box-shadow:0 0 0 0 rgba(191,174,255,.35)}50%{box-shadow:0 0 0 7px rgba(191,174,255,0)}}
+.rtm-insight-hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,rgba(255,255,255,.035),transparent 28%,transparent 72%,rgba(255,255,255,.025));mix-blend-mode:screen}
+.rtm-mesh{position:absolute;border-radius:50%;filter:blur(1px);pointer-events:none}
+.rtm-mesh-a{width:390px;height:390px;right:-135px;top:-225px;background:radial-gradient(circle,rgba(139,92,246,.28),transparent 68%);animation:meshDriftA 12s ease-in-out infinite}
+.rtm-mesh-b{width:330px;height:330px;left:29%;bottom:-270px;background:radial-gradient(circle,rgba(236,72,153,.18),transparent 70%);animation:meshDriftB 15s ease-in-out infinite}
+.rtm-gradient-text{font-style:italic;background:linear-gradient(105deg,#D9CCFF 10%,#B79BFF 46%,#F29BC7 88%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.rtm-live-pip{width:7px;height:7px;border-radius:50%;background:#BFAEFF;box-shadow:0 0 16px rgba(191,174,255,.9);animation:livePip 2.6s ease-in-out infinite}
+.rtm-focus-card:hover{transform:translateY(-3px)!important;box-shadow:0 22px 48px -27px rgba(155,140,255,.7)!important}
+.rtm-focus-glow{position:absolute;width:190px;height:190px;right:-85px;top:-95px;border-radius:50%;pointer-events:none}
+.rtm-arrow{width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#F4F0FF;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);transition:transform .18s,background .18s}
+.rtm-focus-card:hover .rtm-arrow{transform:translateX(3px);background:rgba(255,255,255,.13)}
+.rtm-kpi-line{position:absolute;left:0;right:0;top:0;height:2px;opacity:.9}
+.rtm-kpi-card:hover{transform:translateY(-3px)!important;border-color:rgba(191,174,255,.25)!important;box-shadow:0 20px 42px -28px rgba(139,92,246,.72)!important}
+.rtm-advanced-toggle:hover{border-color:rgba(191,174,255,.42)!important;background:rgba(155,140,255,.09)!important}
+@media(max-width:1050px){
+  .rtm-hero-head{grid-template-columns:1fr!important}
+  .rtm-dashboard-grid{grid-template-columns:1fr!important}
+  .rtm-kpi-grid{grid-template-columns:repeat(2,1fr)!important}
+}
+@media(max-width:680px){
+  .rtm-insight-hero{padding:22px 18px 18px!important}
+  .rtm-hero-head{gap:17px!important}
+  .rtm-kpi-grid{grid-template-columns:1fr 1fr!important}
+  .rtm-trade-summary-grid{grid-template-columns:1fr!important}
+  .rtm-version-panel{align-items:flex-start!important;flex-direction:column!important}
+}
+@media (prefers-reduced-motion:reduce){
+  .rtm-mesh,.rtm-live-pip{animation:none!important}
+}
+
 /* respect reduced-motion preferences (but keep the price marquee scrolling — it conveys info) */
 
 </style>
