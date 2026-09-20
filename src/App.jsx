@@ -2,6 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { ImageSlot } from './ImageSlot.jsx';
 import { loadJournal, saveJournal, getImageUrl, deleteImages, wipeImages, imageUsage } from './dataStore.js';
+import {
+  commissionCost,
+  equityDrawdownPercent,
+  finiteNumber,
+  netPnlFromTrade,
+  positionRisk,
+  realizedRFromNetTrade,
+  setupEvidenceFromNetTrades,
+  summarizeNetTrades,
+  tradeLegs,
+} from './tradeMath.js';
 const { Fragment } = React;
 
 /* CSS string -> React style object (lets us copy the prototype's inline styles verbatim) */
@@ -447,10 +458,10 @@ class App extends React.Component {
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
     setups: [
-      { id: 's1', name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
-      { id: 's2', name: 'Impulse', glyph: 'I', accent: '#7BA7D9', desc: 'โมเมนตัมแรงหลังข่าว/เบรก', pnl: 12100, wr: 61, trades: 31, avgR: 1.1, usage: 'ใช้จับโมเมนตัมแรงหลังเบรก structure สำคัญ\n• volume / range ต้องขยายชัดเจน\n• เข้าไม้เล็กก่อน เพิ่มเมื่อถูกทาง\n• ไม่ไล่ราคา — รอ retest จุดเบรก\n• SL ใต้แท่งเบรก · TP ตาม measured move' },
-      { id: 's3', name: 'Wyckoff', glyph: 'W', accent: '#9B8CFF', desc: 'สะสม/กระจาย แล้ว spring', pnl: 8940, wr: 58, trades: 24, avgR: 0.9, usage: 'ใช้กับโครงสร้าง accumulation / distribution\n• ระบุ phase ให้ชัดก่อน\n• รอ spring (กดต่ำกว่าฐาน) หรือ upthrust\n• ยืนยันด้วย sign of strength\n• เป้าหมายตาม count ของ trading range' },
-      { id: 's4', name: 'Reversal', glyph: 'V', accent: '#DC6A63', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
+      { id: 's1', version: 1, name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
+      { id: 's2', version: 1, name: 'Impulse', glyph: 'I', accent: '#7BA7D9', desc: 'โมเมนตัมแรงหลังข่าว/เบรก', pnl: 12100, wr: 61, trades: 31, avgR: 1.1, usage: 'ใช้จับโมเมนตัมแรงหลังเบรก structure สำคัญ\n• volume / range ต้องขยายชัดเจน\n• เข้าไม้เล็กก่อน เพิ่มเมื่อถูกทาง\n• ไม่ไล่ราคา — รอ retest จุดเบรก\n• SL ใต้แท่งเบรก · TP ตาม measured move' },
+      { id: 's3', version: 1, name: 'Wyckoff', glyph: 'W', accent: '#9B8CFF', desc: 'สะสม/กระจาย แล้ว spring', pnl: 8940, wr: 58, trades: 24, avgR: 0.9, usage: 'ใช้กับโครงสร้าง accumulation / distribution\n• ระบุ phase ให้ชัดก่อน\n• รอ spring (กดต่ำกว่าฐาน) หรือ upthrust\n• ยืนยันด้วย sign of strength\n• เป้าหมายตาม count ของ trading range' },
+      { id: 's4', version: 1, name: 'Reversal', glyph: 'V', accent: '#DC6A63', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
     ],
     // portfolios
     portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก', startBalance: 100000 }],
@@ -468,6 +479,7 @@ class App extends React.Component {
     edgeMetric: 'r',   // 'r' = expectancy (avg R) · 'wr' = win rate — see _edgeRules()
     logPage: 0, // pagination จริง: จำกัด DOM ไว้ที่ 50 แถว แม้มีข้อมูลหลายพันไม้
     logToolsOpen: false, // ซ่อนเครื่องมือวิเคราะห์ขั้นสูงไว้ก่อน เพื่อลดความแน่นของหน้า Journal
+    tradeAdvancedOpen: false, // quick entry first; context/review fields are one tap away
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     eqRange: 'ALL',
     // เลื่อนดู period ย้อนหลัง/อนาคตใน checklist
@@ -908,13 +920,13 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['test_mode', 'date', 'day', 'symbol', 'side', 'setup', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
+    const headers = ['test_mode', 'date', 'day', 'symbol', 'side', 'setup', 'setup_version', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
       // numeric columns go out sanitized, so a spreadsheet never opens on "NaN"/"not-a-number"
-      lines.push([this._testMode(t), t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? this._n(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([this._testMode(t), t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, this._tradeSetupVersion(t), t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? commissionCost(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -984,10 +996,13 @@ class App extends React.Component {
         const realizedR = num(get(o, 'realized_r', 'r_multiple', 'r'));
         const netCell = get(o, 'net_pnl', 'net_profit');
         const grossCell = get(o, 'gross_pnl', 'pnl', 'profit', 'profit_loss');
-        let pnl = num(netCell !== '' ? netCell : grossCell);
-        if (pnl == null && realizedR != null && risk != null) pnl = realizedR * risk;
+        const commission = commissionCost(num(get(o, 'commission', 'fees', 'fee', 'swap')) || 0);
+        const netValue = num(netCell);
+        const grossValue = num(grossCell);
+        // Store gross once and let the shared calculation engine subtract fees once.
+        let pnl = grossValue != null ? grossValue : (netValue != null ? netValue + commission : null);
+        if (pnl == null && realizedR != null && risk != null) pnl = realizedR * risk + commission;
         if (pnl == null) pnl = 0;
-        const commission = netCell !== '' ? 0 : (num(get(o, 'commission', 'fees', 'fee', 'swap')) || 0);
         const rawSide = get(o, 'side', 'direction', 'type').toUpperCase();
         const side = /SELL|SHORT/.test(rawSide) ? 'SELL' : 'BUY';
         const rawStatus = get(o, 'status').toUpperCase();
@@ -997,7 +1012,7 @@ class App extends React.Component {
         const entryTime = entryRaw ? (entryRaw.includes('T') || entryRaw.includes(' ') ? entryRaw.replace(' ', 'T').slice(0, 16) : date + 'T' + entryRaw.slice(0, 5)) : date + 'T09:00';
         const exitTime = exitRaw ? (exitRaw.includes('T') || exitRaw.includes(' ') ? exitRaw.replace(' ', 'T').slice(0, 16) : date + 'T' + exitRaw.slice(0, 5)) : '';
         const t = {
-          id: 't' + Date.now() + '-' + i, testMode: mode, date, sym, side, setupId,
+          id: 't' + Date.now() + '-' + i, testMode: mode, date, sym, side, setupId, setupVersion: this._setupVersion(setups.find(s => s.id === setupId)),
           session: get(o, 'session') || 'London', entry: get(o, 'entry', 'entry_price'), stop: get(o, 'stop', 'stop_loss', 'sl'), target: get(o, 'target', 'take_profit', 'tp'),
           rr: realizedR != null ? realizedR : (num(get(o, 'rr', 'planned_rr')) || 0), pnl: status === 'OPEN' ? 0 : pnl, commission, risk: risk == null ? '' : risk,
           lot: get(o, 'lot', 'lots', 'size', 'quantity'), entryTime, exitTime, status, notes: get(o, 'notes', 'note', 'comment'),
@@ -1171,7 +1186,7 @@ class App extends React.Component {
   // Coerce whatever the journal holds (typed text, pasted junk, legacy rows) into a finite
   // number. `Number(x) || 0` already handles "abc", but Infinity is truthy and sails straight
   // through — poisoning every total, average and axis it touches.
-  _n(v) { const x = Number(v); return isFinite(x) ? x : 0; }
+  _n(v) { return finiteNumber(v); }
   /* ===== how much evidence before we call something an edge =====================
      Splitting a journal by many factors is a multiple-comparisons trap: with ~40 groups,
      pure noise will hand you a couple of "65% win rate" pockets every time. Two guards:
@@ -1191,14 +1206,10 @@ class App extends React.Component {
     return { level: 'low', label: 'ยังไม่พอ', color: '#83838C' };
   }
   _rMult(t) {
-    if (t.status === 'OPEN') return 0;
-    const p = this._n(t.pnl);
-    const risk = this._posRisk(t);
-    if (risk > 0) return p / risk;
-    if (p < 0) return -1; if (p > 0) return Math.abs(this._n(t.rr)); return 0;
+    return realizedRFromNetTrade(t);
   }
   // the position's 1R in $ — sum of each leg's risk when scaled in, else the single risk field
-  _posRisk(t) { const lr = this._legStats(t).totalRisk; return lr > 0 ? lr : Math.abs(this._n(t.risk)); }
+  _posRisk(t) { return positionRisk(t); }
   // entry model — now lives on the first real leg's "trigger"; falls back to the old per-trade entryType
   _entryModel(t) {
     const legs = this._legs(t);
@@ -1210,12 +1221,21 @@ class App extends React.Component {
   _legRetest(t) { const l = this._legs(t).find(x => x.retest === 'yes' || x.retest === 'no'); return (l && l.retest) || t.retest || ''; }
   _legFibo(t) { const l = this._legs(t).find(x => (x.fibo || '').trim()); return (l && l.fibo) || t.fibo || ''; }
   // net P&L after costs: entered P&L minus commission/swap (positive commission = a cost)
-  _netPnl(t) { return this._n(t.pnl) - this._n(t.commission); }
+  _netPnl(t) { return netPnlFromTrade(t); }
   // a copy of the trades with pnl already net of commission — everything downstream
   // (equity, calendar, analytics, win-rate) then works off the true net figure
   // Always hand downstream a finite net pnl. (It used to rewrite the row only when a
   // commission was present, which let a non-finite or non-numeric pnl through untouched.)
-  _withNet(list) { return (list || []).map(t => { const net = this._netPnl(t); return t.pnl === net ? t : { ...t, pnl: net }; }); }
+  _withNet(list) {
+    return (list || []).map(t => ({
+      ...t,
+      _grossPnl: this._n(t.pnl),
+      _pnlValid: t.pnl !== '' && t.pnl != null && Number.isFinite(Number(t.pnl)),
+      _pnlNet: true,
+      commission: commissionCost(t.commission),
+      pnl: this._netPnl(t),
+    }));
+  }
   // ----- excursion (MAE/MFE) & timeframe alignment -----
   // MAE = worst heat this position took ($), MFE = best unrealised profit ($). Both magnitudes.
   _maeUsd(t) { return Math.abs(this._n(t.mae)); }
@@ -1227,7 +1247,8 @@ class App extends React.Component {
   //   MFE $   = $/point × |peakPrice − avgEntry|  (entry → the furthest the trend ran)
   // Needs a TP/exit price, a peak price, a leg avg entry and a non-zero realized pnl.
   _autoMfe(t) {
-    const peak = Number(t.peakPrice), exit = Number(t.exitPrice), avg = this._legStats(t).avgEntry, pnl = this._n(t.pnl);
+    const peak = Number(t.peakPrice), exit = Number(t.exitPrice), avg = this._legStats(t).avgEntry;
+    const pnl = this._n(t && t._pnlNet ? t._grossPnl : t.pnl);
     if (!isFinite(peak) || !peak || !isFinite(exit) || !exit || avg == null || !isFinite(avg) || !avg || !pnl) return null;
     const capturedPts = Math.abs(exit - avg); if (capturedPts <= 0) return null;
     return this._n(Math.abs(pnl) / capturedPts * Math.abs(peak - avg));
@@ -1246,15 +1267,7 @@ class App extends React.Component {
   _alignN(t) { return (t.alignHTF ? 1 : 0) + (t.alignMTF ? 1 : 0) + (t.alignLTF ? 1 : 0); }
   // ----- multi-leg "เบิ้ล" (scaling-in): a position built from several entries -----
   _legs(t) {
-    const raw = Array.isArray(t.legs) ? t.legs.filter(l => l && (l.price || l.lot || l.risk || l.dd)) : [];
-    if (raw.length) return raw;
-    // backward-compat: synthesise one leg from the classic single-entry fields
-    if ((t.entry != null && t.entry !== '') || (t.lot != null && t.lot !== '')) {
-      // carry the trade's own entry model, not a placeholder label — otherwise every classic
-      // trade reports its entry as the literal string "First entry" in the log and the analysis
-      return [{ trigger: t.entryType || '', price: t.entry || '', lot: t.lot || '', slBasis: '', risk: t.risk || '', dd: '' }];
-    }
-    return [];
+    return tradeLegs(t);
   }
   _legStats(t) {
     const legs = this._legs(t);
@@ -1277,7 +1290,10 @@ class App extends React.Component {
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _testMode(t) { return t && t.testMode === 'backtest' ? 'backtest' : 'forward'; }
   _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
-  openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false }); }
+  _setupVersion(s) { return Math.max(1, Math.floor(this._n(s && s.version)) || 1); }
+  _tradeSetupVersion(t) { return Math.max(1, Math.floor(this._n(t && t.setupVersion)) || 1); }
+  _isCurrentSetupVersion(t, setup) { return this._tradeSetupVersion(t) === this._setupVersion(setup); }
+  openTrade(id) { const t = this.state.trades.find(x => x.id === id); if (t) this.setState({ draft: { ...t }, draftIsNew: false, showTrade: true, showDay: false, tradeAdvancedOpen: false }); }
   _hasDraftContent(d) {
     if (!d) return false;
     const has = (x) => x != null && String(x).trim() !== '';
@@ -1295,8 +1311,8 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward', date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
-      draftIsNew: true, showTrade: true, showDay: false,
+      draft: { id: 't' + Date.now(), testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward', date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', setupVersion: this.state.setups[0] ? this._setupVersion(this.state.setups[0]) : 1, session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
+      draftIsNew: true, showTrade: true, showDay: false, tradeAdvancedOpen: false,
     }, () => this._save());
   }
   closeTrade() { this.setState({ showTrade: false }); this._save(); } // ปิดแต่เก็บ draft ไว้ (ปิดพลาดก็ไม่หาย)
@@ -1313,6 +1329,7 @@ class App extends React.Component {
   }
   setD(field, v) {
     const d = { ...this.state.draft, [field]: v };
+    if (field === 'setupId') d.setupVersion = this._setupVersion(this.state.setups.find(s => s.id === v));
     if (field === 'entry' || field === 'stop' || field === 'target') {
       const e = parseFloat(d.entry), s = parseFloat(d.stop), t = parseFloat(d.target);
       if (!isNaN(e) && !isNaN(s) && !isNaN(t) && Math.abs(e - s) > 0) d.rr = (Math.abs(t - e) / Math.abs(e - s)).toFixed(2);
@@ -1505,7 +1522,7 @@ class App extends React.Component {
     if (s && this.state.setupIsNew && ((s.name && s.name.trim()) || (s.desc && s.desc.trim()) || (s.usage && s.usage.trim()))) {
       this.setState({ showSetup: true }); return;
     }
-    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1 }, setupIsNew: true, showSetup: true }, () => this._save());
+    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1, version: 1, versionHistory: [] }, setupIsNew: true, showSetup: true }, () => this._save());
   }
   closeSetup() { this.setState({ showSetup: false }); this._save(); } // ปิดแต่เก็บ draft ไว้
   cancelSetup() {
@@ -1518,7 +1535,28 @@ class App extends React.Component {
     if (!this.state.setupIsNew && s && s.id) patch.setups = this.state.setups.map(x => x.id === s.id ? this._liveSetup(s) : x);
     this.setState(patch); this._save();
   }
-  setS(field, v) { this._patchSDraft({ ...this.state.sDraft, [field]: v }); }
+  setS(field, v) {
+    let s = { ...this.state.sDraft };
+    // Once evidence exists, changing an entry rule starts a new experiment
+    // automatically. Cosmetic name/colour edits do not fork the data.
+    if (!this.state.setupIsNew && (field === 'desc' || field === 'usage') && s[field] !== v) {
+      const version = this._setupVersion(s);
+      const hasEvidence = this.state.trades.some(t => t.setupId === s.id && this._tradeSetupVersion(t) === version && t.status !== 'OPEN');
+      if (hasEvidence) {
+        const snapshot = { version, desc: s.desc || '', usage: s.usage || '', savedAt: new Date().toISOString() };
+        s = { ...s, version: version + 1, versionHistory: [...(s.versionHistory || []), snapshot] };
+      }
+    }
+    this._patchSDraft({ ...s, [field]: v });
+  }
+  bumpSetupVersion() {
+    const s = this.state.sDraft;
+    if (!s || this.state.setupIsNew) return;
+    const version = this._setupVersion(s);
+    if (!window.confirm('Create setup v' + (version + 1) + '? Existing trades stay on v' + version + ' and new trades will use the new rules.')) return;
+    const snapshot = { version, desc: s.desc || '', usage: s.usage || '', savedAt: new Date().toISOString() };
+    this._patchSDraft({ ...s, version: version + 1, versionHistory: [...(s.versionHistory || []), snapshot] });
+  }
   addSetupImg() { const s = this.state.sDraft; const c = s.imgCount || 1; if (c < 6) this._patchSDraft({ ...s, imgCount: c + 1 }); }
   saveSetup() {
     const s = this.state.sDraft;
@@ -1953,15 +1991,16 @@ class App extends React.Component {
     const barMoney = (n) => { const a = Math.abs(n), sign = n >= 0 ? '+$' : '−$'; return a >= 100000 ? (sign + (a / 1000).toFixed(0) + 'k') : (sign + Math.round(a).toLocaleString('en-US')); };
     // กันข้อมูลที่ pnl/rr เป็น string -> บังคับเป็นตัวเลขเสมอ
     trades = (trades || []).map(t => ({ ...t, pnl: this._n(t.pnl), rr: this._n(t.rr) }));
-    const closed = trades.filter(t => t.status !== 'OPEN');
+    const summary = summarizeNetTrades(trades);
+    const closed = summary.closed;
     const wins = closed.filter(t => (t.pnl || 0) > 0);
     const losses = closed.filter(t => (t.pnl || 0) < 0);
-    const closedNet = closed.reduce((s, t) => s + (t.pnl || 0), 0);
-    const grossP = wins.reduce((s, t) => s + t.pnl, 0);
-    const grossL = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-    const winRate = closed.length ? (wins.length / closed.length * 100) : 0;
-    const pf = grossL ? (grossP / grossL) : (grossP > 0 ? 99 : 0);
-    const avgR = closed.length ? closed.reduce((s, t) => s + this._rMult(t), 0) / closed.length : 0;
+    const closedNet = summary.net;
+    const grossP = summary.grossProfit;
+    const grossL = summary.grossLoss;
+    const winRate = summary.winRate;
+    const pf = summary.profitFactor;
+    const avgR = summary.avgR;
     const relevant = (cpId === 'all') ? portfolios : portfolios.filter(p => p.id === cpId);
     const startBal = relevant.reduce((s, p) => s + (Number(p.startBalance) || 0), 0);
     // baseline จากออเดอร์ที่เก็บถาวรแล้ว — รวมกำไรไว้เพื่อให้ net/milestone/Growth เดินต่อเนื่องหลังคืนพื้นที่
@@ -1975,9 +2014,15 @@ class App extends React.Component {
     const equity = capitalIn - cashOut + net;  // มูลค่าพอร์ตจริง (เงินสดในบัญชี)
 
     const chrono = closed.slice().sort((a, b) => (a.date.localeCompare(b.date)) || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
-    // account equity curve (ทุนเริ่มต้น + กำไรสะสม รวม baseline ที่เก็บถาวร) — ใช้คำนวณ Max Drawdown
-    let acum = startBal + archPnl, peakAcct = startBal + archPnl, maxDD = 0;
-    chrono.forEach(t => { acum += t.pnl || 0; if (acum > peakAcct) peakAcct = acum; const dd = peakAcct > 0 ? (peakAcct - acum) / peakAcct * 100 : 0; if (dd > maxDD) maxDD = dd; });
+    // Trading drawdown follows the real equity high-water mark. Deposits/withdrawals shift
+    // both equity and its peak, so external cash never masquerades as performance.
+    const equityDD = equityDrawdownPercent({
+      trades: chrono,
+      startingBalance: startBal,
+      archivedPnl: archPnl,
+      cashFlows: relevant.flatMap(p => (p.deposits || []).map(d => ({ date: d.date, amount: d.amount }))),
+    });
+    const maxDD = equityDD.maxDrawdownPct;
 
     // GROWTH curve = กำไรสะสม เริ่มจาก baseline ที่เก็บถาวร (archPnl) เพื่อให้เดินต่อเนื่องแม้ล้างออเดอร์เก่า
     const curve = [archPnl]; let cum = archPnl;
@@ -2028,10 +2073,12 @@ class App extends React.Component {
     }
 
     const bySetup = setups.map(s => {
-      const ts = closed.filter(t => t.setupId === s.id);
+      // A changed ruleset is a new experiment. Never blend legacy trades into the
+      // current setup's dashboard bar or the apparent edge can be mathematically false.
+      const ts = closed.filter(t => t.setupId === s.id && this._isCurrentSetupVersion(t, s));
       const p = ts.reduce((a, t) => a + (t.pnl || 0), 0);
       const w = ts.filter(t => t.pnl > 0).length;
-      return { name: s.name, pnl: p, count: ts.length, wr: ts.length ? Math.round(w / ts.length * 100) : 0 };
+      return { name: s.name + ' v' + this._setupVersion(s), pnl: p, count: ts.length, wr: ts.length ? Math.round(w / ts.length * 100) : 0 };
     });
     const maxAbs = Math.max(1, ...bySetup.map(s => Math.abs(s.pnl)));
     const setupBars = bySetup.slice().sort((a, b) => b.pnl - a.pnl).map(s => ({
@@ -2081,8 +2128,7 @@ class App extends React.Component {
     const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#ECEAE3');
 
     // drawdown (underwater) chart — วัดจากมูลค่าพอร์ต (ทุนเริ่มต้น + กำไรสะสม) ไม่ใช่กำไรสะสมเปล่าๆ
-    let peak2 = startBal; let dd = [];
-    curve.forEach(v => { const eq = startBal + v; if (eq > peak2) peak2 = eq; dd.push(peak2 > 0 ? (peak2 - eq) / peak2 * 100 : 0); });
+    let dd = equityDD.series.slice();
     let maxDDv = 0.0001; dd.forEach(v => { if (v > maxDDv) maxDDv = v; }); // ลูปแทน spread
     // downsample เช่นเดียวกับ equity curve
     if (dd.length > 640) {
@@ -2308,44 +2354,72 @@ class App extends React.Component {
     // ---- setup validation gates: discover in Backtest, verify out-of-sample in Forward ----
     // R is the comparison unit so trades with different position sizes remain comparable.
     const gateStats = (list) => {
-      const xs = list.filter(t => t.status !== 'OPEN');
-      const rs = xs.map(t => this._rMult(t)).filter(Number.isFinite);
-      const grossWin = rs.filter(r => r > 0).reduce((a, r) => a + r, 0);
-      const grossLoss = Math.abs(rs.filter(r => r < 0).reduce((a, r) => a + r, 0));
-      const avgR = rs.length ? rs.reduce((a, r) => a + r, 0) / rs.length : 0;
-      const pf = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? 99 : 0);
-      let curve = 0, peak = 0, maxDD = 0;
-      rs.forEach(r => { curve += r; peak = Math.max(peak, curve); maxDD = Math.max(maxDD, peak - curve); });
-      const quality = xs.length ? Math.round(xs.reduce((sum, t) => {
+      const closedRows = list.filter(t => t.status !== 'OPEN');
+      // Gate decisions only use observations with a real outcome and a real 1R.
+      // Missing risk cannot silently fall back to planned R:R and manufacture an edge.
+      const xs = closedRows.filter(t => t._pnlValid && this._posRisk(t) > 0);
+      const evidence = setupEvidenceFromNetTrades(xs);
+      const quality = closedRows.length ? Math.round(closedRows.reduce((sum, t) => {
         const context = !!((t.ltf || t.mtf || t.htf || this._legRetest(t) || this._legFibo(t) || this._entryModel(t)) + '').trim();
-        const checks = [!!t.setupId, !!String(t.sym || '').trim(), this._posRisk(t) > 0, !!t.date, Number.isFinite(this._rMult(t)), context];
+        const checks = [!!t.setupId, !!String(t.sym || '').trim(), this._posRisk(t) > 0, !!this._asDate(t.date), !!t.entryTime && !!t.exitTime, t._pnlValid, context];
         return sum + checks.filter(Boolean).length / checks.length;
-      }, 0) / xs.length * 100) : 0;
-      return { n: xs.length, avgR, pf, maxDD, quality, wr: xs.length ? Math.round(xs.filter(t => this._n(t.pnl) > 0).length / xs.length * 100) : 0 };
+      }, 0) / closedRows.length * 100) : 0;
+      return {
+        ...evidence,
+        pf: evidence.profitFactor,
+        maxDD: evidence.maxDrawdownR,
+        quality,
+        excluded: closedRows.length - xs.length,
+        wr: Math.round(evidence.winRate),
+      };
     };
     const setupGates = setups.map(s => {
-      const bt = gateStats(backtestAll.filter(t => t.setupId === s.id));
-      const fw = gateStats(forwardAll.filter(t => t.setupId === s.id));
-      const btPass = bt.n >= 30 && bt.avgR > 0 && bt.pf >= 1.2 && bt.maxDD <= 10;
-      const fwPass = fw.n >= 30 && fw.avgR > 0 && fw.pf >= 1.1;
+      const currentVersion = this._setupVersion(s);
+      const bt = gateStats(backtestAll.filter(t => t.setupId === s.id && this._isCurrentSetupVersion(t, s)));
+      const fw = gateStats(forwardAll.filter(t => t.setupId === s.id && this._isCurrentSetupVersion(t, s)));
+      const btPass = bt.n >= 30 && bt.avgR > 0 && bt.pf >= 1.2 && bt.maxDD <= 10 && bt.holdoutPass;
+      // Forward is the real out-of-sample confirmation. A positive 95% lower confidence
+      // bound prevents a lucky but highly volatile 30-trade run being labelled confirmed.
+      const fwPass = fw.n >= 30 && fw.avgR > 0 && fw.pf >= 1.1 && fw.ciLow > 0;
       let stage = 'collect', stageLabel = 'Collecting samples', stageNote = Math.max(0, 30 - bt.n) + ' backtest trades to first review', color = '#7BA7D9';
-      if (bt.n >= 30 && !btPass) { stage = 'revise'; stageLabel = 'Revise setup'; stageNote = 'Backtest gate not passed'; color = '#DC6A63'; }
+      if (bt.n >= 30 && !btPass) { stage = 'revise'; stageLabel = 'Revise setup'; stageNote = !bt.holdoutPass ? 'Chronological holdout did not retain the edge' : 'Backtest gate not passed'; color = '#DC6A63'; }
       if (btPass && fw.n < 30) { stage = 'forward'; stageLabel = 'Ready for Forward'; stageNote = Math.max(0, 30 - fw.n) + ' forward trades to validate'; color = '#E2C588'; }
-      if (btPass && fw.n >= 30 && !fwPass) { stage = 'failed'; stageLabel = 'Not confirmed'; stageNote = 'Forward result did not retain the edge'; color = '#E0A15A'; }
-      if (btPass && fwPass) { stage = 'confirmed'; stageLabel = 'Edge confirmed'; stageNote = 'Positive out-of-sample expectancy'; color = '#5FC08D'; }
+      if (btPass && fw.n >= 30 && !fwPass) { stage = 'failed'; stageLabel = 'Not confirmed'; stageNote = 'Forward expectancy is not statistically stable yet'; color = '#E0A15A'; }
+      if (btPass && fwPass) { stage = 'confirmed'; stageLabel = 'Edge confirmed'; stageNote = 'Positive out-of-sample expectancy with 95% confidence'; color = '#5FC08D'; }
       return {
-        id: s.id, name: s.name || '(untitled)', glyph: s.glyph, accent: s.accent, color, stage, stageLabel, stageNote,
+        id: s.id, name: s.name || '(untitled)', version: currentVersion, versionLabel: 'v' + currentVersion, glyph: s.glyph, accent: s.accent, color, stage, stageLabel, stageNote,
         bt, fw, btPass, fwPass,
         btN: bt.n, fwN: fw.n, btProgress: Math.min(100, bt.n / 30 * 100) + '%', fwProgress: Math.min(100, fw.n / 30 * 100) + '%',
         btR: (bt.avgR >= 0 ? '+' : '−') + Math.abs(bt.avgR).toFixed(2) + 'R', fwR: (fw.avgR >= 0 ? '+' : '−') + Math.abs(fw.avgR).toFixed(2) + 'R',
-        btPf: bt.pf >= 99 ? '∞' : bt.pf.toFixed(2), fwPf: fw.pf >= 99 ? '∞' : fw.pf.toFixed(2),
-        btDd: '−' + bt.maxDD.toFixed(1) + 'R', quality: bt.quality + '%', open: () => this.openSetup(s.id),
+        btPf: Number.isFinite(bt.pf) ? bt.pf.toFixed(2) : '∞', fwPf: Number.isFinite(fw.pf) ? fw.pf.toFixed(2) : '∞',
+        btDd: '−' + bt.maxDD.toFixed(1) + 'R', quality: bt.quality + '%', fwQuality: fw.quality + '%',
+        btExcluded: bt.excluded, fwExcluded: fw.excluded,
+        holdoutR: (bt.holdout.avgR >= 0 ? '+' : '−') + Math.abs(bt.holdout.avgR).toFixed(2) + 'R', holdoutN: bt.holdout.n,
+        fwCi: fw.n > 1 && Number.isFinite(fw.ciLow) ? ((fw.ciLow >= 0 ? '+' : '−') + Math.abs(fw.ciLow).toFixed(2) + 'R to ' + (fw.ciHigh >= 0 ? '+' : '−') + Math.abs(fw.ciHigh).toFixed(2) + 'R') : '—',
+        open: () => this.openSetup(s.id),
       };
     });
     const readySetups = setupGates.filter(s => s.btPass).length;
     const confirmedSetups = setupGates.filter(s => s.stage === 'confirmed').length;
     const backtestClosed = backtestAll.filter(t => t.status !== 'OPEN').length;
     const forwardClosed = forwardAll.filter(t => t.status !== 'OPEN').length;
+    // One clear next step beats another passive metric. Prioritise invalidated rules,
+    // then forward-test readiness, then sample collection, and finally monitoring.
+    const focusGate = setupGates.find(g => g.stage === 'revise')
+      || setupGates.find(g => g.stage === 'failed')
+      || setupGates.find(g => g.stage === 'forward')
+      || setupGates.find(g => g.stage === 'collect')
+      || setupGates.find(g => g.stage === 'confirmed')
+      || null;
+    const focusAction = (() => {
+      if (!focusGate) return { eyebrow: 'Next action', title: 'Create your first setup', body: 'Write one repeatable rule, then collect clean backtest samples.', cta: 'Create setup', color: '#9B8CFF', click: () => this.openNewSetup() };
+      const label = focusGate.name + ' ' + focusGate.versionLabel;
+      if (focusGate.stage === 'revise') return { eyebrow: 'Holdout warning', title: 'Refine ' + label, body: 'The newest third of the backtest did not preserve the edge. Change one rule, then create a new version.', cta: 'Review rules', color: '#DC6A63', click: focusGate.open };
+      if (focusGate.stage === 'failed') return { eyebrow: 'Forward warning', title: 'Do not scale ' + label, body: 'The 95% confidence interval still includes zero. Keep the rules frozen and collect more evidence.', cta: 'Inspect evidence', color: '#E0A15A', click: () => this.setState({ view: 'analytics', journalMode: 'forward' }) };
+      if (focusGate.stage === 'forward') return { eyebrow: 'Ready to validate', title: 'Forward test ' + label, body: 'Backtest and holdout passed. Run the same rules live without changing them mid-sample.', cta: 'Open Forward', color: '#9B8CFF', click: () => this.setState({ view: 'log', journalMode: 'forward', logPage: 0 }) };
+      if (focusGate.stage === 'collect') return { eyebrow: 'Build the sample', title: 'Test ' + label, body: focusGate.stageNote + '. Keep risk and context fields complete so every R result is comparable.', cta: 'Add backtest', color: '#7BA7D9', click: () => this.setState({ view: 'log', journalMode: 'backtest', logPage: 0 }) };
+      return { eyebrow: 'Edge monitor', title: label + ' is confirmed', body: 'Keep the rules frozen and watch for expectancy drift as the forward sample grows.', cta: 'Monitor edge', color: '#5FC08D', click: () => this.setState({ view: 'analytics', journalMode: 'forward' }) };
+    })();
     const activeGate = gateStats(trades);
     const selectedQuality = activeGate.quality;
     const rDrawdownChart = (() => {
@@ -2400,7 +2474,7 @@ class App extends React.Component {
       if (t.fibo) chips.push({ label: 'Fibo · ' + t.fibo, color: '#E2C588' });
       if (t.entryType) chips.push({ label: 'Entry · ' + t.entryType, color: '#9CD3C0' });
       return {
-        id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name, accent: su.accent,
+        id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name + ' v' + this._tradeSetupVersion(t), accent: su.accent,
         session: t.session, dateShort: dShort, chips,
         dowShort: this._dowShort(t.date), fullDate: this._fullDateLabel(t.date), dowColor: this._dowColor(t.date),
         dateLong: (() => { const dt = this._asDate(t.date); return dt ? (dt.getDate() + ' ' + this._EN_MONS_SHORT()[dt.getMonth()] + ' ' + dt.getFullYear()) : '—'; })(),
@@ -2416,7 +2490,7 @@ class App extends React.Component {
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         entryHM: (t.entryTime && String(t.entryTime).length >= 16) ? String(t.entryTime).slice(11, 16) : '', exitHM: (t.exitTime && String(t.exitTime).length >= 16) ? String(t.exitTime).slice(11, 16) : '',
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
-        commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ((parseFloat(t.commission) < 0 ? '−$' : '$') + Math.abs(parseFloat(t.commission)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
+        commStr: (t.commission != null && String(t.commission).trim() !== '' && !isNaN(parseFloat(t.commission))) ? ('−$' + commissionCost(t.commission).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })) : '—',
         // max lot (from legs, fallback single lot) + MFE ($) for the log
         maxLotStr: (() => { const ml = this._legStats(t).maxLot; if (ml > 0) return ml.toFixed(2); return (t.lot != null && t.lot !== '') ? String(t.lot) : '—'; })(),
         mfeStr: (() => { const m = this._mfeUsd(t); return m > 0 ? '+$' + Math.round(m) : '—'; })(),
@@ -2450,7 +2524,7 @@ class App extends React.Component {
       if (t.status === 'OPEN') return;
       const mfe = this._mfeUsd(t); if (mfe > 0) { _mfeSum += mfe; _mfeN++; }
       // "captured of the best move" only makes sense for winners — it's the "sold the pig" (TP-too-early) lens
-      if (this._netPnl(t) > 0) { const cp = this._captureP(t); if (cp != null) { _capSum += cp; _capN++; } }
+      if (this._n(t.pnl) > 0) { const cp = this._captureP(t); if (cp != null) { _capSum += cp; _capN++; } }
       _alignSum += this._alignN(t); _alignN++;
     });
     const edge = {
@@ -2477,7 +2551,7 @@ class App extends React.Component {
       if (LF.day && LF.day !== 'all' && this._dowFull(t.date) !== LF.day) return false;
       if (LF.align && LF.align !== 'all' && String(this._alignN(t)) !== LF.align) return false;
       if (LF.session && LF.session !== 'all' && (t.session || '') !== LF.session) return false;
-      if (LF.setup && LF.setup !== 'all' && this._setupById(t.setupId).name !== LF.setup) return false;
+      if (LF.setup && LF.setup !== 'all' && (this._setupById(t.setupId).name + ' v' + this._tradeSetupVersion(t)) !== LF.setup) return false;
       if (LF.entryType && LF.entryType !== 'all' && this._entryModel(t) !== LF.entryType) return false;
       if (LF.retest && LF.retest !== 'all' && this._legRetest(t) !== LF.retest) return false;
       if (LF.fibo && LF.fibo !== 'all' && this._legFibo(t) !== LF.fibo) return false;
@@ -2516,7 +2590,7 @@ class App extends React.Component {
     const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
     const distinctFibo = (() => { const set = new Set(this._fieldOpts('fibo')); trades.forEach(t => { const v = (this._legFibo(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
     const distinctSess = Array.from(new Set(trades.map(t => (t.session || '').trim()).filter(Boolean)));
-    const distinctSetup = Array.from(new Set(trades.map(t => this._setupById(t.setupId).name).filter(Boolean)));
+    const distinctSetup = Array.from(new Set(trades.map(t => this._setupById(t.setupId).name + ' v' + this._tradeSetupVersion(t)).filter(Boolean)));
     const logFieldFilters = [{ key: 'day', label: 'Day', value: LF.day || 'all', options: [1, 2, 3, 4, 5, 6, 0].map(i => ({ v: dayFull[i], label: dayFull[i] })) }]
       // TF-alignment count — the key "combine 2/3 aligned + fibo …" edge lens
       .concat([{ key: 'align', label: 'TF aligned', value: LF.align || 'all', options: ['3', '2', '1', '0'].map(v => ({ v, label: v + '/3' })) }])
@@ -2544,7 +2618,7 @@ class App extends React.Component {
       retest: { label: 'Retest', get: t => { const r = this._legRetest(t); return r === 'yes' ? 'Yes' : (r === 'no' ? 'No' : '—'); }, order: ['Yes', 'No', '—'] },
       fibo: { label: 'Fibo M15 side', get: t => (this._legFibo(t) || '').trim() || '—' },
       entryType: { label: 'Entry model', get: t => (this._entryModel(t) || '').trim() || '—' },
-      setup: { label: 'Setup', get: t => this._setupById(t.setupId).name },
+      setup: { label: 'Setup version', get: t => this._setupById(t.setupId).name + ' v' + this._tradeSetupVersion(t) },
       session: { label: 'Session', get: t => t.session || '—' },
       align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
       feelEntry: { label: 'Feeling · ตอนเข้า', get: t => (t.feelEntry || '').trim() || '—' },
@@ -2723,13 +2797,13 @@ class App extends React.Component {
 
     // ---- setup cards (จากเทรดจริง) ----
     const setupCards = setups.map(s => {
-      const ts = trades.filter(t => t.setupId === s.id && t.status !== 'OPEN');
+      const ts = trades.filter(t => t.setupId === s.id && this._isCurrentSetupVersion(t, s) && t.status !== 'OPEN');
       const p = ts.reduce((a, t) => a + (t.pnl || 0), 0);
       const w = ts.filter(t => t.pnl > 0).length;
       const wr = ts.length ? Math.round(w / ts.length * 100) : 0;
       const avgR = ts.length ? ts.reduce((a, t) => a + this._rMult(t), 0) / ts.length : 0;
       return {
-        id: s.id, name: s.name || '(untitled)', glyph: s.glyph, accent: s.accent, iconBg: this._tint(s.accent), desc: s.desc || '—',
+        id: s.id, name: s.name || '(untitled)', versionLabel: 'v' + this._setupVersion(s), glyph: s.glyph, accent: s.accent, iconBg: this._tint(s.accent), desc: s.desc || '—',
         wrStr: wr + '%', tradesStr: String(ts.length), avgRStr: (avgR >= 0 ? '+' : '−') + Math.abs(avgR).toFixed(1) + 'R', rColor: avgR >= 0 ? GREEN : RED,
         pnlStr: this._fmtMoney(p), pnlColor: pc(p), wrW: wr + '%',
         open: () => this.openSetup(s.id), del: (e) => { e.stopPropagation(); this.deleteSetup2(s.id); },
@@ -2992,8 +3066,11 @@ class App extends React.Component {
       const imgs = []; for (let i = 0; i < (d.imgCount || 2); i++) imgs.push({ tid: d.id, n: i });
       const draftMode = this._testMode(d);
       tradeVals = {
-        tradeModalTag: (draftMode === 'backtest' ? 'Backtest sample' : 'Forward test') + (st.draftIsNew ? ' · new entry' : ' · editing') + ' · autosaved',
+        tradeModalTag: (draftMode === 'backtest' ? 'Backtest sample' : 'Forward test') + ' · setup v' + this._tradeSetupVersion(d) + (st.draftIsNew ? ' · new entry' : ' · editing') + ' · autosaved',
         tradeModalTitle: st.draftIsNew ? 'Log a trade' : ((d.sym || 'Trade') + ' · ' + d.date),
+        tradeAdvancedOpen: !!st.tradeAdvancedOpen,
+        toggleTradeAdvanced: () => this.setState({ tradeAdvancedOpen: !st.tradeAdvancedOpen }),
+        tradeAdvancedFilled: [d.ltf, d.mtf, d.htf, d.feelEntry, d.feelSL, d.feelTP, d.mfe, d.peakPrice, d.exitPrice].filter(v => String(v || '').trim()).length + ((d.legs || []).filter(l => l && (l.price || l.risk || l.trigger)).length),
         dTestMode: draftMode,
         setBacktestMode: () => this.setD('testMode', 'backtest'),
         setForwardMode: () => this.setD('testMode', 'forward'),
@@ -3010,7 +3087,7 @@ class App extends React.Component {
         // suggested 1R (price distance × lot) — click to fill; exact for $1/point instruments
         dRiskHint: (() => { const e = parseFloat(d.entry), s = parseFloat(d.stop), l = parseFloat(d.lot); if (isNaN(e) || isNaN(s) || Math.abs(e - s) <= 0) return null; const v = Math.abs(e - s) * (isNaN(l) || l <= 0 ? 1 : l); return { val: Math.round(v * 100) / 100, fill: () => this.setD('risk', String(Math.round(v * 100) / 100)) }; })(),
         // realized R preview from the entered risk
-        dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = parseFloat(d.commission) || 0; if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
+        dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = commissionCost(d.commission); if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
         dDayLabel: this._fullDateLabel(d.date),
         // ----- MFE / capture: enter TP + peak price → the system works out how far the trend ran -----
         dMfe: d.mfe != null ? String(d.mfe) : '', setMfe: (e) => this.setD('mfe', e.target.value),
@@ -3080,7 +3157,7 @@ class App extends React.Component {
           // _posRisk covers both shapes: summed leg risk when scaled in, else the trade's own
           // risk field (older single-entry rows) — matching what the log and exports use.
           const totalRisk = this._posRisk(d);
-          const gross = parseFloat(d.pnl) || 0, comm = parseFloat(d.commission) || 0;
+          const gross = parseFloat(d.pnl) || 0, comm = commissionCost(d.commission);
           const net = gross - comm;
           const open = d.status === 'OPEN';
           const r = (!open && totalRisk > 0) ? net / totalRisk : null;
@@ -3140,7 +3217,7 @@ class App extends React.Component {
         holdingDur: this._fmtDur(d.entryTime, d.exitTime),
         setupOptions: setups.map(s => {
           const gate = setupGates.find(g => g.id === s.id);
-          return { id: s.id, name: (s.name || '(setup)') + (draftMode === 'forward' ? (gate && gate.btPass ? ' · Ready ✓' : ' · Not validated') : '') };
+          return { id: s.id, name: (s.name || '(setup)') + ' · v' + this._setupVersion(s) + (draftMode === 'forward' ? (gate && gate.btPass ? ' · Ready ✓' : ' · Not validated') : '') };
         }),
         dPortfolio: d.portfolioId || (st.portfolios[0] ? st.portfolios[0].id : ''),
         setPortfolio: (e) => this.setD('portfolioId', e.target.value),
@@ -3161,17 +3238,17 @@ class App extends React.Component {
     if (sd) {
       const choices = [GREEN, GOLD, BLUE, PURPLE, RED];
       setupVals = {
-        setupModalTag: st.setupIsNew ? 'New setup · autosaved' : 'Setup · autosaved',
+        setupModalTag: st.setupIsNew ? 'New setup · autosaved' : 'Setup v' + this._setupVersion(sd) + ' · autosaved',
         setupModalTitle: st.setupIsNew ? 'New setup' : (sd.name || 'Setup'),
         sId: sd.id, sName: sd.name, sDesc: sd.desc, sUsage: sd.usage,
         setSName: (e) => this.setS('name', e.target.value), setSDesc: (e) => this.setS('desc', e.target.value), setSUsage: (e) => this.setS('usage', e.target.value),
         accentChoices: choices.map(c => ({ color: c, pick: () => this.setS('accent', c), border: sd.accent === c ? '2px solid #fff' : '2px solid transparent' })),
         canDeleteSetup: !st.setupIsNew,
         setupStats: (() => {
-          const sts = netAll.filter(t => t.setupId === sd.id && t.status !== 'OPEN');
+          const sts = netAll.filter(t => t.setupId === sd.id && this._isCurrentSetupVersion(t, sd) && t.status !== 'OPEN');
           const sp = sts.reduce((a, t) => a + (t.pnl || 0), 0);
           const sw = sts.filter(t => t.pnl > 0).length;
-          const sr = sts.length ? sts.reduce((a, t) => a + (t.rr || 0), 0) / sts.length : 0;
+          const sr = sts.length ? sts.reduce((a, t) => a + this._rMult(t), 0) / sts.length : 0;
           return [
             { l: 'Net P&L', v: this._fmtMoney(sp), c: pc(sp) },
             { l: 'Win rate', v: (sts.length ? Math.round(sw / sts.length * 100) : 0) + '%', c: '#ECEAE3' },
@@ -3179,6 +3256,8 @@ class App extends React.Component {
             { l: 'Avg R', v: (sr >= 0 ? '+' : '−') + Math.abs(sr).toFixed(2) + 'R', c: sr >= 0 ? GREEN : RED },
           ];
         })(),
+        setupVersion: this._setupVersion(sd), versionHistoryN: (sd.versionHistory || []).length,
+        canBumpSetup: !st.setupIsNew, bumpSetupVersion: () => this.bumpSetupVersion(),
         showSetupStats: !st.setupIsNew,
         setupImgs: (() => { const c = sd.imgCount || 1; const a = []; for (let n = 0; n < c; n++) a.push({ n, slotId: n === 0 ? ('setup-' + sd.id + '-chart') : ('setup-' + sd.id + '-chart-' + n) }); return a; })(),
         canAddSetupImg: (sd.imgCount || 1) < 6, addSetupImg: () => this.addSetupImg(),
@@ -3255,9 +3334,9 @@ class App extends React.Component {
       selectPortfolio: (id) => this.selectPortfolio(id), delPortfolio: (id, e) => this.delPortfolio(id, e),
       openAccount: () => this.openAccount(), isAccount: st.view === 'account', goAccount: () => this.setView('account'),
       portfolioStats, newPortName: st.newPortName, setNewPortName: (e) => this.setNewPortName(e.target.value),
-      acctTotalEquity: '$' + Math.round(st.portfolios.reduce((a, p) => a + (Number(p.startBalance) || 0) + this._portDeposits(p), 0) + forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)).toLocaleString('en-US'),
-      acctTotalNet: this._fmtMoney(forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
-      acctTotalNetColor: pc(forwardAll.reduce((a, t) => a + (t.status !== 'OPEN' ? (t.pnl || 0) : 0), 0)),
+      acctTotalEquity: usd(allBal),
+      acctTotalNet: this._fmtMoney(milestoneNet),
+      acctTotalNetColor: pc(milestoneNet),
       calToday: () => { const n = new Date(); this.setState({ calYear: n.getFullYear(), calMonth: n.getMonth() }); },
       addPortfolioNamed: () => this.addPortfolioNamed(), addPortKey: (e) => { if (e.key === 'Enter') this.addPortfolioNamed(); },
       showUserMenu: st.showUserMenu, toggleUserMenu: () => { const open = !st.showUserMenu; this.setState({ showUserMenu: open, showPortMenu: false }); if (open) this._loadStorageUsage(); },
@@ -3279,7 +3358,9 @@ class App extends React.Component {
       // KPI
       kEquity: activeMode === 'backtest' ? S.kNet : S.kEquity,
       kEquityLabel: activeMode === 'backtest' ? 'Backtest net' : 'Equity',
-      kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin, kPf: S.kPf, kR: S.kR,
+      kNet: S.kNet, kNetColor: S.kNetColor, kWin: S.kWin,
+      kPf: activeMode === 'backtest' ? (Number.isFinite(activeGate.pf) ? activeGate.pf.toFixed(2) : (activeGate.n ? '∞' : '0.00')) : S.kPf,
+      kR: S.kR,
       kDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD,
       donut: S.donut,
       totalClosed: S.totalClosed, winsN: S.winsN, lossesN: S.lossesN, startBalStr: S.startBalStr, archNote: S.archNote,
@@ -3332,7 +3413,7 @@ class App extends React.Component {
       calYearOptions: (() => { const ny = new Date().getFullYear(); const arr = []; for (let y = ny - 8; y <= ny + 1; y++) arr.push(y); if (!arr.includes(st.calYear)) arr.push(st.calYear); return arr.sort((a, b) => a - b); })(),
       dowBars, sessionBars, rDist, anaStats,
       setupCards: setupCards.map(s => ({ ...s, gate: setupGates.find(g => g.id === s.id) })),
-      setupGates, readySetups, confirmedSetups, backtestClosed, forwardClosed,
+      setupGates, readySetups, confirmedSetups, backtestClosed, forwardClosed, focusAction,
       selectedQuality: selectedQuality + '%',
       expectancyStr: S.expectancyStr, curStreakStr: S.curStreakStr, curStreakColor: S.curStreakColor, consistencyStr: S.consistencyStr,
       ddLine: activeMode === 'backtest' ? rDrawdownChart.line : S.ddLine,
@@ -3344,7 +3425,8 @@ class App extends React.Component {
       feelMoments: [{ v: 'entry', label: 'ตอนเข้า' }, { v: 'sl', label: 'ตอนวาง SL' }, { v: 'tp', label: 'ตอนออก / TP' }],
       feelRows: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).rows,
       feelMore: (S.feelStats[st.feelMoment || 'entry'] || S.feelStats.entry).more,
-      maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak, anaPf: S.kPf,
+      maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak,
+      anaPf: activeMode === 'backtest' ? (Number.isFinite(activeGate.pf) ? activeGate.pf.toFixed(2) : (activeGate.n ? '∞' : '0.00')) : S.kPf,
       anaDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD, anaR: S.kR,
       edgeFinder: S.edgeFinder,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
@@ -3474,17 +3556,25 @@ class App extends React.Component {
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div className="rtm-system-map liquid-glass" style={css('position:relative;overflow:hidden;padding:24px 26px 22px;border-radius:19px;background:linear-gradient(118deg,rgba(123,167,217,.105),rgba(255,255,255,.018) 45%,rgba(201,166,95,.09));border:1px solid rgba(201,166,95,.22);box-shadow:0 24px 70px -36px rgba(201,166,95,.75);animation:rise .55s both')}>
-          <div className="rtm-map-orb" style={css('position:absolute;width:280px;height:280px;right:-100px;top:-150px;border-radius:50%;background:radial-gradient(circle,rgba(226,197,136,.15),transparent 68%);pointer-events:none')}></div>
-          <div style={css('position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:20px')}>
-            <div><div style={css('font-size:10.5px;letter-spacing:.25em;text-transform:uppercase;color:#C9A65F;margin-bottom:7px')}>System development</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:29px;color:#F4F0E7;line-height:1.1')}>From hypothesis to <span style={css('font-style:italic;color:#E2C588')}>verified edge</span></div><div style={css('font-size:12px;color:#83838C;margin-top:7px')}>Backtest → ผ่านเกณฑ์ → Forward test → เติบโตด้วยระบบที่พิสูจน์แล้ว</div></div>
-            <div style={css('text-align:right;flex:none')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#6f6f78;margin-bottom:5px')}>Data quality · {V.modeLabel}</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#A9C9EB')}>{V.selectedQuality}</div></div>
+        <div className="rtm-system-map rtm-insight-hero liquid-glass" style={css('position:relative;overflow:hidden;padding:30px 30px 24px;border-radius:22px;background:linear-gradient(125deg,rgba(108,77,255,.13),rgba(255,255,255,.018) 46%,rgba(236,72,153,.09));border:1px solid rgba(171,139,255,.25);box-shadow:0 30px 90px -44px rgba(125,88,255,.88);animation:rise .55s both')}>
+          <div className="rtm-mesh rtm-mesh-a"></div><div className="rtm-mesh rtm-mesh-b"></div>
+          <div className="rtm-hero-head" style={css('position:relative;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);align-items:stretch;gap:28px;margin-bottom:24px')}>
+            <div style={css('display:flex;flex-direction:column;justify-content:center;min-height:178px')}>
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px')}><span className="rtm-live-pip"></span><span style={css('font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#BFAEFF')}>Evidence-first trade journal</span></div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:clamp(36px,4.3vw,58px);color:#FAF8FF;line-height:.98;letter-spacing:-.025em;max-width:760px')}>See the edge.<br/><span className="rtm-gradient-text">Remove the guesswork.</span></div>
+              <div style={css('font-size:13px;color:#AAA5B5;margin-top:15px;line-height:1.65;max-width:660px')}>ค้นหา setup จาก Backtest แยกตาม ruleset version แล้วพิสูจน์ซ้ำด้วย Forward test — ทุกการตัดสินใจอิง R, drawdown และหลักฐาน out-of-sample</div>
+            </div>
+            <div onClick={V.focusAction.click} className="rtm-focus-card rtm-press" style={{ ...css('position:relative;padding:20px 21px;border-radius:17px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:rgba(8,7,14,.7);backdrop-filter:blur(18px);transition:.2s'), border: '1px solid ' + V.focusAction.color + '55' }}>
+              <div className="rtm-focus-glow" style={{ background: 'radial-gradient(circle,' + V.focusAction.color + '42,transparent 68%)' }}></div>
+              <div style={css('position:relative')}><div style={{ ...css('font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px'), color: V.focusAction.color }}>{V.focusAction.eyebrow}</div><div style={css('font-family:Instrument Serif;font-size:24px;line-height:1.05;color:#F5F2FA;margin-bottom:10px')}>{V.focusAction.title}</div><div style={css('font-size:11.5px;color:#8F8A99;line-height:1.6')}>{V.focusAction.body}</div></div>
+              <div style={css('position:relative;display:flex;align-items:center;justify-content:space-between;margin-top:17px')}><span style={{ ...css('font-size:11.5px;font-weight:700'), color: V.focusAction.color }}>{V.focusAction.cta}</span><span className="rtm-arrow">→</span></div>
+            </div>
           </div>
           <div style={css('position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
             <div className="rtm-flow-line"></div>
             {[
               { n: '01', t: 'Backtest', v: V.backtestClosed + ' samples', s: 'ค้นหา pattern และกติกา', c: '#7BA7D9', click: V.goBacktest, live: V.backtestClosed > 0 },
-              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: '≥30 ไม้ · Avg R > 0 · PF ≥ 1.20', c: '#E2C588', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
+              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: 'Training + chronological holdout', c: '#E2C588', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
               { n: '03', t: 'Forward Test', v: V.forwardClosed + ' samples', s: 'ยืนยันผลแบบ out-of-sample', c: '#9B8CFF', click: V.goForward, live: V.readySetups > 0 },
               { n: '04', t: 'Trading goal', v: V.milestonePct, s: V.confirmedSetups + ' confirmed edge · Forward only', c: '#5FC08D', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
             ].map((x, i) => (
@@ -3504,13 +3594,15 @@ class App extends React.Component {
           </div>
         </div>
 
-        <div style={css('display:grid;grid-template-columns:repeat(6,1fr);gap:11px')}>
-          <div className="hv-k-gold liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(201,166,95,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #C9A65F;animation:rise .5s .04s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>{V.kEquityLabel}</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}><CountUp value={V.kEquity} /></div></div>
-          <div className="hv-k-green liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);animation:rise .5s .08s both;transition:.16s'), borderTop: '2px solid ' + V.kNetColor }}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.kNetColor }}><CountUp value={V.kNet} /></div></div>
-          <div className="hv-k-green liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(95,192,141,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D;animation:rise .5s .12s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#ECEAE3')}><CountUp value={V.kWin} /></div></div>
-          <div className="hv-k-blue liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(123,167,217,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #7BA7D9;animation:rise .5s .16s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Profit factor</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7BA7D9')}><CountUp value={V.kPf} /></div></div>
-          <div className="hv-k-purple liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(155,140,255,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #9B8CFF;animation:rise .5s .2s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Avg R</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#9B8CFF')}><CountUp value={V.kR} /></div></div>
-          <div className="hv-k-red liquid-glass" style={css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(220,106,99,.09),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid #DC6A63;animation:rise .5s .24s both;transition:.16s')}><div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Max DD</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#DC6A63')}><CountUp value={V.kDD} /></div></div>
+        <div className="rtm-kpi-grid" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:11px')}>
+          {[
+            { l: V.isBacktestMode ? 'Closed samples' : 'Closed trades', v: String(V.totalClosed), c: '#BFAEFF' },
+            { l: 'Avg R', v: V.kR, c: '#9B8CFF' },
+            { l: 'Profit factor', v: V.kPf, c: '#7BA7D9' },
+            { l: 'Max drawdown', v: V.kDD, c: '#DC6A63' },
+          ].map((m, i) => (
+            <div key={m.l} className="rtm-kpi-card liquid-glass" style={{ ...css('position:relative;overflow:hidden;padding:17px 18px;border-radius:14px;background:linear-gradient(180deg,' + m.c + '14,rgba(255,255,255,.014));border:1px solid rgba(255,255,255,.075);animation:rise .5s both;transition:.18s'), animationDelay: (.04 + i * .05) + 's' }}><div className="rtm-kpi-line" style={{ background: m.c }}></div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#85808F;margin-bottom:9px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:650'), color: m.c }}><CountUp value={m.v} /></div></div>
+          ))}
         </div>
 
         <div className="liquid-glass" style={css('display:grid;grid-template-columns:220px 1fr 120px;align-items:center;gap:20px;padding:16px 20px;border-radius:15px;background:linear-gradient(105deg,rgba(95,192,141,.06),rgba(201,166,95,.06));border:1px solid rgba(201,166,95,.16);animation:rise .5s .26s both')}>
@@ -3519,7 +3611,7 @@ class App extends React.Component {
           <div style={css('text-align:right')}><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:700;color:#E2C588')}>{V.milestonePct}</div>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={css('width:110px;margin-top:4px;background:rgba(0,0,0,.35);border:1px solid rgba(201,166,95,.45);border-radius:7px;padding:5px 7px;color:#ECEAE3;font-size:11px;font-family:JetBrains Mono;outline:none;text-align:right')} /> : <span onClick={V.startGoal} className="hv-op" style={css('font-size:9.5px;color:#83838C;cursor:pointer')}>Edit target</span>}</div>
         </div>
 
-        <div style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
+        <div className="rtm-dashboard-grid" style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
           <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
             <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#83838C;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
               {['ALL', '3M', '1M'].map((rg) => (
@@ -3829,14 +3921,14 @@ class App extends React.Component {
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;animation:rise .5s both')}><div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Edge lab · {V.modeLabel}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.isBacktestMode ? 'Discover the edge' : 'Validate the edge'} <span style={css('font-style:italic;color:#E2C588')}>— evidence before conviction</span></div></div><div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}><span onClick={V.showBacktestAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? '#7BA7D9' : 'transparent' }}>Backtest</span><span onClick={V.showForwardAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? '#5FC08D' : 'transparent' }}>Forward</span></div></div>
         <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.07),rgba(255,255,255,.018));border:1px solid rgba(201,166,95,.2);margin-bottom:16px;animation:rise .5s .02s both')}>
-          <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Setup validation gates</div><div style={css('font-size:11px;color:#83838C;margin-top:4px;line-height:1.5')}>ผ่าน Backtest เมื่อ ≥30 ไม้, Avg R &gt; 0, PF ≥1.20 และ Max DD ≤10R · ยืนยันอีกครั้งด้วย Forward ≥30 ไม้และ PF ≥1.10</div></div><span style={css('flex:none;font-size:10.5px;color:#5FC08D;padding:5px 10px;border-radius:999px;background:rgba(95,192,141,.08);border:1px solid rgba(95,192,141,.24)')}>{V.confirmedSetups} confirmed</span></div>
+          <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Setup validation gates</div><div style={css('font-size:11px;color:#83838C;margin-top:4px;line-height:1.55')}>Backtest: ≥30 ไม้, Avg R &gt; 0, PF ≥1.20, DD ≤10R และช่วง holdout ล่าสุดต้องเป็นบวก · Forward: ≥30 ไม้, PF ≥1.10 และขอบล่าง 95% CI ของ Avg R ต้องมากกว่า 0 <span style={css('color:#A69BC0')}>· นับเฉพาะไม้ที่มีผลลัพธ์และ Risk (1R) ครบ</span></div></div><span style={css('flex:none;font-size:10.5px;color:#5FC08D;padding:5px 10px;border-radius:999px;background:rgba(95,192,141,.08);border:1px solid rgba(95,192,141,.24)')}>{V.confirmedSetups} confirmed</span></div>
           <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px')}>
             {V.setupGates.map((g, i) => (
               <div key={g.id} onClick={g.open} className="rtm-gate-card rtm-press" style={{ ...css('padding:14px 15px;border-radius:13px;background:rgba(5,5,8,.46);cursor:pointer;transition:.17s;animation:rise .45s both'), border: '1px solid ' + g.color + '44', animationDelay: (i * .055) + 's' }}>
-                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px')}><div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{g.name}</div><span style={{ ...css('font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap'), color: g.color, background: g.color + '14', border: '1px solid ' + g.color + '44' }}>{g.stageLabel}</span></div>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px')}><div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{g.name} <span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#9B8CFF')}>{g.versionLabel}</span></div><span style={{ ...css('font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap'), color: g.color, background: g.color + '14', border: '1px solid ' + g.color + '44' }}>{g.stageLabel}</span></div>
                 <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px')}>
-                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(123,167,217,.06)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7BA7D9;margin-bottom:5px')}>Backtest</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.btN} · {g.btR}</div><div style={css('font-size:9.5px;color:#6f6f78;margin-top:3px')}>PF {g.btPf} · DD {g.btDd}</div></div>
-                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(95,192,141,.05)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.fwN} · {g.fwR}</div><div style={css('font-size:9.5px;color:#6f6f78;margin-top:3px')}>PF {g.fwPf} · quality {g.quality}</div></div>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(123,167,217,.06)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7BA7D9;margin-bottom:5px')}>Backtest</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.btN} · {g.btR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.btPf} · DD {g.btDd}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:3px')}>Holdout {g.holdoutN} · {g.holdoutR}</div></div>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(95,192,141,.05)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.fwN} · {g.fwR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.fwPf} · quality {g.fwQuality}</div><div title="95% confidence interval of average R" style={css('font-size:9.5px;color:#77717F;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>95% CI {g.fwCi}</div></div>
                 </div>
                 <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px')}><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.btProgress, height: '100%', borderRadius: 99, background: '#7BA7D9' }}></div></div><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.fwProgress, height: '100%', borderRadius: 99, background: '#5FC08D' }}></div></div></div>
                 <div style={{ ...css('font-size:10.5px;line-height:1.4'), color: g.color }}>{g.stageNote}</div>
@@ -4499,6 +4591,11 @@ class App extends React.Component {
               <div style={css('font-size:12px;color:#9A9AA4')}>Holding time</div>
               <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#E2C588')}>{V.holdingDur}</div>
             </div>
+            <div onClick={V.toggleTradeAdvanced} className="rtm-advanced-toggle rtm-press" style={css('display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border-radius:12px;background:rgba(155,140,255,.055);border:1px solid rgba(155,140,255,.2);cursor:pointer;transition:.18s')}>
+              <div><div style={css('font-size:12px;font-weight:700;color:#C9BEFF;margin-bottom:3px')}>Advanced analysis</div><div style={css('font-size:10.5px;color:#77717F')}>Timeframes · scaled entries · emotions · MFE</div></div>
+              <div style={css('display:flex;align-items:center;gap:10px')}><span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#8E8897')}>{V.tradeAdvancedFilled ? V.tradeAdvancedFilled + ' saved' : 'optional'}</span><span style={{ ...css('font-size:17px;color:#BFAEFF;transition:transform .2s'), transform: V.tradeAdvancedOpen ? 'rotate(45deg)' : 'none' }}>+</span></div>
+            </div>
+            {V.tradeAdvancedOpen && (<>
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div style={css('display:flex;align-items:center;justify-content:space-between')}>
               <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
@@ -4614,10 +4711,12 @@ class App extends React.Component {
                 <div style={{ ...css('margin-top:12px;border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.55'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.12)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.4)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
               </div>
             )}
-            {/* ③ สรุปรอบ · Round summary — cost + result roll up here (entries & risk live in the legs) */}
+            </>)}
+            {/* Core result — the only numeric inputs required for comparable expectancy. */}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>③</b> สรุปรอบ · Round summary</div>
-            <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
+            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>Result</b> · three numbers for accurate Net P&amp;L and R</div>
+            <div className="rtm-trade-summary-grid" style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
+              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Risk (1R) <span style={css('color:#83838C')}>(USD)</span></div><input value={V.dRisk} onChange={V.setRisk} placeholder="e.g. 100" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} />{V.dRiskHint && !V.dRisk && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('display:inline-block;margin-top:5px;font-size:9.5px;color:#7BA7D9;cursor:pointer')}>Use estimated ${V.dRiskHint.val}</span>}</div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Commission / Swap <span style={css('color:#83838C')}>(รวมทุกไม้)</span></div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
               <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>P&amp;L (USD) <span style={css('color:#83838C')}>ก่อนหักค่าธรรมเนียม</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
@@ -4627,7 +4726,7 @@ class App extends React.Component {
               <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Net P&amp;L</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.netColor }}>{V.dSummary.netStr}</div></div>
               <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>ได้กี่ R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.rColor }}>{V.dSummary.rStr}</div></div>
             </div>
-            {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#C9A65F;margin-top:-4px')}>ⓘ ใส่ Risk $ ในแต่ละไม้ เพื่อให้ระบบคำนวณ “ได้กี่ R” ของรอบนี้</div>)}
+            {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#C9A65F;margin-top:-4px')}>ⓘ ใส่ Risk (1R) เพื่อให้ Avg R และ Edge Gate คำนวณจากความเสี่ยงจริงของไม้</div>)}
             <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
             <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
             <div>
@@ -4816,6 +4915,12 @@ class App extends React.Component {
                 ))}
               </div>
             )}
+            {V.canBumpSetup && (
+              <div className="rtm-version-panel" style={css('display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 15px;border-radius:12px;background:linear-gradient(110deg,rgba(155,140,255,.09),rgba(255,255,255,.02));border:1px solid rgba(155,140,255,.24)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#BFAEFF;margin-bottom:5px')}>Current ruleset · v{V.setupVersion}</div><div style={css('font-size:11.5px;color:#8D8995;line-height:1.5')}>สถิติใช้เฉพาะ trades ของเวอร์ชันนี้ · เมื่อแก้ description/entry conditions หลังมีข้อมูล ระบบจะเปิดเวอร์ชันใหม่ให้อัตโนมัติ {V.versionHistoryN > 0 ? '· history ' + V.versionHistoryN : ''}</div></div>
+                <span onClick={V.bumpSetupVersion} className="rtm-press" style={css('flex:none;font-size:11.5px;font-weight:700;color:#0B0713;padding:9px 12px;border-radius:9px;cursor:pointer;background:linear-gradient(135deg,#BFAEFF,#E48AC8)')}>Create v{V.setupVersion + 1}</span>
+              </div>
+            )}
             <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Short description</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="e.g. Uptrend continuation, enter on pullback" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
             <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>How to use / entry conditions</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="Describe how to use this setup, when to enter, where to set SL/TP..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
             <div>
@@ -4852,10 +4957,10 @@ class App extends React.Component {
       ? curView === 'log' && V.journalMode === k
       : curView === k;
     return (
-      <div style={css('position:fixed;inset:0;display:flex;background:radial-gradient(125% 85% at 50% -12%,rgba(201,166,95,.075),transparent 58%),linear-gradient(180deg,#0b0b0e 0%,#070709 52%,#000 100%)')}>
+      <div style={css('position:fixed;inset:0;display:flex;background:radial-gradient(92% 72% at 62% -14%,rgba(120,78,255,.11),transparent 60%),radial-gradient(62% 58% at 105% 42%,rgba(218,71,151,.045),transparent 70%),linear-gradient(180deg,#0b0a10 0%,#070709 52%,#000 100%)')}>
 
         <div style={css('position:absolute;inset:0;pointer-events:none;overflow:hidden')}>
-          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(226,197,136,.055),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(155,111,255,.075),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
           <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(123,167,217,.032),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
           <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.026),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
           {/* fine light seam along the very top — the "polished edge" of the surface */}
