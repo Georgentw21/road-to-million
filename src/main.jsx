@@ -162,11 +162,11 @@ function Login() {
             Trade with <em style={{ fontStyle: 'italic' }}>clarity</em>.
           </h1>
           <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 14, lineHeight: 1.75, maxWidth: 540, marginBottom: 30, padding: '0 12px' }}>
-            Capture every decision, measure your edge, and turn real trading data into a repeatable process — one reviewed trade at a time.
+            Backtest the hypothesis. Prove the setup. Validate it forward. Build a trading system from evidence — not memory.
           </p>
 
           <div className="hide-m" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 9, margin: '-12px 0 24px' }}>
-            {['Structured trade journal', 'Performance analytics', 'Risk & emotion review'].map((item) => (
+            {['Backtest research', 'Edge validation', 'Forward test journal'].map((item) => (
               <span key={item} className="liquid-glass" style={{ borderRadius: 999, padding: '8px 14px', color: 'rgba(255,255,255,.78)', fontSize: 11.5, letterSpacing: '.01em' }}>{item}</span>
             ))}
           </div>
@@ -195,7 +195,7 @@ function Login() {
           <span onClick={goManifesto} className="liquid-glass hv-op" style={{ borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 30 }}>Manifesto</span>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 10, paddingBottom: 34, textAlign: 'center', color: 'rgba(255,255,255,.38)', fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase' }}>Private · Focused · Built for review</div>
+        <div style={{ position: 'relative', zIndex: 10, paddingBottom: 34, textAlign: 'center', color: 'rgba(255,255,255,.38)', fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase' }}>Backtest · Validate · Execute</div>
       </section>
 
       {/* ===== MANIFESTO ===== */}
@@ -206,7 +206,7 @@ function Login() {
           Build an <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>edge</em> you can explain,<br className="hide-m" /> trust, and <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>repeat.</em>
         </h2>
         <p className="rv" style={{ color: 'rgba(255,255,255,.55)', fontSize: 15, lineHeight: 1.85, maxWidth: 620, margin: '34px auto 0' }}>
-          Results improve when decisions become visible. Log the setup, risk, execution, emotion, and outcome. Review the evidence, find the leak, and take the next trade with a clearer plan.
+          Keep research and real execution separate. A setup earns its way from Backtest to Forward only when the sample, expectancy, profit factor, and drawdown support it.
         </p>
         <span onClick={() => scrollerRef.current && scrollerRef.current.scrollTo({ top: 0, behavior: 'smooth' })} className="rv liquid-glass hv-op" style={{ display: 'inline-block', borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 44 }}>Start the chase ↑</span>
       </section>
