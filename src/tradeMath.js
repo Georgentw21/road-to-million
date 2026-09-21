@@ -201,3 +201,211 @@ export function equityDrawdownPercent({ trades = [], startingBalance = 0, archiv
 
   return { maxDrawdownPct, series, endingEquity: equity, peakEquity: peak };
 }
+
+function hasValue(value) {
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
+function hasOutcome(trade) {
+  if (!trade || trade._pnlValid === false || !hasValue(trade.pnl)) return false;
+  return Number.isFinite(Number(trade.pnl));
+}
+
+function isValidDate(value) {
+  if (!hasValue(value)) return false;
+  const date = new Date(String(value).slice(0, 10) + 'T00:00:00');
+  return Number.isFinite(date.getTime());
+}
+
+function validResearchTrades(trades) {
+  return (trades || [])
+    .filter((trade) => trade && trade.status !== 'OPEN' && hasOutcome(trade) && positionRisk(trade) > 0)
+    .slice()
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))
+      || String(a.entryTime || '').localeCompare(String(b.entryTime || '')));
+}
+
+// A transparent completeness score for the fields that make a trade useful as
+// research evidence. Risk and outcome carry the most weight because without
+// them expectancy in R cannot be calculated honestly.
+export function dataQualityReport(trades) {
+  const closed = (trades || []).filter((trade) => trade && trade.status !== 'OPEN');
+  const fields = [
+    { key: 'setupId', label: 'Setup', weight: 15, ok: (t) => hasValue(t.setupId) },
+    { key: 'sym', label: 'Symbol', weight: 10, ok: (t) => hasValue(t.sym) },
+    { key: 'date', label: 'Trade date', weight: 10, ok: (t) => isValidDate(t.date) },
+    { key: 'risk', label: 'Risk (1R)', weight: 20, ok: (t) => positionRisk(t) > 0 },
+    { key: 'pnl', label: 'Closed outcome', weight: 20, ok: (t) => hasOutcome(t) },
+    { key: 'marketRegime', label: 'Market regime', weight: 10, ok: (t) => hasValue(t.marketRegime) },
+    { key: 'ruleAdherence', label: 'Rule adherence', weight: 10, ok: (t) => hasValue(t.ruleAdherence) },
+    { key: 'exitReason', label: 'Exit reason', weight: 5, ok: (t) => hasValue(t.exitReason) },
+  ];
+  const scoreRows = closed.map((trade) => {
+    const score = fields.reduce((sum, field) => sum + (field.ok(trade) ? field.weight : 0), 0);
+    return { trade, score };
+  });
+  const missing = fields.map((field) => ({
+    key: field.key,
+    label: field.label,
+    count: closed.reduce((sum, trade) => sum + (field.ok(trade) ? 0 : 1), 0),
+  })).filter((field) => field.count > 0).sort((a, b) => b.count - a.count);
+  const bySetupMap = new Map();
+  scoreRows.forEach(({ trade, score }) => {
+    const key = hasValue(trade.setupId) ? String(trade.setupId) : '__missing__';
+    const row = bySetupMap.get(key) || { setupId: key, count: 0, total: 0 };
+    row.count += 1;
+    row.total += score;
+    bySetupMap.set(key, row);
+  });
+  const bySetup = Array.from(bySetupMap.values()).map((row) => ({
+    setupId: row.setupId,
+    count: row.count,
+    score: row.count ? Math.round(row.total / row.count) : 0,
+  })).sort((a, b) => a.score - b.score || b.count - a.count);
+  const score = scoreRows.length
+    ? Math.round(scoreRows.reduce((sum, row) => sum + row.score, 0) / scoreRows.length)
+    : 0;
+  return {
+    score,
+    count: closed.length,
+    researchReady: closed.filter((trade) => hasOutcome(trade) && positionRisk(trade) > 0).length,
+    missing,
+    bySetup,
+  };
+}
+
+// Consecutive rolling windows show whether expectancy survives different parts
+// of the sample instead of being carried by one unusually good cluster.
+export function walkForwardReport(trades, { windowSize = 30, step = 15, maxWindows = 6 } = {}) {
+  const rows = validResearchTrades(trades);
+  const size = Math.max(10, Math.floor(windowSize));
+  const stride = Math.max(1, Math.floor(step));
+  if (rows.length < size) {
+    return { ready: false, n: rows.length, windowSize: size, nextNeeded: size - rows.length, windows: [], positiveRate: 0 };
+  }
+  const starts = [];
+  for (let start = 0; start + size <= rows.length; start += stride) starts.push(start);
+  const finalStart = rows.length - size;
+  if (starts[starts.length - 1] !== finalStart) starts.push(finalStart);
+  const windows = starts.slice(-Math.max(1, maxWindows)).map((start, index, picked) => {
+    const sample = rows.slice(start, start + size);
+    const stats = rSeriesStats(sample.map(realizedRFromNetTrade));
+    return {
+      index: starts.length - picked.length + index + 1,
+      start: sample[0].date || '',
+      end: sample[sample.length - 1].date || '',
+      ...stats,
+      pass: stats.avgR > 0 && stats.profitFactor >= 1.1,
+    };
+  });
+  const positive = windows.filter((window) => window.avgR > 0).length;
+  return {
+    ready: true,
+    n: rows.length,
+    windowSize: size,
+    nextNeeded: 0,
+    windows,
+    positiveRate: windows.length ? positive / windows.length * 100 : 0,
+  };
+}
+
+// Compare the backtest distribution with the most recent forward observations.
+// This is an early-warning monitor, not a licence to rewrite rules mid-sample.
+export function edgeDriftReport(backtestTrades, forwardTrades, { windowSize = 30, minForward = 15 } = {}) {
+  const backtest = validResearchTrades(backtestTrades);
+  const forward = validResearchTrades(forwardTrades);
+  const baseline = rSeriesStats(backtest.map(realizedRFromNetTrade));
+  const recentRows = forward.slice(-Math.max(minForward, windowSize));
+  const recent = rSeriesStats(recentRows.map(realizedRFromNetTrade));
+  if (baseline.n < 30 || recent.n < minForward) {
+    return {
+      ready: false,
+      status: 'collecting',
+      baseline,
+      recent,
+      neededBacktest: Math.max(0, 30 - baseline.n),
+      neededForward: Math.max(0, minForward - recent.n),
+      deltaR: recent.avgR - baseline.avgR,
+    };
+  }
+  const floor = Number.isFinite(baseline.ciLow) ? Math.max(0, baseline.ciLow) : 0;
+  const status = recent.avgR < 0 ? 'at-risk' : (recent.avgR < floor ? 'watch' : 'stable');
+  return {
+    ready: true,
+    status,
+    baseline,
+    recent,
+    floor,
+    neededBacktest: 0,
+    neededForward: 0,
+    deltaR: recent.avgR - baseline.avgR,
+  };
+}
+
+function percentile(sorted, probability) {
+  if (!sorted.length) return 0;
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil(probability * sorted.length) - 1));
+  return sorted[index];
+}
+
+// Deterministic empirical bootstrap. "Ruin" is deliberately defined as equity
+// falling to 50% of its starting value; the UI names that threshold explicitly.
+export function monteCarloRisk(rValues, {
+  riskPct = 1,
+  simulations = 1200,
+  horizon = 100,
+  ruinEquity = 0.5,
+  seed = 0x6d2b79f5,
+} = {}) {
+  const values = (rValues || []).map(finiteNumber).filter(Number.isFinite);
+  const riskFraction = Math.max(0.0001, Math.min(0.1, finiteNumber(riskPct) / 100));
+  const paths = Math.max(100, Math.floor(simulations));
+  const trades = Math.max(10, Math.floor(horizon));
+  if (values.length < 20) {
+    return { ready: false, n: values.length, nextNeeded: 20 - values.length, riskPct: riskFraction * 100, simulations: paths, horizon: trades };
+  }
+  let state = seed >>> 0;
+  values.forEach((value) => { state = (Math.imul(state ^ Math.round(value * 10000), 2654435761) + 1013904223) >>> 0; });
+  const random = () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let x = state;
+    x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+  const drawdowns = [];
+  const endings = [];
+  let ruined = 0;
+  for (let path = 0; path < paths; path += 1) {
+    let equity = 1;
+    let peak = 1;
+    let maxDrawdown = 0;
+    let hitRuin = false;
+    for (let index = 0; index < trades; index += 1) {
+      const r = values[Math.floor(random() * values.length)];
+      equity = Math.max(0, equity * (1 + r * riskFraction));
+      peak = Math.max(peak, equity);
+      maxDrawdown = Math.max(maxDrawdown, peak > 0 ? (peak - equity) / peak : 1);
+      if (equity <= ruinEquity) hitRuin = true;
+    }
+    if (hitRuin) ruined += 1;
+    drawdowns.push(maxDrawdown * 100);
+    endings.push((equity - 1) * 100);
+  }
+  drawdowns.sort((a, b) => a - b);
+  endings.sort((a, b) => a - b);
+  return {
+    ready: true,
+    n: values.length,
+    nextNeeded: 0,
+    riskPct: riskFraction * 100,
+    simulations: paths,
+    horizon: trades,
+    ruinThresholdPct: (1 - ruinEquity) * 100,
+    riskOfRuinPct: ruined / paths * 100,
+    medianMaxDrawdownPct: percentile(drawdowns, 0.5),
+    p95MaxDrawdownPct: percentile(drawdowns, 0.95),
+    medianEndingPct: percentile(endings, 0.5),
+    p05EndingPct: percentile(endings, 0.05),
+  };
+}
