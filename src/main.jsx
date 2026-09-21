@@ -195,20 +195,20 @@ function Login() {
           <span onClick={goManifesto} className="liquid-glass hv-op" style={{ borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 30 }}>Manifesto</span>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 10, paddingBottom: 34, textAlign: 'center', color: 'rgba(255,255,255,.38)', fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase' }}>Backtest · Validate · Execute</div>
+        <div className="rtm-login-stage" style={{ position: 'relative', zIndex: 10, paddingBottom: 34, textAlign: 'center', color: 'rgba(255,255,255,.38)', fontSize: 10.5, letterSpacing: '.16em', textTransform: 'uppercase' }}>Backtest · Validate · Execute</div>
       </section>
 
       {/* ===== MANIFESTO ===== */}
       <section className="rtm-login-manifesto" ref={manifestoRef} style={{ position: 'relative', background: '#000', padding: '140px 24px 120px', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at top, rgba(255,255,255,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div className="rv" style={{ color: 'rgba(255,255,255,.4)', fontSize: 13, letterSpacing: '.3em', textTransform: 'uppercase', marginBottom: 28 }}>The Manifesto</div>
-        <h2 className="rv" style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(34px, 5.5vw, 68px)', color: '#fff', lineHeight: 1.14, letterSpacing: '-.01em', maxWidth: 920, margin: '0 auto' }}>
+        <div className="rv rtm-manifesto-kicker" style={{ color: 'rgba(255,255,255,.4)', fontSize: 13, letterSpacing: '.3em', textTransform: 'uppercase', marginBottom: 28 }}>The Manifesto</div>
+        <h2 className="rv rtm-manifesto-title" style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(34px, 5.5vw, 68px)', color: '#fff', lineHeight: 1.14, letterSpacing: '-.01em', maxWidth: 920, margin: '0 auto' }}>
           Build an <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>edge</em> you can explain,<br className="hide-m" /> trust, and <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.6)' }}>repeat.</em>
         </h2>
-        <p className="rv" style={{ color: 'rgba(255,255,255,.55)', fontSize: 15, lineHeight: 1.85, maxWidth: 620, margin: '34px auto 0' }}>
+        <p className="rv rtm-manifesto-copy" style={{ color: 'rgba(255,255,255,.55)', fontSize: 15, lineHeight: 1.85, maxWidth: 620, margin: '34px auto 0' }}>
           Keep research and real execution separate. A setup earns its way from Backtest to Forward only when the sample, expectancy, profit factor, and drawdown support it.
         </p>
-        <span onClick={() => scrollerRef.current && scrollerRef.current.scrollTo({ top: 0, behavior: 'smooth' })} className="rv liquid-glass hv-op" style={{ display: 'inline-block', borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 44 }}>Start the chase ↑</span>
+        <span onClick={() => scrollerRef.current && scrollerRef.current.scrollTo({ top: 0, behavior: 'smooth' })} className="rv liquid-glass hv-op rtm-manifesto-cta" style={{ display: 'inline-block', borderRadius: 999, padding: '12px 32px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginTop: 44 }}>Start the chase ↑</span>
       </section>
     </div>
   );
