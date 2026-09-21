@@ -2,13 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   commissionCost,
+  dataQualityReport,
+  edgeDriftReport,
   equityDrawdownPercent,
+  monteCarloRisk,
   netPnlFromTrade,
   positionRisk,
   realizedRFromNetTrade,
   rSeriesStats,
   setupEvidenceFromNetTrades,
   summarizeNetTrades,
+  walkForwardReport,
 } from '../src/tradeMath.js';
 
 test('fees are always treated as costs and applied exactly once', () => {
@@ -91,4 +95,49 @@ test('evidence calculations remain stable across 1,000 trades', () => {
   assert.equal(evidence.holdout.n, 334);
   assert.equal(evidence.avgR, 0.5);
   assert.equal(evidence.profitFactor, 2);
+});
+
+test('data quality weights calculation-critical fields more heavily', () => {
+  const report = dataQualityReport([
+    { status: 'CLOSED', date: '2026-01-01', setupId: 's1', sym: 'BTC', risk: 100, pnl: 200, marketRegime: 'Trend', ruleAdherence: 'On plan', exitReason: 'TP' },
+    { status: 'CLOSED', date: '2026-01-02', setupId: 's1', sym: 'BTC', risk: '', pnl: '', marketRegime: '', ruleAdherence: '', exitReason: '' },
+  ]);
+  assert.equal(report.score, 68);
+  assert.equal(report.researchReady, 1);
+  assert.equal(report.missing[0].count, 1);
+  assert.deepEqual(report.missing.slice(0, 2).map((row) => row.label), ['Risk (1R)', 'Closed outcome']);
+});
+
+test('walk-forward windows use chronological rolling samples', () => {
+  const trades = Array.from({ length: 60 }, (_, index) => ({
+    status: 'CLOSED',
+    date: new Date(2026, 0, index + 1).toISOString().slice(0, 10),
+    pnl: index < 30 ? 100 : -50,
+    risk: 100,
+  }));
+  const report = walkForwardReport(trades, { windowSize: 30, step: 15 });
+  assert.equal(report.ready, true);
+  assert.equal(report.windows.length, 3);
+  assert.equal(report.windows[0].avgR, 1);
+  assert.equal(report.windows[2].avgR, -0.5);
+});
+
+test('edge drift flags negative recent forward expectancy', () => {
+  const make = (count, pnl, prefix) => Array.from({ length: count }, (_, index) => ({
+    status: 'CLOSED', date: `${prefix}-${String(index + 1).padStart(2, '0')}`, pnl, risk: 100,
+  }));
+  const report = edgeDriftReport(make(30, 100, '2026-01'), make(15, -50, '2026-02'));
+  assert.equal(report.ready, true);
+  assert.equal(report.status, 'at-risk');
+  assert.equal(report.recent.avgR, -0.5);
+});
+
+test('Monte Carlo bootstrap is deterministic and reacts to position risk', () => {
+  const rs = Array.from({ length: 40 }, (_, index) => index % 2 ? -1 : 1.5);
+  const lowRisk = monteCarloRisk(rs, { riskPct: 0.5, simulations: 500, horizon: 100 });
+  const highRisk = monteCarloRisk(rs, { riskPct: 2, simulations: 500, horizon: 100 });
+  const repeat = monteCarloRisk(rs, { riskPct: 2, simulations: 500, horizon: 100 });
+  assert.equal(lowRisk.ready, true);
+  assert.equal(highRisk.p95MaxDrawdownPct, repeat.p95MaxDrawdownPct);
+  assert.ok(highRisk.p95MaxDrawdownPct > lowRisk.p95MaxDrawdownPct);
 });
