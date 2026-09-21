@@ -1477,6 +1477,8 @@ class App extends React.Component {
   // a distinct colour per weekday (Sun..Sat) — Monday = gold, then blue/green/purple/amber, weekends muted
   _DOW_COLORS() { return ['#C77B7B', '#7658E8', '#4D7FE8', '#1C9B68', '#B79CE8', '#E39A6A', '#6E7686']; }
   _dowColor(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_COLORS()[d.getDay()] : '#746E7D'; }
+  // Shared English month labels used by calendar and trade date displays.
+  _EN_MONS_SHORT() { return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; }
   // "8 Jul 2026 · Wed"
   _fullDateLabel(dateStr) {
     const d = this._asDate(dateStr); if (!d) return '—';
