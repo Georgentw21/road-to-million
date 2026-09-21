@@ -131,19 +131,19 @@ function Login() {
   const pillInput = { flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 14, fontFamily: 'inherit', padding: '10px 0', minWidth: 0, position: 'relative', zIndex: 1 };
 
   return (
-    <div ref={scrollerRef} className="rtm-scroll" style={{ position: 'fixed', inset: 0, background: '#000', overflowY: 'auto', overflowX: 'hidden' }}>
+    <div ref={scrollerRef} className="rtm-scroll rtm-login-shell" style={{ position: 'fixed', inset: 0, background: '#000', overflowY: 'auto', overflowX: 'hidden' }}>
 
       {/* ===== HERO ===== */}
-      <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <video ref={videoRef} src={HERO_VIDEO} muted autoPlay playsInline preload="auto"
+      <section className="rtm-login-hero" style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <video className="rtm-login-video" ref={videoRef} src={HERO_VIDEO} muted autoPlay playsInline preload="auto"
           onCanPlay={onCanPlay} onTimeUpdate={onTimeUpdate} onEnded={onEnded}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'bottom', opacity: 0 }} />
         {/* soft scrim so the type + form stay readable over any frame */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.18) 40%,rgba(0,0,0,.55) 100%)', pointerEvents: 'none' }} />
+        <div className="rtm-login-scrim" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.18) 40%,rgba(0,0,0,.55) 100%)', pointerEvents: 'none' }} />
 
         {/* navbar */}
         <div style={{ position: 'relative', zIndex: 20, padding: 24 }}>
-          <div className="liquid-glass" style={{ borderRadius: 999, maxWidth: 1000, margin: '0 auto', padding: '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+          <div className="liquid-glass rtm-login-nav" style={{ borderRadius: 999, maxWidth: 1000, margin: '0 auto', padding: '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <span style={{ color: '#fff', fontWeight: 600, fontSize: 16.5, whiteSpace: 'nowrap' }}>Road to Million</span>
@@ -157,27 +157,27 @@ function Login() {
         </div>
 
         {/* hero content */}
-        <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', textAlign: 'center', transform: 'translateY(-3%)' }}>
-          <h1 style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(52px, 8.5vw, 118px)', letterSpacing: '-.02em', color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.05, marginBottom: 16, textShadow: '0 4px 40px rgba(0,0,0,.5)' }}>
+        <div className="rtm-login-copy" style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', textAlign: 'center', transform: 'translateY(-3%)' }}>
+          <h1 className="rtm-login-title" style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(52px, 8.5vw, 118px)', letterSpacing: '-.02em', color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.05, marginBottom: 16, textShadow: '0 4px 40px rgba(0,0,0,.5)' }}>
             Trade with <em style={{ fontStyle: 'italic' }}>clarity</em>.
           </h1>
-          <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 14, lineHeight: 1.75, maxWidth: 540, marginBottom: 30, padding: '0 12px' }}>
+          <p className="rtm-login-subtitle" style={{ color: 'rgba(255,255,255,.85)', fontSize: 14, lineHeight: 1.75, maxWidth: 540, marginBottom: 30, padding: '0 12px' }}>
             Backtest the hypothesis. Prove the setup. Validate it forward. Build a trading system from evidence — not memory.
           </p>
 
-          <div className="hide-m" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 9, margin: '-12px 0 24px' }}>
+          <div className="hide-m rtm-login-badges" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 9, margin: '-12px 0 24px' }}>
             {['Backtest research', 'Edge validation', 'Forward test journal'].map((item) => (
               <span key={item} className="liquid-glass" style={{ borderRadius: 999, padding: '8px 14px', color: 'rgba(255,255,255,.78)', fontSize: 11.5, letterSpacing: '.01em' }}>{item}</span>
             ))}
           </div>
 
-          <form onSubmit={submit} style={{ width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <form className="rtm-login-form" onSubmit={submit} style={{ width: '100%', maxWidth: 430, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="liquid-glass" style={pill}>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" autoComplete="username" style={pillInput} />
             </div>
             <div className="liquid-glass" style={pill}>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === 'signup' ? 'Create a password' : 'Password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} style={pillInput} />
-              <button type="submit" disabled={busy} title={mode === 'signup' ? 'Create account' : 'Sign in'} style={{ position: 'relative', zIndex: 1, background: '#fff', color: '#000', border: 'none', borderRadius: '50%', width: 42, height: 42, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: busy ? 'progress' : 'pointer' }}>
+              <button className="rtm-login-submit" type="submit" disabled={busy} title={mode === 'signup' ? 'Create account' : 'Sign in'} style={{ position: 'relative', zIndex: 1, background: '#fff', color: '#000', border: 'none', borderRadius: '50%', width: 42, height: 42, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: busy ? 'progress' : 'pointer' }}>
                 {busy
                   ? <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2.5px solid rgba(0,0,0,.2)', borderTopColor: '#000', animation: 'spin .7s linear infinite' }} />
                   : <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>}
@@ -199,7 +199,7 @@ function Login() {
       </section>
 
       {/* ===== MANIFESTO ===== */}
-      <section ref={manifestoRef} style={{ position: 'relative', background: '#000', padding: '140px 24px 120px', textAlign: 'center', overflow: 'hidden' }}>
+      <section className="rtm-login-manifesto" ref={manifestoRef} style={{ position: 'relative', background: '#000', padding: '140px 24px 120px', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at top, rgba(255,255,255,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div className="rv" style={{ color: 'rgba(255,255,255,.4)', fontSize: 13, letterSpacing: '.3em', textTransform: 'uppercase', marginBottom: 28 }}>The Manifesto</div>
         <h2 className="rv" style={{ fontFamily: "'Instrument Serif',serif", fontWeight: 400, fontSize: 'clamp(34px, 5.5vw, 68px)', color: '#fff', lineHeight: 1.14, letterSpacing: '-.01em', maxWidth: 920, margin: '0 auto' }}>
