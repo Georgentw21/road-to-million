@@ -166,21 +166,21 @@ function Sel({ value, onChange, children, style, className, title, disabled }) {
       onKeyDown={onKeyDown}
       style={{ ...style, display: 'flex', alignItems: 'center', gap: 8, cursor: disabled ? 'default' : 'pointer', userSelect: 'none', position: 'relative', opacity: disabled ? .5 : 1 }}>
       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shown}</span>
-      <svg className="rtm-selchev" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#C9A65F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
+      <svg className="rtm-selchev" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#6747D8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
     </div>
   );
   if (!open || !pos) return trigger;
   const panel = (
     <div ref={panelRef} className="rtm-selpanel rtm-xscroll" data-up={pos.up ? '1' : '0'} role="listbox"
-      style={{ position: 'fixed', left: pos.left, width: pos.width, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), maxHeight: 288, overflowY: 'auto', zIndex: 9000, borderRadius: 12, padding: '6px', background: 'rgba(18,18,22,.97)', border: '1px solid rgba(201,166,95,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+      style={{ position: 'fixed', left: pos.left, width: pos.width, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), maxHeight: 288, overflowY: 'auto', zIndex: 9000, borderRadius: 12, padding: '6px', background: 'rgba(18,18,22,.97)', border: '1px solid rgba(118,88,232,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(49,35,73,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
       {opts.map((o, i) => {
         const sel = String(o.v) === String(value == null ? '' : value);
         return (
           <div key={i} className="rtm-selopt" role="option" aria-selected={sel} data-hi={i === hi ? '1' : '0'}
             onMouseEnter={() => setHi(i)} onClick={() => pick(o.v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, color: sel ? '#E2C588' : '#D8D8DE', fontWeight: sel ? 600 : 400, animationDelay: Math.min(i, 10) * 18 + 'ms' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, color: sel ? '#7658E8' : '#3B3542', fontWeight: sel ? 600 : 400, animationDelay: Math.min(i, 10) * 18 + 'ms' }}>
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-            {sel && <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#E2C588" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M20 6L9 17l-5-5" /></svg>}
+            {sel && <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#7658E8" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M20 6L9 17l-5-5" /></svg>}
           </div>
         );
       })}
@@ -256,8 +256,8 @@ function DateField({ value, onChange, style, title, className }) {
       data-open={open ? '1' : '0'} data-press={press ? '1' : '0'}
       onMouseDown={() => setPress(true)} onMouseUp={() => setPress(false)} onMouseLeave={() => setPress(false)}
       onClick={() => (open ? close() : doOpen())} onKeyDown={onKeyDown}
-      style={{ ...style, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: cur ? (style && style.color) || '#ECEAE3' : '#6a6a72' }}>
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.9" style={{ flex: 'none' }}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" strokeLinecap="round" /></svg>
+      style={{ ...style, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: cur ? (style && style.color) || '#24202B' : '#9A93A1' }}>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6747D8" strokeWidth="1.9" style={{ flex: 'none' }}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" strokeLinecap="round" /></svg>
       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
     </div>
   );
@@ -274,24 +274,24 @@ function DateField({ value, onChange, style, title, className }) {
 
   const panel = (
     <div ref={panelRef} className="rtm-selpanel" data-up={pos.up ? '1' : '0'}
-      style={{ position: 'fixed', left: pos.left, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), width: 286, zIndex: 9000, borderRadius: 14, padding: 12, background: 'rgba(18,18,22,.97)', border: '1px solid rgba(201,166,95,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(255,255,255,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+      style={{ position: 'fixed', left: pos.left, ...(pos.up ? { bottom: pos.bottom } : { top: pos.top }), width: 286, zIndex: 9000, borderRadius: 14, padding: 12, background: 'rgba(18,18,22,.97)', border: '1px solid rgba(118,88,232,.28)', boxShadow: '0 26px 60px -18px rgba(0,0,0,.95), 0 0 0 1px rgba(49,35,73,.04)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
       <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:10px')}>
-        <span onClick={() => shift(-1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-        <span style={css('font-family:\'Instrument Serif\',serif;font-size:15px;color:#ECEAE3')}>{MON[vw.m]} {vw.y}</span>
-        <span onClick={() => shift(1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+        <span onClick={() => shift(-1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(49,35,73,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+        <span style={css('font-family:\'Instrument Serif\',serif;font-size:15px;color:#24202B')}>{MON[vw.m]} {vw.y}</span>
+        <span onClick={() => shift(1)} className="rtm-press" style={css('width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(49,35,73,.12);color:#B9B9C0')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
       </div>
       <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px')}>
-        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(w => (<div key={w} style={css('text-align:center;font-size:10px;color:#83838C;padding:4px 0')}>{w}</div>))}
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(w => (<div key={w} style={css('text-align:center;font-size:10px;color:#928B9B;padding:4px 0')}>{w}</div>))}
       </div>
       <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:2px')}>
         {cells.map((d, i) => d == null
           ? <div key={'e' + i}></div>
           : (<div key={d} className="rtm-day" onClick={() => pick(d)}
-              style={{ ...css('text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;font-size:12.5px;font-family:JetBrains Mono'), ...(isSel(d) ? { background: 'linear-gradient(180deg,#E2C588,#C9A65F)', color: '#1a1408', fontWeight: 700 } : { color: '#D8D8DE' }), ...(isToday(d) && !isSel(d) ? { boxShadow: 'inset 0 0 0 1px rgba(201,166,95,.55)' } : {}) }}>{d}</div>)
+              style={{ ...css('text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;font-size:12.5px;font-family:JetBrains Mono'), ...(isSel(d) ? { background: 'linear-gradient(180deg,#7658E8,#6747D8)', color: '#FFFFFF', fontWeight: 700 } : { color: '#3B3542' }), ...(isToday(d) && !isSel(d) ? { boxShadow: 'inset 0 0 0 1px rgba(118,88,232,.55)' } : {}) }}>{d}</div>)
         )}
       </div>
       <div onClick={() => { const t = new Date(); close(); if (onChange) onChange({ target: { value: iso(t.getFullYear(), t.getMonth(), t.getDate()) } }); }}
-        className="rtm-press" style={css('margin-top:10px;text-align:center;padding:8px;border-radius:9px;cursor:pointer;font-size:12px;color:#E2C588;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.08)')}>วันนี้ · Today</div>
+        className="rtm-press" style={css('margin-top:10px;text-align:center;padding:8px;border-radius:9px;cursor:pointer;font-size:12px;color:#7658E8;border:1px solid rgba(118,88,232,.3);background:rgba(118,88,232,.08)')}>วันนี้ · Today</div>
     </div>
   );
   return (<Fragment>{trigger}{ReactDOM.createPortal(panel, document.body)}</Fragment>);
@@ -325,24 +325,24 @@ function EquityCurve({ line, area, points, lastY, zeroY }) {
     <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={leave}
       style={css('position:relative;width:100%;height:210px')}>
       <svg viewBox="0 0 640 230" preserveAspectRatio="none" style={css('width:100%;height:210px;display:block;overflow:visible')}>
-        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E2C588" stopOpacity=".42"/><stop offset="55%" stopColor="#C9A65F" stopOpacity=".12"/><stop offset="100%" stopColor="#C9A65F" stopOpacity="0"/></linearGradient></defs>
-        <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(255,255,255,.05)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(255,255,255,.05)"/>
-        {zeroY != null && <Fragment><line x1="0" y1={zeroY} x2="640" y2={zeroY} stroke="rgba(255,255,255,.28)" strokeWidth="1" strokeDasharray="5 5"/><text x="6" y={zeroY - 5} fill="#9A9AA4" fontSize="10" fontFamily="'JetBrains Mono',monospace">breakeven</text></Fragment>}
+        <defs><linearGradient id="cv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7658E8" stopOpacity=".42"/><stop offset="55%" stopColor="#6747D8" stopOpacity=".12"/><stop offset="100%" stopColor="#6747D8" stopOpacity="0"/></linearGradient></defs>
+        <line x1="0" y1="52" x2="640" y2="52" stroke="rgba(51,38,76,.07)"/><line x1="0" y1="112" x2="640" y2="112" stroke="rgba(51,38,76,.07)"/><line x1="0" y1="172" x2="640" y2="172" stroke="rgba(51,38,76,.07)"/>
+        {zeroY != null && <Fragment><line x1="0" y1={zeroY} x2="640" y2={zeroY} stroke="rgba(51,38,76,.22)" strokeWidth="1" strokeDasharray="5 5"/><text x="6" y={zeroY - 5} fill="#746E7D" fontSize="10" fontFamily="'JetBrains Mono',monospace">breakeven</text></Fragment>}
         <path d={area} fill="url(#cv)"/>
-        <path className="eq-line" d={line} fill="none" stroke="#E2C588" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path className="eq-line" d={line} fill="none" stroke="#7658E8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         {hp ? (
           <Fragment>
-            <line x1={hp.x} y1="0" x2={hp.x} y2="230" stroke="rgba(226,197,136,.4)" strokeWidth="1" strokeDasharray="4 4"/>
-            <circle className="rtm-hoverdot" cx={hp.x} cy={hp.y} r="6" fill="#08080B" stroke="#E2C588" strokeWidth="2.5"/>
+            <line x1={hp.x} y1="0" x2={hp.x} y2="230" stroke="rgba(118,88,232,.35)" strokeWidth="1" strokeDasharray="4 4"/>
+            <circle className="rtm-hoverdot" cx={hp.x} cy={hp.y} r="6" fill="#FFFFFF" stroke="#7658E8" strokeWidth="2.5"/>
           </Fragment>
         ) : (
-          <circle cx="640" cy={lastY} r="4.5" fill="#E2C588"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="640" cy={lastY} r="4.5" fill="#7658E8"><animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/></circle>
         )}
       </svg>
       {hp && (
-        <div style={{ ...css('position:absolute;pointer-events:none;z-index:5;background:rgba(12,12,16,.95);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 11px;box-shadow:0 10px 30px -12px rgba(0,0,0,.9);white-space:nowrap'), left: tipLeft + '%', top: tipTop + '%', transform: 'translate(' + (flip ? '-108%' : '8%') + ',-118%)' }}>
-          <div style={css('font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:600;color:#E2C588')}>{hp.valueStr}</div>
-          {hp.label ? <div style={css('font-size:10.5px;color:#9A9AA4;margin-top:2px')}>{hp.label}</div> : null}
+        <div style={{ ...css('position:absolute;pointer-events:none;z-index:5;background:rgba(255,255,255,.98);border:1px solid rgba(118,88,232,.25);border-radius:9px;padding:7px 11px;box-shadow:0 16px 40px -20px rgba(50,31,90,.38);white-space:nowrap'), left: tipLeft + '%', top: tipTop + '%', transform: 'translate(' + (flip ? '-108%' : '8%') + ',-118%)' }}>
+          <div style={css('font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:600;color:#7658E8')}>{hp.valueStr}</div>
+          {hp.label ? <div style={css('font-size:10.5px;color:#746E7D;margin-top:2px')}>{hp.label}</div> : null}
         </div>
       )}
     </div>
@@ -447,21 +447,26 @@ class App extends React.Component {
       feelEntry: ['ตามแผน · นิ่ง', 'มั่นใจ', 'ลังเล / ไม่แน่ใจ', 'รีบเข้า · FOMO', 'กดแบบไร้ใจ', 'แก้แค้น (revenge)'],
       feelSL: ['สบายๆ ตามแผน', 'แน่นเกินไป', 'กว้างเกินไป', 'เสียดาย · ลังเล', 'ขยับ SL (ผิดแผน)'],
       feelTP: ['ถือถึงเป้า', 'ออกเร็วเพราะกลัว', 'ปล่อยให้วิ่ง', 'ขายหมู', 'โลภ · คืนกำไร'],
+      // Research context: separate the setup's statistical edge from execution mistakes
+      // without making the quick-entry form longer.
+      marketRegime: ['Trending · high volatility', 'Trending · low volatility', 'Range · high volatility', 'Range · low volatility', 'News / event-driven'],
+      exitReason: ['Take profit', 'Stop loss', 'Breakeven', 'Trailing stop', 'Manual · plan invalidated', 'Manual · emotion / mistake'],
+      ruleAdherence: ['On plan', 'Partial deviation', 'Rule break'],
       // ----- multi-leg "เบิ้ล" editable options -----
       // legTrigger = "จุดเข้า" ของแต่ละไม้ (ย้ายมาจาก Entry — M5/M15 เดิม) แก้ตัวเลือกเองได้
       legTrigger: ['M15 Completed Stick', 'M5 Completed Stick', 'M15 Doji', 'M5 Doji', 'Break confirm', 'Retest zone'],
       legSL: ['Dow / structure', 'รวมแท่ง (group candle)', 'ใต้แท่ง (under candle)', 'Fixed pips', 'Breakeven'],
     },
     // trade-log analysis filters + breakdown lens
-    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' },
+    logF: { day: 'all', align: 'all', setup: 'all', session: 'all', marketRegime: 'all', exitReason: 'all', ruleAdherence: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' },
     logDim: 'day', // breakdown dimension: day | ltf | mtf | htf | retest | fibo | entryType | setup | session
     fieldCfg: null, // open the "manage analysis options" editor when truthy
     // setups
     setups: [
-      { id: 's1', version: 1, name: 'Rally', glyph: 'R', accent: '#5FC08D', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
-      { id: 's2', version: 1, name: 'Impulse', glyph: 'I', accent: '#7BA7D9', desc: 'โมเมนตัมแรงหลังข่าว/เบรก', pnl: 12100, wr: 61, trades: 31, avgR: 1.1, usage: 'ใช้จับโมเมนตัมแรงหลังเบรก structure สำคัญ\n• volume / range ต้องขยายชัดเจน\n• เข้าไม้เล็กก่อน เพิ่มเมื่อถูกทาง\n• ไม่ไล่ราคา — รอ retest จุดเบรก\n• SL ใต้แท่งเบรก · TP ตาม measured move' },
-      { id: 's3', version: 1, name: 'Wyckoff', glyph: 'W', accent: '#9B8CFF', desc: 'สะสม/กระจาย แล้ว spring', pnl: 8940, wr: 58, trades: 24, avgR: 0.9, usage: 'ใช้กับโครงสร้าง accumulation / distribution\n• ระบุ phase ให้ชัดก่อน\n• รอ spring (กดต่ำกว่าฐาน) หรือ upthrust\n• ยืนยันด้วย sign of strength\n• เป้าหมายตาม count ของ trading range' },
-      { id: 's4', version: 1, name: 'Reversal', glyph: 'V', accent: '#DC6A63', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
+      { id: 's1', version: 1, name: 'Rally', glyph: 'R', accent: '#1C9B68', desc: 'เทรนด์ขาขึ้นต่อเนื่อง เข้าที่ pullback', pnl: 18420, wr: 67, trades: 42, avgR: 1.4, usage: 'ใช้เมื่อเทรนด์ HTF เป็นขาขึ้นชัดเจน (HH/HL)\n• รอราคา pullback มาที่โซน demand หรือ EMA20\n• เข้าเมื่อมีสัญญาณยืนยัน price action (bullish engulfing / pin bar)\n• SL ใต้ swing low ล่าสุด\n• TP ที่ R ≥ 2 หรือแนวต้านถัดไป' },
+      { id: 's2', version: 1, name: 'Impulse', glyph: 'I', accent: '#4D7FE8', desc: 'โมเมนตัมแรงหลังข่าว/เบรก', pnl: 12100, wr: 61, trades: 31, avgR: 1.1, usage: 'ใช้จับโมเมนตัมแรงหลังเบรก structure สำคัญ\n• volume / range ต้องขยายชัดเจน\n• เข้าไม้เล็กก่อน เพิ่มเมื่อถูกทาง\n• ไม่ไล่ราคา — รอ retest จุดเบรก\n• SL ใต้แท่งเบรก · TP ตาม measured move' },
+      { id: 's3', version: 1, name: 'Wyckoff', glyph: 'W', accent: '#8B6CF0', desc: 'สะสม/กระจาย แล้ว spring', pnl: 8940, wr: 58, trades: 24, avgR: 0.9, usage: 'ใช้กับโครงสร้าง accumulation / distribution\n• ระบุ phase ให้ชัดก่อน\n• รอ spring (กดต่ำกว่าฐาน) หรือ upthrust\n• ยืนยันด้วย sign of strength\n• เป้าหมายตาม count ของ trading range' },
+      { id: 's4', version: 1, name: 'Reversal', glyph: 'V', accent: '#E25462', desc: 'กลับตัวที่แนวรับ-ต้านสำคัญ', pnl: -2180, wr: 40, trades: 20, avgR: -0.3, usage: 'ใช้เฉพาะแนวรับ-ต้านสำคัญเท่านั้น\n• ต้องมี divergence หรือสัญญาณ exhaustion\n• ความเสี่ยงครึ่งหนึ่งของไม้ปกติ\n• win rate ต่ำ — เลือกจุดให้ดีที่สุด\n• ออกเร็วถ้าไม่เป็นไปตามแผน' },
     ],
     // portfolios
     portfolios: [{ id: 'pf1', name: 'พอร์ตหลัก', startBalance: 100000 }],
@@ -576,7 +581,7 @@ class App extends React.Component {
       storageLoadingFlag: st.storageLoading, storageReady: imgReady,
       storageImgText: imgReady ? (fmt(imgBytes) + ' / 1 GB') : (st.storageLoading ? 'Calculating…' : 'Loading…'),
       storageImgWidth: imgPct.toFixed(2) + '%',
-      storageImgColor: imgPct >= 90 ? '#DC6A63' : (imgPct >= 70 ? '#E2C588' : '#5FC08D'),
+      storageImgColor: imgPct >= 90 ? '#E25462' : (imgPct >= 70 ? '#7658E8' : '#1C9B68'),
       storageDataText: fmt(dataBytes) + ' / 500 MB',
       storageDataWidth: dataPct.toFixed(2) + '%',
       storageNearFull: imgReady && usedPct >= 80, // ≥80% = ใกล้เต็ม เตือนสำรอง
@@ -920,13 +925,13 @@ class App extends React.Component {
       .filter(t => cp === 'all' || t.portfolioId === cp || (!t.portfolioId && cp === firstPf))
       .filter(t => inRange(t.date));
     if (!rows.length) { window.alert('No trades in the selected range'); return; }
-    const headers = ['test_mode', 'date', 'day', 'symbol', 'side', 'setup', 'setup_version', 'session', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
+    const headers = ['test_mode', 'date', 'day', 'symbol', 'side', 'setup', 'setup_version', 'session', 'market_regime', 'exit_reason', 'rule_adherence', 'lot', 'entry', 'stop', 'target', 'rr', 'risk_usd', 'realized_r', 'gross_pnl', 'commission', 'net_pnl', 'ltf', 'mtf', 'htf', 'retest', 'fibo_m15', 'entry_model', 'sl_zone', 'portfolio', 'tags', 'notes'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [headers.join(',')];
     rows.forEach(t => {
       const closed = t.status !== 'OPEN';
       // numeric columns go out sanitized, so a spreadsheet never opens on "NaN"/"not-a-number"
-      lines.push([this._testMode(t), t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, this._tradeSetupVersion(t), t.session, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? commissionCost(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
+      lines.push([this._testMode(t), t.date, this._dowFull(t.date), t.sym, t.side, this._setupById(t.setupId).name, this._tradeSetupVersion(t), t.session, t.marketRegime, t.exitReason, t.ruleAdherence, this._n(t.lot), t.entry, t.stop, t.target, this._n(t.rr), (t.risk != null ? this._n(t.risk) : ''), (closed ? this._rMult({ ...t, pnl: this._netPnl(t) }).toFixed(2) : ''), (closed ? this._n(t.pnl) : ''), (t.commission != null ? commissionCost(t.commission) : ''), (closed ? this._netPnl(t) : ''), t.ltf, t.mtf, t.htf, (this._legRetest(t) === 'yes' ? 'Yes' : (this._legRetest(t) === 'no' ? 'No' : '')), this._legFibo(t), this._entryModel(t), t.slZone, this._portfolioName(t.portfolioId), (t.tags || []).join('|'), t.notes].map(esc).join(','));
     });
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -971,7 +976,7 @@ class App extends React.Component {
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       };
       const mode = this.state.journalMode === 'backtest' ? 'backtest' : 'forward';
-      const accents = ['#5FC08D', '#7BA7D9', '#9B8CFF', '#E0A15A', '#DC6A63', '#5FD0C8'];
+      const accents = ['#1C9B68', '#4D7FE8', '#8B6CF0', '#E0A15A', '#E25462', '#5FD0C8'];
       let setups = this.state.setups.slice();
       const setupFor = (name, rawId) => {
         if (rawId && setups.some(s => s.id === rawId)) return rawId;
@@ -1019,6 +1024,7 @@ class App extends React.Component {
           tags: get(o, 'tags').split('|').map(x => x.trim()).filter(Boolean), imgCount: 2,
           portfolioId: mode === 'forward' ? (get(o, 'portfolio_id') || (this.state.currentPortfolioId !== 'all' ? this.state.currentPortfolioId : (this.state.portfolios[0] && this.state.portfolios[0].id))) : '',
           ltf: get(o, 'ltf'), mtf: get(o, 'mtf'), htf: get(o, 'htf'), retest: get(o, 'retest').toLowerCase(), fibo: get(o, 'fibo_m15', 'fibo'), entryType: get(o, 'entry_model', 'entry_type'), slZone: get(o, 'sl_zone'),
+          marketRegime: get(o, 'market_regime', 'regime'), exitReason: get(o, 'exit_reason'), ruleAdherence: get(o, 'rule_adherence', 'on_plan'),
           feelEntry: get(o, 'feel_entry', 'emotion'), feelSL: get(o, 'feel_sl'), feelTP: get(o, 'feel_tp'),
           mae: get(o, 'mae'), mfe: get(o, 'mfe'), legs: [], tfMeta: {}, alignHTF: false, alignMTF: false, alignLTF: false,
         };
@@ -1055,8 +1061,8 @@ class App extends React.Component {
   setView(v) { this.setState({ view: v }); }
   navStyle(key) {
     const base = 'width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s;position:relative;';
-    if (this.state.view === key) return base + 'color:#E2C588;background:rgba(201,166,95,.14);box-shadow:inset 2px 0 0 #C9A65F;';
-    return base + 'color:#83838C;';
+    if (this.state.view === key) return base + 'color:#7658E8;background:rgba(118,88,232,.14);box-shadow:inset 2px 0 0 #6747D8;';
+    return base + 'color:#928B9B;';
   }
 
   startName() { this.setState({ editName: true }); }
@@ -1201,9 +1207,9 @@ class App extends React.Component {
   // how much a group's numbers can be trusted, from its closed-trade count
   _edgeConf(n) {
     const R = this._edgeRules();
-    if (n >= R.strongSample) return { level: 'strong', label: 'น่าเชื่อถือ', color: '#5FC08D' };
-    if (n >= R.minSample) return { level: 'ok', label: 'พอประเมินได้', color: '#E2C588' };
-    return { level: 'low', label: 'ยังไม่พอ', color: '#83838C' };
+    if (n >= R.strongSample) return { level: 'strong', label: 'น่าเชื่อถือ', color: '#1C9B68' };
+    if (n >= R.minSample) return { level: 'ok', label: 'พอประเมินได้', color: '#7658E8' };
+    return { level: 'low', label: 'ยังไม่พอ', color: '#928B9B' };
   }
   _rMult(t) {
     return realizedRFromNetTrade(t);
@@ -1289,7 +1295,7 @@ class App extends React.Component {
   }
   _portDeposits(p) { return (p.deposits || []).reduce((s, d) => s + (Number(d.amount) || 0), 0); }
   _testMode(t) { return t && t.testMode === 'backtest' ? 'backtest' : 'forward'; }
-  _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#9A9AA4', glyph: '?' }; }
+  _setupById(id) { return this.state.setups.find(s => s.id === id) || { name: '—', accent: '#746E7D', glyph: '?' }; }
   _setupVersion(s) { return Math.max(1, Math.floor(this._n(s && s.version)) || 1); }
   _tradeSetupVersion(t) { return Math.max(1, Math.floor(this._n(t && t.setupVersion)) || 1); }
   _isCurrentSetupVersion(t, setup) { return this._tradeSetupVersion(t) === this._setupVersion(setup); }
@@ -1311,7 +1317,7 @@ class App extends React.Component {
     const cp = this.state.currentPortfolioId;
     const pf = (cp && cp !== 'all') ? cp : (this.state.portfolios[0] ? this.state.portfolios[0].id : 'pf1');
     this.setState({
-      draft: { id: 't' + Date.now(), testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward', date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', setupVersion: this.state.setups[0] ? this._setupVersion(this.state.setups[0]) : 1, session: 'London', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
+      draft: { id: 't' + Date.now(), testMode: this.state.journalMode === 'backtest' ? 'backtest' : 'forward', date: d, sym: '', side: 'BUY', setupId: this.state.setups[0] ? this.state.setups[0].id : '', setupVersion: this.state.setups[0] ? this._setupVersion(this.state.setups[0]) : 1, session: 'London', marketRegime: '', exitReason: '', ruleAdherence: '', entry: '', stop: '', target: '', rr: '', pnl: '', lot: '', entryTime: d + 'T' + (d === today ? hh : '09:00'), exitTime: '', notes: '', status: 'CLOSED', imgCount: 2, portfolioId: pf, tags: [], commission: '', risk: '', mae: '', mfe: '', alignHTF: false, alignMTF: false, alignLTF: false, feelEntry: '', feelSL: '', feelTP: '', ltf: '', mtf: '', htf: '', retest: '', fibo: '', entryType: '', slZone: '', legs: [{ trigger: '', price: '', lot: '', slBasis: '', risk: '', dd: '' }], ddBaseline: '', tfMeta: {}, entryKind: '', bias: '', exitPrice: '', peakPrice: '' },
       draftIsNew: true, showTrade: true, showDay: false, tradeAdvancedOpen: false,
     }, () => this._save());
   }
@@ -1493,8 +1499,8 @@ class App extends React.Component {
   _dowShort(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_SHORT()[d.getDay()] : ''; }
   _dowFull(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_FULL()[d.getDay()] : ''; }
   // a distinct colour per weekday (Sun..Sat) — Monday = gold, then blue/green/purple/amber, weekends muted
-  _DOW_COLORS() { return ['#C77B7B', '#E2C588', '#7BA7D9', '#5FC08D', '#B79CE8', '#E39A6A', '#6E7686']; }
-  _dowColor(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_COLORS()[d.getDay()] : '#9A9AA4'; }
+  _DOW_COLORS() { return ['#C77B7B', '#7658E8', '#4D7FE8', '#1C9B68', '#B79CE8', '#E39A6A', '#6E7686']; }
+  _dowColor(dateStr) { const d = this._asDate(dateStr); return d ? this._DOW_COLORS()[d.getDay()] : '#746E7D'; }
   // "8 Jul 2026 · Wed"
   _fullDateLabel(dateStr) {
     const d = this._asDate(dateStr); if (!d) return '—';
@@ -1522,7 +1528,7 @@ class App extends React.Component {
     if (s && this.state.setupIsNew && ((s.name && s.name.trim()) || (s.desc && s.desc.trim()) || (s.usage && s.usage.trim()))) {
       this.setState({ showSetup: true }); return;
     }
-    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#E2C588', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1, version: 1, versionHistory: [] }, setupIsNew: true, showSetup: true }, () => this._save());
+    this.setState({ sDraft: { id: 's' + Date.now(), name: '', glyph: '★', accent: '#7658E8', desc: '', pnl: 0, wr: 0, trades: 0, avgR: 0, usage: '', imgCount: 1, version: 1, versionHistory: [] }, setupIsNew: true, showSetup: true }, () => this._save());
   }
   closeSetup() { this.setState({ showSetup: false }); this._save(); } // ปิดแต่เก็บ draft ไว้
   cancelSetup() {
@@ -1595,10 +1601,10 @@ class App extends React.Component {
     if (h) return h + 'h ' + mins + 'm';
     return mins + 'm';
   }
-  _segStyle(active) { return 'font-size:12.5px;font-weight:600;padding:7px 18px;border-radius:8px;cursor:pointer;transition:.14s;' + (active ? 'background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408' : 'color:#9A9AA4'); }
+  _segStyle(active) { return 'font-size:12.5px;font-weight:600;padding:7px 18px;border-radius:8px;cursor:pointer;transition:.14s;' + (active ? 'background:linear-gradient(180deg,#7658E8,#6747D8);color:#FFFFFF' : 'color:#746E7D'); }
   _tint(c) {
-    const m = { '#5FC08D': 'rgba(95,192,141,.14)', '#7BA7D9': 'rgba(123,167,217,.14)', '#9B8CFF': 'rgba(155,140,255,.14)', '#DC6A63': 'rgba(220,106,99,.14)', '#E2C588': 'rgba(226,197,136,.14)' };
-    return m[c] || 'rgba(201,166,95,.14)';
+    const m = { '#1C9B68': 'rgba(28,155,104,.14)', '#4D7FE8': 'rgba(77,127,232,.14)', '#8B6CF0': 'rgba(139,108,240,.14)', '#E25462': 'rgba(226,84,98,.14)', '#7658E8': 'rgba(139,108,240,.14)' };
+    return m[c] || 'rgba(118,88,232,.14)';
   }
   _ticker() {
     const live = this.state.livePrices;
@@ -1613,9 +1619,9 @@ class App extends React.Component {
       <Fragment>
         {items.map((it, i) => (
           <span key={i} style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ color: '#9A9AA4' }}>{it[0]}</span>
-            <span style={{ color: '#ECEAE3' }}>{it[1]}</span>
-            <span style={{ color: it[3] ? '#5FC08D' : '#DC6A63' }}>{it[2]}</span>
+            <span style={{ color: '#746E7D' }}>{it[0]}</span>
+            <span style={{ color: '#24202B' }}>{it[1]}</span>
+            <span style={{ color: it[3] ? '#1C9B68' : '#E25462' }}>{it[2]}</span>
           </span>
         ))}
       </Fragment>
@@ -1855,7 +1861,7 @@ class App extends React.Component {
   pageHabitDays(delta) { this.setState({ habitDayOffset: Math.max(0, this.state.habitDayOffset + delta) }); }
   resetHabitDays() { this.setState({ habitDayOffset: 0 }); }
   // habit CRUD
-  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#C9A65F' } }); }
+  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#6747D8' } }); }
   closeHabitCfg() { this.setState({ habitCfg: null }); }
   patchHabitCfg(patch) { this.setState({ habitCfg: { ...this.state.habitCfg, ...patch } }); }
   saveHabitCfg() {
@@ -1863,7 +1869,7 @@ class App extends React.Component {
     const clean = {
       id: c.id || ('h' + Date.now()), name: String(c.name).trim(),
       kind: c.kind === 'measure' ? 'measure' : 'bool', unit: (c.unit || (c.kind === 'measure' ? 'units' : 'times')),
-      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#C9A65F',
+      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#6747D8',
     };
     let habits = this.state.habits.slice();
     const idx = habits.findIndex(x => x.id === clean.id);
@@ -1984,7 +1990,7 @@ class App extends React.Component {
 
   // ===== คำนวณสถิติทั้งหมดจากเทรดจริง (Dashboard + Analytics) =====
   _stats(trades, setups, portfolios, cpId, firstPf, goal, eqRange, metric) {
-    const GREEN = '#5FC08D', RED = '#DC6A63', GOLD = '#E2C588', BLUE = '#7BA7D9', PURPLE = '#9B8CFF';
+    const GREEN = '#1C9B68', RED = '#E25462', GOLD = '#7658E8', BLUE = '#4D7FE8', PURPLE = '#8B6CF0';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const fm = (n) => this._fmtMoney(n);
     // เลขบนแท่งกราฟ: โชว์ค่าจริง (มี comma) ย่อเป็น k เฉพาะเมื่อ ≥ 100,000 เพื่อไม่ให้ล้น
@@ -2090,7 +2096,7 @@ class App extends React.Component {
     closed.forEach(t => { dowSum[new Date(t.date + 'T00:00').getDay()] += t.pnl || 0; });
     const dowIdx = [1, 2, 3, 4, 5];
     const dowMax = Math.max(1, ...dowIdx.map(i => Math.abs(dowSum[i])));
-    const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: barMoney(dowSum[i]), color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#5FC08D,rgba(95,192,141,.3))' : 'linear-gradient(180deg,#DC6A63,rgba(220,106,99,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
+    const dowBars = dowIdx.map(i => ({ label: dowFull[i], val: barMoney(dowSum[i]), color: pc(dowSum[i]), bg: dowSum[i] >= 0 ? 'linear-gradient(180deg,#1C9B68,rgba(28,155,104,.3))' : 'linear-gradient(180deg,#E25462,rgba(226,84,98,.3))', h: (Math.abs(dowSum[i]) / dowMax * 100) + '%' }));
 
     const sesDefs = [['Tokyo', BLUE, '123,167,217'], ['London', GOLD, '226,197,136'], ['New York', PURPLE, '155,140,255']];
     const sesSum = {}; closed.forEach(t => { sesSum[t.session] = (sesSum[t.session] || 0) + (t.pnl || 0); });
@@ -2100,7 +2106,7 @@ class App extends React.Component {
     const buckets = [['<-2R', v => v < -2], ['-2R', v => v >= -2 && v < -1.5], ['-1R', v => v >= -1.5 && v < -0.5], ['0R', v => v >= -0.5 && v < 0.5], ['+1R', v => v >= 0.5 && v < 1.5], ['+2R', v => v >= 1.5 && v < 2.5], ['+3R', v => v >= 2.5 && v < 3.5], ['>3R', v => v >= 3.5]];
     const rCounts = buckets.map(([l, f]) => ({ l, n: closed.filter(t => f(this._rMult(t))).length }));
     const rMax = Math.max(1, ...rCounts.map(b => b.n));
-    const rDist = rCounts.map(b => ({ label: b.l, bg: (b.l.startsWith('-') || b.l.startsWith('<')) ? 'rgba(220,106,99,.55)' : (b.l === '0R' ? 'rgba(255,255,255,.18)' : 'rgba(95,192,141,.6)'), h: (b.n / rMax * 100) + '%' }));
+    const rDist = rCounts.map(b => ({ label: b.l, bg: (b.l.startsWith('-') || b.l.startsWith('<')) ? 'rgba(226,84,98,.55)' : (b.l === '0R' ? 'rgba(49,35,73,.18)' : 'rgba(28,155,104,.6)'), h: (b.n / rMax * 100) + '%' }));
 
     // best/worst ด้วยลูป (ห้าม spread — trades เยอะมากจะ stack overflow)
     let best = 0, worst = 0;
@@ -2112,7 +2118,7 @@ class App extends React.Component {
     const anaStats = [
       { label: 'Best trade', val: fm(best), color: GREEN }, { label: 'Worst trade', val: fm(worst), color: RED },
       { label: 'Avg win', val: fm(avgWin), color: GREEN }, { label: 'Avg loss', val: fm(avgLoss), color: RED },
-      { label: 'Max win streak', val: String(mw), color: GOLD }, { label: 'Max loss streak', val: String(ml), color: '#ECEAE3' },
+      { label: 'Max win streak', val: String(mw), color: GOLD }, { label: 'Max loss streak', val: String(ml), color: '#24202B' },
     ];
 
     // expectancy ($/ไม้) + current streak
@@ -2125,7 +2131,7 @@ class App extends React.Component {
     let cs = 0, sign = 0;
     for (let i = chrono.length - 1; i >= 0; i--) { const p = chrono[i].pnl; const s = p > 0 ? 1 : (p < 0 ? -1 : 0); if (s === 0) continue; if (sign === 0) { sign = s; cs = 1; } else if (s === sign) cs++; else break; }
     const curStreakStr = sign === 0 ? '—' : (sign > 0 ? ('Won ' + cs + ' in a row') : ('Lost ' + cs + ' in a row'));
-    const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#ECEAE3');
+    const curStreakColor = sign > 0 ? GREEN : (sign < 0 ? RED : '#24202B');
 
     // drawdown (underwater) chart — วัดจากมูลค่าพอร์ต (ทุนเริ่มต้น + กำไรสะสม) ไม่ใช่กำไรสะสมเปล่าๆ
     let dd = equityDD.series.slice();
@@ -2173,7 +2179,7 @@ class App extends React.Component {
           name: x.name, n: x.n,
           meta: x.n + ' ไม้ · ' + x.wr + '% wr',
           avgR: (x.avgR >= 0 ? '+' : '−') + Math.abs(x.avgR).toFixed(2) + 'R',
-          avgRColor: x.avgR > 0 ? GREEN : (x.avgR < 0 ? RED : '#9A9AA4'),
+          avgRColor: x.avgR > 0 ? GREEN : (x.avgR < 0 ? RED : '#746E7D'),
           pnl: fm(x.net), color: pc(x.net), w: (Math.abs(x.net) / mx * 100) + '%',
           conf: this._edgeConf(x.n).label, confColor: this._edgeConf(x.n).color,
         })),
@@ -2264,7 +2270,7 @@ class App extends React.Component {
       kPf: grossL ? pf.toFixed(2) : (grossP > 0 ? '∞' : '0.00'),
       kR: (avgR >= 0 ? '+' : '−') + Math.abs(avgR).toFixed(2) + 'R',
       kDD: maxDD.toFixed(1) + '%',
-      donut: `conic-gradient(#5FC08D 0% ${winRate}%, rgba(255,255,255,.07) ${winRate}%)`,
+      donut: `conic-gradient(#1C9B68 0% ${winRate}%, rgba(49,35,73,.07) ${winRate}%)`,
       totalClosed: closed.length, winsN: wins.length, lossesN: losses.length,
       archCount, archNote: archCount > 0 ? ('Includes ' + archCount + ' archived trades in P&L / curve') : '',
       startBalStr: '$' + Math.round(startBal).toLocaleString('en-US'),
@@ -2284,7 +2290,7 @@ class App extends React.Component {
   }
 
   renderVals() {
-    const GREEN = '#5FC08D', RED = '#DC6A63', BLUE = '#7BA7D9', GOLD = '#E2C588', PURPLE = '#9B8CFF';
+    const GREEN = '#1C9B68', RED = '#E25462', BLUE = '#4D7FE8', GOLD = '#7658E8', PURPLE = '#8B6CF0';
     const pc = (n) => n >= 0 ? GREEN : RED;
     const st = this.state;
     const setups = st.setups;
@@ -2299,6 +2305,24 @@ class App extends React.Component {
     const trades = (activeMode === 'backtest' || cpId === 'all')
       ? modeAll
       : modeAll.filter(t => t.portfolioId === cpId || (!t.portfolioId && cpId === firstPf));
+    // Keep every rule-break in the dataset; compare it with on-plan execution instead of
+    // deleting bad trades. This exposes execution leakage without hindsight bias.
+    const executionEligible = trades.filter(t => t.status !== 'OPEN' && this._posRisk(t) > 0);
+    const executionTracked = executionEligible.filter(t => String(t.ruleAdherence || '').trim());
+    const executionOnPlan = executionTracked.filter(t => t.ruleAdherence === 'On plan');
+    const executionDeviated = executionTracked.filter(t => t.ruleAdherence !== 'On plan');
+    const executionOnStats = this._aggStats(executionOnPlan);
+    const executionOffStats = this._aggStats(executionDeviated);
+    const fmtAuditR = (v, n) => n ? ((v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + 'R') : '—';
+    const executionAudit = {
+      eligible: executionEligible.length,
+      tracked: executionTracked.length,
+      coverage: executionEligible.length ? Math.round(executionTracked.length / executionEligible.length * 100) + '%' : '0%',
+      onN: executionOnStats.closed, onR: fmtAuditR(executionOnStats.avgR, executionOnStats.closed), onWr: executionOnStats.closed ? executionOnStats.wr + '%' : '—',
+      offN: executionOffStats.closed, offR: fmtAuditR(executionOffStats.avgR, executionOffStats.closed), offWr: executionOffStats.closed ? executionOffStats.wr + '%' : '—',
+      leak: executionOnStats.closed && executionOffStats.closed ? fmtAuditR(executionOnStats.avgR - executionOffStats.avgR, 1) : '—',
+      ready: executionTracked.length >= 10 && executionOnStats.closed > 0 && executionOffStats.closed > 0,
+    };
 
     // ---- per-portfolio stats (Account page) ----
     const portfolioStats = st.portfolios.map(p => {
@@ -2381,11 +2405,11 @@ class App extends React.Component {
       // Forward is the real out-of-sample confirmation. A positive 95% lower confidence
       // bound prevents a lucky but highly volatile 30-trade run being labelled confirmed.
       const fwPass = fw.n >= 30 && fw.avgR > 0 && fw.pf >= 1.1 && fw.ciLow > 0;
-      let stage = 'collect', stageLabel = 'Collecting samples', stageNote = Math.max(0, 30 - bt.n) + ' backtest trades to first review', color = '#7BA7D9';
-      if (bt.n >= 30 && !btPass) { stage = 'revise'; stageLabel = 'Revise setup'; stageNote = !bt.holdoutPass ? 'Chronological holdout did not retain the edge' : 'Backtest gate not passed'; color = '#DC6A63'; }
-      if (btPass && fw.n < 30) { stage = 'forward'; stageLabel = 'Ready for Forward'; stageNote = Math.max(0, 30 - fw.n) + ' forward trades to validate'; color = '#E2C588'; }
+      let stage = 'collect', stageLabel = 'Collecting samples', stageNote = Math.max(0, 30 - bt.n) + ' backtest trades to first review', color = '#4D7FE8';
+      if (bt.n >= 30 && !btPass) { stage = 'revise'; stageLabel = 'Revise setup'; stageNote = !bt.holdoutPass ? 'Chronological holdout did not retain the edge' : 'Backtest gate not passed'; color = '#E25462'; }
+      if (btPass && fw.n < 30) { stage = 'forward'; stageLabel = 'Ready for Forward'; stageNote = Math.max(0, 30 - fw.n) + ' forward trades to validate'; color = '#7658E8'; }
       if (btPass && fw.n >= 30 && !fwPass) { stage = 'failed'; stageLabel = 'Not confirmed'; stageNote = 'Forward expectancy is not statistically stable yet'; color = '#E0A15A'; }
-      if (btPass && fwPass) { stage = 'confirmed'; stageLabel = 'Edge confirmed'; stageNote = 'Positive out-of-sample expectancy with 95% confidence'; color = '#5FC08D'; }
+      if (btPass && fwPass) { stage = 'confirmed'; stageLabel = 'Edge confirmed'; stageNote = 'Positive out-of-sample expectancy with 95% confidence'; color = '#1C9B68'; }
       return {
         id: s.id, name: s.name || '(untitled)', version: currentVersion, versionLabel: 'v' + currentVersion, glyph: s.glyph, accent: s.accent, color, stage, stageLabel, stageNote,
         bt, fw, btPass, fwPass,
@@ -2412,13 +2436,13 @@ class App extends React.Component {
       || setupGates.find(g => g.stage === 'confirmed')
       || null;
     const focusAction = (() => {
-      if (!focusGate) return { eyebrow: 'Next action', title: 'Create your first setup', body: 'Write one repeatable rule, then collect clean backtest samples.', cta: 'Create setup', color: '#9B8CFF', click: () => this.openNewSetup() };
+      if (!focusGate) return { eyebrow: 'Next action', title: 'Create your first setup', body: 'Write one repeatable rule, then collect clean backtest samples.', cta: 'Create setup', color: '#8B6CF0', click: () => this.openNewSetup() };
       const label = focusGate.name + ' ' + focusGate.versionLabel;
-      if (focusGate.stage === 'revise') return { eyebrow: 'Holdout warning', title: 'Refine ' + label, body: 'The newest third of the backtest did not preserve the edge. Change one rule, then create a new version.', cta: 'Review rules', color: '#DC6A63', click: focusGate.open };
+      if (focusGate.stage === 'revise') return { eyebrow: 'Holdout warning', title: 'Refine ' + label, body: 'The newest third of the backtest did not preserve the edge. Change one rule, then create a new version.', cta: 'Review rules', color: '#E25462', click: focusGate.open };
       if (focusGate.stage === 'failed') return { eyebrow: 'Forward warning', title: 'Do not scale ' + label, body: 'The 95% confidence interval still includes zero. Keep the rules frozen and collect more evidence.', cta: 'Inspect evidence', color: '#E0A15A', click: () => this.setState({ view: 'analytics', journalMode: 'forward' }) };
-      if (focusGate.stage === 'forward') return { eyebrow: 'Ready to validate', title: 'Forward test ' + label, body: 'Backtest and holdout passed. Run the same rules live without changing them mid-sample.', cta: 'Open Forward', color: '#9B8CFF', click: () => this.setState({ view: 'log', journalMode: 'forward', logPage: 0 }) };
-      if (focusGate.stage === 'collect') return { eyebrow: 'Build the sample', title: 'Test ' + label, body: focusGate.stageNote + '. Keep risk and context fields complete so every R result is comparable.', cta: 'Add backtest', color: '#7BA7D9', click: () => this.setState({ view: 'log', journalMode: 'backtest', logPage: 0 }) };
-      return { eyebrow: 'Edge monitor', title: label + ' is confirmed', body: 'Keep the rules frozen and watch for expectancy drift as the forward sample grows.', cta: 'Monitor edge', color: '#5FC08D', click: () => this.setState({ view: 'analytics', journalMode: 'forward' }) };
+      if (focusGate.stage === 'forward') return { eyebrow: 'Ready to validate', title: 'Forward test ' + label, body: 'Backtest and holdout passed. Run the same rules live without changing them mid-sample.', cta: 'Open Forward', color: '#8B6CF0', click: () => this.setState({ view: 'log', journalMode: 'forward', logPage: 0 }) };
+      if (focusGate.stage === 'collect') return { eyebrow: 'Build the sample', title: 'Test ' + label, body: focusGate.stageNote + '. Keep risk and context fields complete so every R result is comparable.', cta: 'Add backtest', color: '#4D7FE8', click: () => this.setState({ view: 'log', journalMode: 'backtest', logPage: 0 }) };
+      return { eyebrow: 'Edge monitor', title: label + ' is confirmed', body: 'Keep the rules frozen and watch for expectancy drift as the forward sample grows.', cta: 'Monitor edge', color: '#1C9B68', click: () => this.setState({ view: 'analytics', journalMode: 'forward' }) };
     })();
     const activeGate = gateStats(trades);
     const selectedQuality = activeGate.quality;
@@ -2456,7 +2480,7 @@ class App extends React.Component {
     // ---- trade row mapper ----
     const sessColor = (s) => s === 'Tokyo' ? BLUE : (s === 'London' ? GOLD : PURPLE);
     // one stable colour per portfolio, so a mixed "All portfolio" log is readable at a glance
-    const PORT_TINT = ['#E2C588', '#7BA7D9', '#5FC08D', '#C9A6E8', '#E0A15A', '#8FBFA6', '#DC9A9A'];
+    const PORT_TINT = ['#7658E8', '#4D7FE8', '#1C9B68', '#C9A6E8', '#E0A15A', '#8FBFA6', '#DC9A9A'];
     const portTint = {};
     st.portfolios.forEach((p, i) => { portTint[p.id] = PORT_TINT[i % PORT_TINT.length]; });
     const mapTrade = (t0) => {
@@ -2468,10 +2492,10 @@ class App extends React.Component {
       if (!dShort) { const _d = this._asDate(t.date); dShort = this._dShortCache[t.date] = _d ? _d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'; }
       const chips = [];
       if (t.ltf) chips.push({ label: 'LTF · ' + t.ltf, color: '#9CC2E8' });
-      if (t.mtf) chips.push({ label: 'MTF · ' + t.mtf, color: '#E2C588' });
+      if (t.mtf) chips.push({ label: 'MTF · ' + t.mtf, color: '#7658E8' });
       if (t.htf) chips.push({ label: 'HTF · ' + t.htf, color: '#B79CE8' });
-      if (t.retest) chips.push({ label: 'Retest · ' + (t.retest === 'yes' ? 'Yes' : 'No'), color: t.retest === 'yes' ? '#5FC08D' : '#DC6A63' });
-      if (t.fibo) chips.push({ label: 'Fibo · ' + t.fibo, color: '#E2C588' });
+      if (t.retest) chips.push({ label: 'Retest · ' + (t.retest === 'yes' ? 'Yes' : 'No'), color: t.retest === 'yes' ? '#1C9B68' : '#E25462' });
+      if (t.fibo) chips.push({ label: 'Fibo · ' + t.fibo, color: '#7658E8' });
       if (t.entryType) chips.push({ label: 'Entry · ' + t.entryType, color: '#9CD3C0' });
       return {
         id: t.id, sym: t.sym || '—', side: t.side, setupName: su.name + ' v' + this._tradeSetupVersion(t), accent: su.accent,
@@ -2482,11 +2506,11 @@ class App extends React.Component {
         sideColor: t.side === 'BUY' ? GREEN : RED,
         sessionColor: sessColor(t.session),
         pnlStr: t.status === 'OPEN' ? '—' : this._fmtMoney(t.pnl),
-        pnlColor: t.status === 'OPEN' ? '#9A9AA4' : pc(t.pnl),
+        pnlColor: t.status === 'OPEN' ? '#746E7D' : pc(t.pnl),
         rStr: t.status === 'OPEN' ? '—' : ((this._rMult(t) >= 0 ? '+' : '−') + Math.abs(this._rMult(t)).toFixed(1) + 'R'),
-        rColor: t.status === 'OPEN' ? '#9A9AA4' : (this._rMult(t) > 0 ? GREEN : (this._rMult(t) < 0 ? RED : '#9A9AA4')),
-        status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#83838C',
-        statusBg: t.status === 'OPEN' ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.05)',
+        rColor: t.status === 'OPEN' ? '#746E7D' : (this._rMult(t) > 0 ? GREEN : (this._rMult(t) < 0 ? RED : '#746E7D')),
+        status: t.status, statusColor: t.status === 'OPEN' ? GOLD : '#928B9B',
+        statusBg: t.status === 'OPEN' ? 'rgba(118,88,232,.14)' : 'rgba(49,35,73,.05)',
         holding: this._fmtDur(t.entryTime, t.exitTime), holdShort: this._fmtDurShort(t.entryTime, t.exitTime),
         entryHM: (t.entryTime && String(t.entryTime).length >= 16) ? String(t.entryTime).slice(11, 16) : '', exitHM: (t.exitTime && String(t.exitTime).length >= 16) ? String(t.exitTime).slice(11, 16) : '',
         lotStr: (t.lot != null && t.lot !== '') ? String(t.lot) : '—',
@@ -2496,11 +2520,11 @@ class App extends React.Component {
         mfeStr: (() => { const m = this._mfeUsd(t); return m > 0 ? '+$' + Math.round(m) : '—'; })(),
         // Max DD — the single drawdown read: legs DD (pip) if scaled, else old heat in R
         heatStr: (() => { const dd = this._legStats(t).maxDD; if (dd > 0) return dd + 'p'; const r = this._maeR(t); if (r != null && this._maeUsd(t) > 0) return r.toFixed(1) + 'R'; return '—'; })(),
-        heatColor: (() => { const dd = this._legStats(t).maxDD; const base = Math.abs(Number(t.ddBaseline) || 0); if (dd > 0) return (base && dd > base) ? '#DC6A63' : '#C9CAD2'; const r = this._maeR(t); return (r == null || this._maeUsd(t) <= 0) ? '#9A9AA4' : (r >= 1 ? '#DC6A63' : (r >= 0.6 ? '#E0B15A' : '#9CD3C0')); })(),
+        heatColor: (() => { const dd = this._legStats(t).maxDD; const base = Math.abs(Number(t.ddBaseline) || 0); if (dd > 0) return (base && dd > base) ? '#E25462' : '#5F5967'; const r = this._maeR(t); return (r == null || this._maeUsd(t) <= 0) ? '#746E7D' : (r >= 1 ? '#E25462' : (r >= 0.6 ? '#E0B15A' : '#9CD3C0')); })(),
         captureStr: (() => { const c = this._captureP(t); return c == null ? '—' : c + '%'; })(),
-        captureColor: (() => { const c = this._captureP(t); return c == null ? '#9A9AA4' : (c >= 80 ? '#5FC08D' : (c >= 55 ? '#E2C588' : '#DC6A63')); })(),
+        captureColor: (() => { const c = this._captureP(t); return c == null ? '#746E7D' : (c >= 80 ? '#1C9B68' : (c >= 55 ? '#7658E8' : '#E25462')); })(),
         alignN: this._alignN(t), alignStr: this._alignN(t) + '/3',
-        alignColor: this._alignN(t) >= 3 ? '#5FC08D' : (this._alignN(t) === 2 ? '#E2C588' : '#9A9AA4'),
+        alignColor: this._alignN(t) >= 3 ? '#1C9B68' : (this._alignN(t) === 2 ? '#7658E8' : '#746E7D'),
         feelEntry: t.feelEntry || '', feelSL: t.feelSL || '', feelTP: t.feelTP || '',
         // edge factors surfaced straight in the log, so a scan of the table shows the conditions
         entryModel: this._entryModel(t),
@@ -2512,7 +2536,7 @@ class App extends React.Component {
         notes: t.notes || '', pnlNum: t.pnl || 0, dateRaw: t.date, tags: t.tags || [],
         // which account this order belongs to — only surfaced when viewing every portfolio at once
         portName: this._portfolioName(t.portfolioId || firstPf),
-        portColor: portTint[t.portfolioId || firstPf] || '#9A9AA4',
+        portColor: portTint[t.portfolioId || firstPf] || '#746E7D',
         open: () => this.openTrade(t.id),
       };
     };
@@ -2529,9 +2553,9 @@ class App extends React.Component {
     });
     const edge = {
       avgMfe: _mfeN ? '$' + Math.round(_mfeSum / _mfeN).toLocaleString('en-US') : '—',
-      avgMfeColor: _mfeN ? GREEN : '#9A9AA4',
+      avgMfeColor: _mfeN ? GREEN : '#746E7D',
       avgCapture: _capN ? Math.round(_capSum / _capN) + '%' : '—',
-      avgCaptureColor: _capN ? (Math.round(_capSum / _capN) >= 70 ? GREEN : (Math.round(_capSum / _capN) >= 50 ? GOLD : RED)) : '#9A9AA4',
+      avgCaptureColor: _capN ? (Math.round(_capSum / _capN) >= 70 ? GREEN : (Math.round(_capSum / _capN) >= 50 ? GOLD : RED)) : '#746E7D',
       avgAlign: _alignN ? (_alignSum / _alignN).toFixed(1) + '/3' : '—',
       heatReady: _mfeN > 0, capReady: _capN > 0,
     };
@@ -2556,6 +2580,7 @@ class App extends React.Component {
       if (LF.retest && LF.retest !== 'all' && this._legRetest(t) !== LF.retest) return false;
       if (LF.fibo && LF.fibo !== 'all' && this._legFibo(t) !== LF.fibo) return false;
       if (!fieldMatch(t, 'ltf') || !fieldMatch(t, 'mtf') || !fieldMatch(t, 'htf') || !fieldMatch(t, 'slZone')) return false;
+      if (!fieldMatch(t, 'marketRegime') || !fieldMatch(t, 'exitReason') || !fieldMatch(t, 'ruleAdherence')) return false;
       if (!fieldMatch(t, 'feelEntry') || !fieldMatch(t, 'feelSL') || !fieldMatch(t, 'feelTP')) return false;
       if (q && !(((t.sym || '') + ' ' + this._setupById(t.setupId).name + ' ' + (t.notes || '')).toLowerCase().includes(q))) return false;
       return true;
@@ -2578,13 +2603,13 @@ class App extends React.Component {
     const filterDefs = [['win', 'Win'], ['loss', 'Loss'], ['long', 'Long'], ['short', 'Short']];
     const logFilters = filterDefs.map(([k, label]) => ({
       label, click: () => this.setState({ logFilter: lf === k ? 'all' : k, logPage: 0 }),
-      fg: lf === k ? '#1a1408' : '#9A9AA4',
-      bg: lf === k ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'rgba(255,255,255,.03)',
-      border: lf === k ? 'none' : '1px solid rgba(255,255,255,.1)',
+      fg: lf === k ? '#FFFFFF' : '#746E7D',
+      bg: lf === k ? 'linear-gradient(180deg,#7658E8,#6747D8)' : 'rgba(49,35,73,.03)',
+      border: lf === k ? 'none' : '1px solid rgba(49,35,73,.1)',
     }));
     // ---- analysis field filters + live stats + breakdown table ----
     const dayFull = this._DOW_FULL();
-    const ANA_FIELDS = [['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['feelEntry', 'Feeling · เข้า'], ['feelSL', 'Feeling · SL'], ['feelTP', 'Feeling · TP']];
+    const ANA_FIELDS = [['marketRegime', 'Market regime'], ['exitReason', 'Exit reason'], ['ruleAdherence', 'Rule adherence'], ['ltf', 'LTF'], ['mtf', 'MTF'], ['htf', 'HTF'], ['retest', 'Retest'], ['fibo', 'Fibo M15'], ['entryType', 'Entry'], ['feelEntry', 'Feeling · เข้า'], ['feelSL', 'Feeling · SL'], ['feelTP', 'Feeling · TP']];
     const distinctFor = (key) => { const set = new Set(this._fieldOpts(key)); trades.forEach(t => { const v = (t[key] || '').trim(); if (v) set.add(v); }); return Array.from(set); };
     // entry model / fibo now live on the legs; build their option lists from the leg-derived values
     const distinctEntry = (() => { const set = new Set(this._fieldOpts('legTrigger')); trades.forEach(t => { const v = (this._entryModel(t) || '').trim(); if (v) set.add(v); }); return Array.from(set); })();
@@ -2604,7 +2629,7 @@ class App extends React.Component {
     const logAggRaw = this._aggStats(filteredRaw);
     const logAgg = {
       n: logAggRaw.n, closed: logAggRaw.closed,
-      wrStr: logAggRaw.closed ? logAggRaw.wr + '%' : '—', wrColor: logAggRaw.closed ? (logAggRaw.wr >= 50 ? GREEN : RED) : '#9A9AA4',
+      wrStr: logAggRaw.closed ? logAggRaw.wr + '%' : '—', wrColor: logAggRaw.closed ? (logAggRaw.wr >= 50 ? GREEN : RED) : '#746E7D',
       record: logAggRaw.wins + 'W · ' + logAggRaw.losses + 'L',
       netStr: this._fmtMoney(logAggRaw.net), netColor: pc(logAggRaw.net),
       avgRStr: (logAggRaw.avgR >= 0 ? '+' : '−') + Math.abs(logAggRaw.avgR).toFixed(2) + 'R', avgRColor: logAggRaw.avgR >= 0 ? GREEN : RED,
@@ -2620,6 +2645,9 @@ class App extends React.Component {
       entryType: { label: 'Entry model', get: t => (this._entryModel(t) || '').trim() || '—' },
       setup: { label: 'Setup version', get: t => this._setupById(t.setupId).name + ' v' + this._tradeSetupVersion(t) },
       session: { label: 'Session', get: t => t.session || '—' },
+      marketRegime: { label: 'Market regime', get: t => (t.marketRegime || '').trim() || '—' },
+      exitReason: { label: 'Exit reason', get: t => (t.exitReason || '').trim() || '—' },
+      ruleAdherence: { label: 'Rule adherence', get: t => (t.ruleAdherence || '').trim() || '—' },
       align: { label: 'TF aligned', get: t => this._alignN(t) + '/3', order: ['3/3', '2/3', '1/3', '0/3'] },
       feelEntry: { label: 'Feeling · ตอนเข้า', get: t => (t.feelEntry || '').trim() || '—' },
       feelSL: { label: 'Feeling · ตอนวาง SL', get: t => (t.feelSL || '').trim() || '—' },
@@ -2695,11 +2723,11 @@ class App extends React.Component {
         const conf = this._edgeConf(a.closed);
         return {
           name: k, nStr: a.n + (a.n === 1 ? ' trade' : ' trades'), n: a.closed,
-          dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#C9A65F',
-          wr: a.closed ? a.wr + '%' : '—', wrColor: a.closed ? (a.wr >= 50 ? GREEN : RED) : '#9A9AA4',
+          dot: dimKey === 'day' && dowI >= 0 ? this._DOW_COLORS()[dowI] : '#6747D8',
+          wr: a.closed ? a.wr + '%' : '—', wrColor: a.closed ? (a.wr >= 50 ? GREEN : RED) : '#746E7D',
           record: a.wins + 'W · ' + a.losses + 'L', net: this._fmtMoney(a.net), netColor: pc(a.net),
           avgR: (a.avgR >= 0 ? '+' : '−') + Math.abs(a.avgR).toFixed(2) + 'R',
-          avgRColor: a.avgR > 0 ? GREEN : (a.avgR < 0 ? RED : '#9A9AA4'),
+          avgRColor: a.avgR > 0 ? GREEN : (a.avgR < 0 ? RED : '#746E7D'),
           w: (Math.abs(a.net) / bmax * 100) + '%', barColor: a.net >= 0 ? GREEN : RED,
           best: hasRealEdge && k === bestKey,
           conf: conf.level, confLabel: conf.label, confColor: conf.color,
@@ -2732,17 +2760,17 @@ class App extends React.Component {
       const has = !!dayTradesMap[d];
       const isToday = d === today;
       if (!has) {
-        calDays.push({ day: String(d), pnl: '', trades: '', dot: '', bg: 'rgba(255,255,255,.02)', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : '1px solid rgba(255,255,255,.05)', dayColor: '#83838C', fg: 'transparent', dotColor: 'transparent', cursor: 'default', click: null });
+        calDays.push({ day: String(d), pnl: '', trades: '', dot: '', bg: 'rgba(49,35,73,.02)', border: isToday ? '1.5px solid rgba(118,88,232,.5)' : '1px solid rgba(49,35,73,.05)', dayColor: '#928B9B', fg: 'transparent', dotColor: 'transparent', cursor: 'default', click: null });
       } else {
         const v = dayPnl[d]; const tn = dayTradesMap[d].length;
         const intensity = Math.min(1, Math.abs(v) / 2200);
-        const bg = v >= 0 ? `rgba(95,192,141,${0.08 + intensity * 0.18})` : `rgba(220,106,99,${0.08 + intensity * 0.18})`;
+        const bg = v >= 0 ? `rgba(28,155,104,${0.08 + intensity * 0.18})` : `rgba(226,84,98,${0.08 + intensity * 0.18})`;
         const hasOpen = dayTradesMap[d].some(x => x.status === 'OPEN');
         calDays.push({
           day: String(d), pnl: v === 0 ? '—' : this._fmtMoney(v), trades: tn + ' trades',
           dot: hasOpen ? '●' : '', dotColor: GOLD,
-          bg, border: isToday ? '1.5px solid #E2C588' : '1px solid rgba(255,255,255,.07)',
-          dayColor: isToday ? '#E2C588' : '#ECEAE3', fg: pc(v),
+          bg, border: isToday ? '1.5px solid #7658E8' : '1px solid rgba(49,35,73,.07)',
+          dayColor: isToday ? '#7658E8' : '#24202B', fg: pc(v),
           cursor: 'pointer',
           click: () => this.openDay(monthPrefix + '-' + String(d).padStart(2, '0')),
         });
@@ -2787,8 +2815,8 @@ class App extends React.Component {
       for (let i = 0; i < hFirstDow; i++) heat.push({ label: '', bg: 'transparent', fg: 'transparent', border: 'none', title: '' });
       for (let d = 1; d <= hDays; d++) {
         const has = !!hHas[d]; const isToday = d === hToday;
-        if (!has) { heat.push({ label: String(d), bg: 'rgba(255,255,255,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(201,166,95,.5)' : 'none', title: '' }); }
-        else { const v = hPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(95,192,141,${0.25 + intensity * 0.5})` : `rgba(220,106,99,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #E2C588' : 'none', title: d + ' ' + dashMonthShort + ' · ' + this._fmtMoney(v) }); }
+        if (!has) { heat.push({ label: String(d), bg: 'rgba(49,35,73,.03)', fg: '#3a3a42', border: isToday ? '1.5px solid rgba(118,88,232,.5)' : 'none', title: '' }); }
+        else { const v = hPnl[d]; const intensity = Math.min(1, Math.abs(v) / 2200); const bg = v >= 0 ? `rgba(28,155,104,${0.25 + intensity * 0.5})` : `rgba(226,84,98,${0.25 + intensity * 0.45})`; heat.push({ label: String(d), bg, fg: '#0c0c10', border: isToday ? '1.5px solid #7658E8' : 'none', title: d + ' ' + dashMonthShort + ' · ' + this._fmtMoney(v) }); }
       }
     }
 
@@ -2833,10 +2861,10 @@ class App extends React.Component {
       const r = periodCheck(key); const full = r.total > 0 && r.done === r.total; const sel = key === periodKey;
       return {
         label, click: () => this.setState(isYearly ? { yearKey: key } : (isWeekly ? { weekKey: key } : { monthKey: key })),
-        bg: sel ? 'rgba(201,166,95,.14)' : 'rgba(255,255,255,.03)',
-        border: sel ? '1px solid rgba(201,166,95,.45)' : '1px solid rgba(255,255,255,.07)',
-        labelColor: sel ? '#E2C588' : '#ECEAE3',
-        dot: full ? GREEN : (r.done > 0 ? GOLD : '#83838C'),
+        bg: sel ? 'rgba(118,88,232,.14)' : 'rgba(49,35,73,.03)',
+        border: sel ? '1px solid rgba(118,88,232,.45)' : '1px solid rgba(49,35,73,.07)',
+        labelColor: sel ? '#7658E8' : '#24202B',
+        dot: full ? GREEN : (r.done > 0 ? GOLD : '#928B9B'),
         status: full ? 'Done ✓' : (r.done + '/' + r.total),
       };
     });
@@ -2844,10 +2872,10 @@ class App extends React.Component {
     const checkItems = items.map((it, i) => {
       const done = !!curChecks[it.id]; const editing = st.editCheck === (which + ':' + it.id);
       return {
-        id: which + '-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-        boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
-        boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
-        textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
+        id: which + '-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(49,35,73,.05)',
+        boxBorder: done ? '1.5px solid #6747D8' : '1.5px solid rgba(49,35,73,.18)',
+        boxBg: done ? 'linear-gradient(150deg,#7658E8,#6747D8)' : 'transparent', checkOp: done ? 1 : 0,
+        textColor: done ? '#928B9B' : '#24202B', strike: done ? 'line-through' : 'none',
         toggle: () => this.toggleCheck(scope, periodKey, it.id),
         editing, notEditing: !editing,
         edit: () => this.editItem(which, it.id), commit: (e) => this.commitPeriodItem(scope, periodKey, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
@@ -2876,14 +2904,14 @@ class App extends React.Component {
       offset: 327 - 327 * ds.avgPct / 100,
       spark: ds.spark.map(s => ({
         h: Math.max(6, Math.round(s.ratio * 100)),
-        bg: s.total > 0 && s.done === s.total ? GREEN : (s.done > 0 ? 'rgba(201,166,95,.7)' : 'rgba(255,255,255,.14)'),
+        bg: s.total > 0 && s.done === s.total ? GREEN : (s.done > 0 ? 'rgba(118,88,232,.7)' : 'rgba(49,35,73,.14)'),
         title: s.done + '/' + s.total,
       })),
       missed: ds.missed.map(m => ({
         text: m.text, pct: Math.round(m.adher * 100) + '%',
         w: Math.round(m.adher * 100),
         sub: 'missed ' + m.miss + '/' + m.present,
-        barBg: m.adher >= 0.5 ? 'rgba(201,166,95,.6)' : 'rgba(224,90,90,.6)',
+        barBg: m.adher >= 0.5 ? 'rgba(118,88,232,.6)' : 'rgba(224,90,90,.6)',
       })),
       allClear: ds.counted > 0 && ds.missed.length === 0,
     };
@@ -2996,7 +3024,7 @@ class App extends React.Component {
       pickWeekly: () => this.patchHabitCfg({ period: 'weekly' }), pickMonthly: () => this.patchHabitCfg({ period: 'monthly' }),
       setAccent: (a) => this.patchHabitCfg({ accent: a }),
       save: () => this.saveHabitCfg(), close: () => this.closeHabitCfg(), del: hc.id ? () => this.delHabit(hc.id) : null,
-      accents: ['#C9A65F', '#5FC08D', '#7BA7D9', '#DC6A63', '#9B8CFF', '#5FD0C8', '#E2A34B'],
+      accents: ['#6747D8', '#1C9B68', '#4D7FE8', '#E25462', '#8B6CF0', '#5FD0C8', '#E2A34B'],
       // live "connected" hint: the derived target for the other period
       derivedHint: (() => {
         const n = Number(hc.target) || 0; const u = hc.unit || 'times';
@@ -3014,10 +3042,10 @@ class App extends React.Component {
     const preItems = st.preItems.map((it, i) => {
       const done = !!preChecks[it.id]; const editing = st.editCheck === ('pre:' + it.id);
       return {
-        id: 'pre-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-        boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
-        boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
-        textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
+        id: 'pre-' + it.id, text: it.text, border: i === 0 ? 'none' : '1px solid rgba(49,35,73,.05)',
+        boxBorder: done ? '1.5px solid #6747D8' : '1.5px solid rgba(49,35,73,.18)',
+        boxBg: done ? 'linear-gradient(150deg,#7658E8,#6747D8)' : 'transparent', checkOp: done ? 1 : 0,
+        textColor: done ? '#928B9B' : '#24202B', strike: done ? 'line-through' : 'none',
         toggle: () => this.toggleCheck('pre', preKey, it.id),
         editing, notEditing: !editing,
         edit: () => this.editItem('pre', it.id), commit: (e) => this.commitItem('pre', it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
@@ -3070,7 +3098,7 @@ class App extends React.Component {
         tradeModalTitle: st.draftIsNew ? 'Log a trade' : ((d.sym || 'Trade') + ' · ' + d.date),
         tradeAdvancedOpen: !!st.tradeAdvancedOpen,
         toggleTradeAdvanced: () => this.setState({ tradeAdvancedOpen: !st.tradeAdvancedOpen }),
-        tradeAdvancedFilled: [d.ltf, d.mtf, d.htf, d.feelEntry, d.feelSL, d.feelTP, d.mfe, d.peakPrice, d.exitPrice].filter(v => String(v || '').trim()).length + ((d.legs || []).filter(l => l && (l.price || l.risk || l.trigger)).length),
+        tradeAdvancedFilled: [d.marketRegime, d.exitReason, d.ruleAdherence, d.ltf, d.mtf, d.htf, d.feelEntry, d.feelSL, d.feelTP, d.mfe, d.peakPrice, d.exitPrice].filter(v => String(v || '').trim()).length + ((d.legs || []).filter(l => l && (l.price || l.risk || l.trigger)).length),
         dTestMode: draftMode,
         setBacktestMode: () => this.setD('testMode', 'backtest'),
         setForwardMode: () => this.setD('testMode', 'forward'),
@@ -3087,7 +3115,7 @@ class App extends React.Component {
         // suggested 1R (price distance × lot) — click to fill; exact for $1/point instruments
         dRiskHint: (() => { const e = parseFloat(d.entry), s = parseFloat(d.stop), l = parseFloat(d.lot); if (isNaN(e) || isNaN(s) || Math.abs(e - s) <= 0) return null; const v = Math.abs(e - s) * (isNaN(l) || l <= 0 ? 1 : l); return { val: Math.round(v * 100) / 100, fill: () => this.setD('risk', String(Math.round(v * 100) / 100)) }; })(),
         // realized R preview from the entered risk
-        dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = commissionCost(d.commission); if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#5FC08D' : (r < 0 ? '#DC6A63' : '#9A9AA4') }; })(),
+        dR: (() => { const risk = Math.abs(parseFloat(d.risk) || 0); const g = parseFloat(d.pnl); const c = commissionCost(d.commission); if (!risk || isNaN(g)) return null; const r = (g - c) / risk; return { str: (r >= 0 ? '+' : '−') + Math.abs(r).toFixed(2) + 'R', color: r > 0 ? '#1C9B68' : (r < 0 ? '#E25462' : '#746E7D') }; })(),
         dDayLabel: this._fullDateLabel(d.date),
         // ----- MFE / capture: enter TP + peak price → the system works out how far the trend ran -----
         dMfe: d.mfe != null ? String(d.mfe) : '', setMfe: (e) => this.setD('mfe', e.target.value),
@@ -3165,10 +3193,10 @@ class App extends React.Component {
             grossStr: open ? '—' : (gross >= 0 ? '+$' : '−$') + Math.abs(gross).toLocaleString('en-US', { maximumFractionDigits: 2 }),
             commStr: comm ? '−$' + Math.abs(comm).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '$0',
             netStr: open ? '—' : (net >= 0 ? '+$' : '−$') + Math.abs(net).toLocaleString('en-US', { maximumFractionDigits: 2 }),
-            netColor: open ? '#9A9AA4' : (net >= 0 ? '#5FC08D' : '#DC6A63'),
+            netColor: open ? '#746E7D' : (net >= 0 ? '#1C9B68' : '#E25462'),
             totalRiskStr: totalRisk ? '$' + this._fmtPrice(totalRisk) : '—',
             rStr: r != null ? (r >= 0 ? '+' : '') + r.toFixed(2) + 'R' : '—',
-            rColor: r == null ? '#9A9AA4' : (r >= 0 ? '#5FC08D' : '#DC6A63'),
+            rColor: r == null ? '#746E7D' : (r >= 0 ? '#1C9B68' : '#E25462'),
             riskMissing: !open && totalRisk <= 0,
           };
         })(),
@@ -3195,6 +3223,9 @@ class App extends React.Component {
         dFeelEntry: d.feelEntry || '', dFeelSL: d.feelSL || '', dFeelTP: d.feelTP || '',
         setFeelEntry: (e) => this.setD('feelEntry', e.target.value), setFeelSL: (e) => this.setD('feelSL', e.target.value), setFeelTP: (e) => this.setD('feelTP', e.target.value),
         optsFeelEntry: this._fieldOptsWith('feelEntry', d.feelEntry), optsFeelSL: this._fieldOptsWith('feelSL', d.feelSL), optsFeelTP: this._fieldOptsWith('feelTP', d.feelTP),
+        dMarketRegime: d.marketRegime || '', dExitReason: d.exitReason || '', dRuleAdherence: d.ruleAdherence || '',
+        optsMarketRegime: this._fieldOptsWith('marketRegime', d.marketRegime), optsExitReason: this._fieldOptsWith('exitReason', d.exitReason), optsRuleAdherence: this._fieldOptsWith('ruleAdherence', d.ruleAdherence),
+        setMarketRegime: (e) => this.setDField('marketRegime', e.target.value), setExitReason: (e) => this.setDField('exitReason', e.target.value), setRuleAdherence: (e) => this.setDField('ruleAdherence', e.target.value),
         dLtf: d.ltf || '', dMtf: d.mtf || '', dHtf: d.htf || '', dRetest: d.retest || '', dFibo: d.fibo || '', dEntryType: d.entryType || '', dSlZone: d.slZone || '',
         optsLtf: this._fieldOptsWith('ltf', d.ltf), optsMtf: this._fieldOptsWith('mtf', d.mtf), optsHtf: this._fieldOptsWith('htf', d.htf), optsFibo: this._fieldOptsWith('fibo', d.fibo), optsEntryType: this._fieldOptsWith('entryType', d.entryType), optsSlZone: this._fieldOptsWith('slZone', d.slZone),
         setLtf: (e) => this.setDField('ltf', e.target.value), setMtf: (e) => this.setDField('mtf', e.target.value), setHtf: (e) => this.setDField('htf', e.target.value),
@@ -3212,8 +3243,8 @@ class App extends React.Component {
         setEntryHM: (e) => this.setDTTime('entryTime', e), setExitHM: (e) => this.setDTTime('exitTime', e),
         blurEntryHM: () => this.commitDTTime('entryTime'), blurExitHM: () => this.commitDTTime('exitTime'),
         setBuy: () => this.setD('side', 'BUY'), setSell: () => this.setD('side', 'SELL'),
-        buyStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'BUY' ? 'background:rgba(95,192,141,.14);border:1px solid rgba(95,192,141,.45);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
-        sellStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'SELL' ? 'background:rgba(220,106,99,.14);border:1px solid rgba(220,106,99,.45);color:#DC6A63' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);color:#9A9AA4'),
+        buyStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'BUY' ? 'background:rgba(28,155,104,.14);border:1px solid rgba(28,155,104,.45);color:#1C9B68' : 'background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.1);color:#746E7D'),
+        sellStyle: 'flex:1;text-align:center;padding:11px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:.14s;' + (d.side === 'SELL' ? 'background:rgba(226,84,98,.14);border:1px solid rgba(226,84,98,.45);color:#E25462' : 'background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.1);color:#746E7D'),
         holdingDur: this._fmtDur(d.entryTime, d.exitTime),
         setupOptions: setups.map(s => {
           const gate = setupGates.find(g => g.id === s.id);
@@ -3224,8 +3255,8 @@ class App extends React.Component {
         portfolioOptions: st.portfolios.map(p => ({ id: p.id, name: p.name })),
         tradeImgs: imgs,
         canDelete: !st.draftIsNew, dStatusOpen: d.status === 'OPEN', canAddImg: (d.imgCount || 2) < 6,
-        pnlBorder: (parseFloat(d.pnl) < 0) ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)',
-        pnlInputColor: (parseFloat(d.pnl) < 0) ? '#DC6A63' : (parseFloat(d.pnl) > 0 ? '#5FC08D' : '#ECEAE3'),
+        pnlBorder: (parseFloat(d.pnl) < 0) ? 'rgba(226,84,98,.4)' : 'rgba(49,35,73,.12)',
+        pnlInputColor: (parseFloat(d.pnl) < 0) ? '#E25462' : (parseFloat(d.pnl) > 0 ? '#1C9B68' : '#24202B'),
         saveTrade: () => this.saveTrade(), deleteTrade: () => this.deleteTrade(),
         duplicateTrade: () => this.duplicateTrade(), canDuplicate: !st.draftIsNew,
         openNewForDay: () => this.openNew(st.dayDate),
@@ -3251,8 +3282,8 @@ class App extends React.Component {
           const sr = sts.length ? sts.reduce((a, t) => a + this._rMult(t), 0) / sts.length : 0;
           return [
             { l: 'Net P&L', v: this._fmtMoney(sp), c: pc(sp) },
-            { l: 'Win rate', v: (sts.length ? Math.round(sw / sts.length * 100) : 0) + '%', c: '#ECEAE3' },
-            { l: 'Trades', v: String(sts.length), c: '#ECEAE3' },
+            { l: 'Win rate', v: (sts.length ? Math.round(sw / sts.length * 100) : 0) + '%', c: '#24202B' },
+            { l: 'Trades', v: String(sts.length), c: '#24202B' },
             { l: 'Avg R', v: (sr >= 0 ? '+' : '−') + Math.abs(sr).toFixed(2) + 'R', c: sr >= 0 ? GREEN : RED },
           ];
         })(),
@@ -3276,10 +3307,10 @@ class App extends React.Component {
         const done = !!cur[it.id]; if (done) pdone++;
         const editing = st.editPlan === (scope + ':' + it.id);
         return {
-          text: it.text, border: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
-          boxBorder: done ? '1.5px solid #C9A65F' : '1.5px solid rgba(255,255,255,.18)',
-          boxBg: done ? 'linear-gradient(150deg,#E2C588,#C9A65F)' : 'transparent', checkOp: done ? 1 : 0,
-          textColor: done ? '#83838C' : '#ECEAE3', strike: done ? 'line-through' : 'none',
+          text: it.text, border: i === 0 ? 'none' : '1px solid rgba(49,35,73,.05)',
+          boxBorder: done ? '1.5px solid #6747D8' : '1.5px solid rgba(49,35,73,.18)',
+          boxBg: done ? 'linear-gradient(150deg,#7658E8,#6747D8)' : 'transparent', checkOp: done ? 1 : 0,
+          textColor: done ? '#928B9B' : '#24202B', strike: done ? 'line-through' : 'none',
           toggle: () => this.toggleCheck(scope, key, it.id),
           editing, notEditing: !editing,
           edit: () => this.editPlanItem(scope, it.id), commit: (e) => this.commitPeriodItem(scope, key, it.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
@@ -3325,7 +3356,7 @@ class App extends React.Component {
       portfolios: st.portfolios, currentPortfolioId: cpId,
       currentPortfolioName: cpId === 'all' ? 'All portfolio' : this._portfolioName(cpId),
       // the switcher doubles as a balance sheet: every account's current equity, and the sum
-      portMenu: portfolioStats.map(p => ({ id: p.id, name: p.name, balStr: p.equityStr, tint: portTint[p.id] || '#9A9AA4' })),
+      portMenu: portfolioStats.map(p => ({ id: p.id, name: p.name, balStr: p.equityStr, tint: portTint[p.id] || '#746E7D' })),
       allBalStr: usd(allBal),
       orphanRow: orphans.length ? { n: orphans.length, netStr: this._fmtMoney(closedNetOf(orphans)) } : null,
       // a portfolio column only earns its width when several accounts are mixed in one view
@@ -3393,7 +3424,7 @@ class App extends React.Component {
       // these are persisted preferences, so they must trigger a save — without it the choice
       // only survives if some unrelated autosave happens to flush afterwards
       setEdgeMetric: (e) => this.setState({ edgeMetric: e.target.value === 'wr' ? 'wr' : 'r' }, () => this._save()),
-      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logPage: 0 }),
+      clearLogFilters: () => this.setState({ logF: { day: 'all', align: 'all', setup: 'all', session: 'all', marketRegime: 'all', exitReason: 'all', ruleAdherence: 'all', ltf: 'all', mtf: 'all', htf: 'all', retest: 'all', fibo: 'all', entryType: 'all', feelEntry: 'all', feelSL: 'all', feelTP: 'all' }, logPage: 0 }),
       fieldCfgOpen: !!st.fieldCfg, openFieldCfg: () => this.openFieldCfg(), closeFieldCfg: () => this.closeFieldCfg(),
       fieldCfgVM: [
         { key: 'legTrigger', label: 'จุดเข้า (แต่ละไม้) · M5 / M15', opts: this._fieldOpts('legTrigger') },
@@ -3405,6 +3436,9 @@ class App extends React.Component {
         { key: 'feelEntry', label: 'Feeling · ตอนเข้า', opts: this._fieldOpts('feelEntry') },
         { key: 'feelSL', label: 'Feeling · ตอนวาง SL', opts: this._fieldOpts('feelSL') },
         { key: 'feelTP', label: 'Feeling · ตอนออก / TP', opts: this._fieldOpts('feelTP') },
+        { key: 'marketRegime', label: 'Market regime', opts: this._fieldOpts('marketRegime') },
+        { key: 'exitReason', label: 'Exit reason', opts: this._fieldOpts('exitReason') },
+        { key: 'ruleAdherence', label: 'Rule adherence', opts: this._fieldOpts('ruleAdherence') },
       ],
       addFieldOpt: (k, v) => this.addFieldOpt(k, v), removeFieldOpt: (k, v) => this.removeFieldOpt(k, v), moveFieldOpt: (k, v, d) => this.moveFieldOpt(k, v, d), renameFieldOpt: (k, o, n) => this.renameFieldOpt(k, o, n),
       heat, calDays, weeks, monthPnl: this._fmtMoney(monthTotal), monthColor: pc(monthTotal),
@@ -3428,7 +3462,7 @@ class App extends React.Component {
       maxWinStreak: S.maxWinStreak, maxLossStreak: S.maxLossStreak,
       anaPf: activeMode === 'backtest' ? (Number.isFinite(activeGate.pf) ? activeGate.pf.toFixed(2) : (activeGate.n ? '∞' : '0.00')) : S.kPf,
       anaDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD, anaR: S.kR,
-      edgeFinder: S.edgeFinder,
+      edgeFinder: S.edgeFinder, executionAudit,
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
@@ -3462,90 +3496,90 @@ class App extends React.Component {
 
   // ===================== VIEWS =====================
   renderAccount(V) {
-    const LBL = css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px');
+    const LBL = css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px');
     const VAL = css('font-family:\'JetBrains Mono\';font-size:17px;font-weight:600');
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>My account &amp; portfolios <span style={css('font-style:italic;color:#E2C588')}>— manage portfolios &amp; stats</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Account</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>My account &amp; portfolios <span style={css('font-style:italic;color:#7658E8')}>— manage portfolios &amp; stats</span></div></div>
 
-        <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(201,166,95,.14)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#E2C588', flex: 'none' }}>{V.avatarLetter}</div>
-          <div style={{ flex: 1, minWidth: 0 }}><div style={css('font-size:15px;color:#ECEAE3;font-weight:600')}>{V.accountName}</div><div style={css('font-size:12.5px;color:#9A9AA4')}>{V.userEmail || '—'}</div></div>
-          <div onClick={V.signOut} className="hv-deloutline" style={css('padding:10px 16px;border-radius:10px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:13px;font-weight:600;cursor:pointer;transition:.14s')}>Sign out</div>
+        <div style={css('display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:16px;background:linear-gradient(120deg,rgba(118,88,232,.12),rgba(49,35,73,.02));border:1px solid rgba(118,88,232,.22);margin-bottom:20px;animation:rise .5s .05s both')}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(118,88,232,.14)', border: '1px solid rgba(118,88,232,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Instrument Serif',serif", fontSize: 20, color: '#7658E8', flex: 'none' }}>{V.avatarLetter}</div>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={css('font-size:15px;color:#24202B;font-weight:600')}>{V.accountName}</div><div style={css('font-size:12.5px;color:#746E7D')}>{V.userEmail || '—'}</div></div>
+          <div onClick={V.signOut} className="hv-deloutline" style={css('padding:10px 16px;border-radius:10px;border:1px solid rgba(226,84,98,.4);color:#E25462;font-size:13px;font-weight:600;cursor:pointer;transition:.14s')}>Sign out</div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;animation:rise .5s .06s both')}>
-          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #E2C588')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#E2C588')}>{V.acctTotalEquity}</div></div>
-          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:2px solid #5FC08D')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:7px')}>Total Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.acctTotalNetColor }}>{V.acctTotalNet}</div></div>
+          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.07);border-top:2px solid #7658E8')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:7px')}>Total equity (all portfolios)</div><div style={css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600;color:#7658E8')}>{V.acctTotalEquity}</div></div>
+          <div className="liquid-glass" style={css('padding:16px 20px;border-radius:14px;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.07);border-top:2px solid #1C9B68')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:7px')}>Total Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.acctTotalNetColor }}>{V.acctTotalNet}</div></div>
         </div>
 
-        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>Add portfolio</div>
+        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#928B9B;margin-bottom:10px')}>Add portfolio</div>
         <div style={css('display:flex;gap:10px;margin-bottom:20px;animation:rise .5s .08s both')}>
-          <input value={V.newPortName} onChange={V.setNewPortName} onKeyDown={V.addPortKey} placeholder="Portfolio name, e.g. FTMO Challenge, Live, Demo" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;color:#ECEAE3;font-size:14px;outline:none')} />
-          <div onClick={V.addPortfolioNamed} className="hv-save rtm-press" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
+          <input value={V.newPortName} onChange={V.setNewPortName} onKeyDown={V.addPortKey} placeholder="Portfolio name, e.g. FTMO Challenge, Live, Demo" className="hv-focus" style={css('flex:1;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 14px;color:#24202B;font-size:14px;outline:none')} />
+          <div onClick={V.addPortfolioNamed} className="hv-save rtm-press" style={css('padding:12px 22px;border-radius:10px;background:linear-gradient(150deg,#7658E8,#6747D8);color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;transition:.15s')}>+ Add</div>
         </div>
 
-        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin-bottom:12px')}>All portfolios · click to view</div>
+        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#928B9B;margin-bottom:12px')}>All portfolios · click to view</div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
           {V.portfolioStats.map((p) => (
-            <div key={p.id} onClick={p.select} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.07)') }}>
+            <div key={p.id} onClick={p.select} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);cursor:pointer;transition:.18s'), border: '1px solid ' + (p.isCurrent ? 'rgba(118,88,232,.5)' : 'rgba(49,35,73,.07)') }}>
               <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px')}>
-                <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="Click to rename" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:4px 8px;outline:none')} />
-                {p.isCurrent && <span style={css('font-size:10px;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>Viewing</span>}
-                <span onClick={p.del} title="Delete portfolio" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;cursor:pointer;transition:.14s;flex:none')}>✕</span>
+                <input defaultValue={p.name} onClick={V.stop} onBlur={p.rename} title="Click to rename" className="hv-focus" style={css('flex:1;min-width:0;font-family:\'Instrument Serif\',serif;font-size:19px;color:#24202B;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.08);border-radius:7px;padding:4px 8px;outline:none')} />
+                {p.isCurrent && <span style={css('font-size:10px;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);padding:3px 9px;border-radius:6px;font-weight:700;flex:none')}>Viewing</span>}
+                <span onClick={p.del} title="Delete portfolio" className="hv-del" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.08);display:flex;align-items:center;justify-content:center;color:#928B9B;cursor:pointer;transition:.14s;flex:none')}>✕</span>
               </div>
               {/* ===== การจัดการเงิน (ฝาก/ถอน) ===== */}
-              <div className="liquid-glass" style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);padding:14px 15px;margin-bottom:14px')}>
+              <div className="liquid-glass" style={css('border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.06);padding:14px 15px;margin-bottom:14px')}>
                 <div style={css('display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px')}>
-                  <div><div style={LBL}>Starting capital ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:110px;font-family:\'JetBrains Mono\';font-size:15px;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;outline:none')} /></div>
-                  <div style={css('text-align:right')}><div style={LBL}>Current equity</div><div style={{ ...VAL, color: '#E2C588' }}>{p.equityStr}</div></div>
+                  <div><div style={LBL}>Starting capital ($)</div><input defaultValue={p.startBalance} onClick={V.stop} onBlur={p.setBalance} placeholder="0" className="hv-focus" style={css('width:110px;font-family:\'JetBrains Mono\';font-size:15px;color:#24202B;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:6px 10px;outline:none')} /></div>
+                  <div style={css('text-align:right')}><div style={LBL}>Current equity</div><div style={{ ...VAL, color: '#7658E8' }}>{p.equityStr}</div></div>
                 </div>
                 {/* breakdown */}
                 <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px')}>
-                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Total in</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#9A9AA4')}>{p.depositedStr}</div></div>
-                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Withdrawn</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.hasCashFlow && p.withdrawnStr !== '$0' ? '#DC6A63' : '#9A9AA4' }}>{p.withdrawnStr}</div></div>
-                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Net capital</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
+                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Total in</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#746E7D')}>{p.depositedStr}</div></div>
+                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Withdrawn</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.hasCashFlow && p.withdrawnStr !== '$0' ? '#E25462' : '#746E7D' }}>{p.withdrawnStr}</div></div>
+                  <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Net capital</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#24202B')}>{p.netCapStr}</div></div>
                 </div>
                 <div style={css('display:flex;gap:8px')}>
-                  <span onClick={(e) => { e.stopPropagation(); p.deposit(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>Deposit</span>
-                  <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>Withdraw</span>
+                  <span onClick={(e) => { e.stopPropagation(); p.deposit(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#1C9B68;background:rgba(28,155,104,.1);border:1px solid rgba(28,155,104,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>Deposit</span>
+                  <span onClick={(e) => { e.stopPropagation(); p.withdraw(); }} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#E25462;background:rgba(226,84,98,.1);border:1px solid rgba(226,84,98,.3);border-radius:8px;padding:8px;cursor:pointer;transition:.14s')}>Withdraw</span>
                 </div>
                 {p.movements.length > 0 && (
-                  <div style={css('margin-top:11px;border-top:1px solid rgba(255,255,255,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px')}>
+                  <div style={css('margin-top:11px;border-top:1px solid rgba(49,35,73,.06);padding-top:9px;display:flex;flex-direction:column;gap:5px')}>
                     {p.movements.slice(0, 3).map((m) => (
                       <div key={m.id} style={css('display:flex;align-items:center;justify-content:space-between;font-size:11.5px')}>
-                        <span style={css('color:#83838C;font-family:JetBrains Mono')}>{m.isW ? 'Withdraw' : 'Deposit'} · {m.date}</span>
-                        <span style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span><span onClick={m.del} title="Delete this entry" className="hv-deltext" style={css('color:#83838C;cursor:pointer')}>✕</span></span>
+                        <span style={css('color:#928B9B;font-family:JetBrains Mono')}>{m.isW ? 'Withdraw' : 'Deposit'} · {m.date}</span>
+                        <span style={css('display:flex;align-items:center;gap:8px')}><span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: m.isW ? '#E25462' : '#1C9B68' }}>{m.amtStr}</span><span onClick={m.del} title="Delete this entry" className="hv-deltext" style={css('color:#928B9B;cursor:pointer')}>✕</span></span>
                       </div>
                     ))}
-                    <span onClick={p.openTxns} className="hv-op" style={css('margin-top:3px;font-size:11.5px;color:#C9A65F;cursor:pointer;text-align:center')}>{p.txnCount > 3 ? ('View all ' + p.txnCount + ' →') : 'View full history →'}</span>
+                    <span onClick={p.openTxns} className="hv-op" style={css('margin-top:3px;font-size:11.5px;color:#6747D8;cursor:pointer;text-align:center')}>{p.txnCount > 3 ? ('View all ' + p.txnCount + ' →') : 'View full history →'}</span>
                   </div>
                 )}
               </div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:14px')}>
                 <div><div style={LBL}>Net P&amp;L</div><div style={{ ...VAL, color: p.netColor }}>{p.netStr}</div></div>
-                <div><div style={LBL}>Win rate</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.wr}%</div></div>
+                <div><div style={LBL}>Win rate</div><div style={{ ...VAL, color: '#24202B' }}>{p.wr}%</div></div>
                 <div><div style={LBL}>Avg R</div><div style={{ ...VAL, color: p.avgRColor }}>{p.avgRStr}</div></div>
-                <div><div style={LBL}>Trades</div><div style={{ ...VAL, color: '#ECEAE3' }}>{p.trades}</div></div>
+                <div><div style={LBL}>Trades</div><div style={{ ...VAL, color: '#24202B' }}>{p.trades}</div></div>
               </div>
             </div>
           ))}
         </div>
 
         {/* ===== สำรองข้อมูล & จัดการพื้นที่ ===== */}
-        <div className="liquid-glass" style={css('margin-top:22px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .12s both')}>
+        <div className="liquid-glass" style={css('margin-top:22px;padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .12s both')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:6px')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Backup &amp; storage</div>
-            <span style={css('font-size:11px;color:#83838C;font-family:JetBrains Mono')}>Last backup: {V.lastBackupStr}</span>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Backup &amp; storage</div>
+            <span style={css('font-size:11px;color:#928B9B;font-family:JetBrains Mono')}>Last backup: {V.lastBackupStr}</span>
           </div>
-          <div style={css('font-size:12.5px;color:#9A9AA4;line-height:1.6;margin-bottom:16px')}>Download all your data to keep safe (restorable) · when storage runs low, “archive old trades” to free image space — their P&amp;L is folded in so <b style={css('color:#E2C588')}>the milestone and Growth curve stay continuous, never reset</b></div>
+          <div style={css('font-size:12.5px;color:#746E7D;line-height:1.6;margin-bottom:16px')}>Download all your data to keep safe (restorable) · when storage runs low, “archive old trades” to free image space — their P&amp;L is folded in so <b style={css('color:#7658E8')}>the milestone and Growth curve stay continuous, never reset</b></div>
           <div style={css('display:flex;flex-wrap:wrap;gap:10px;align-items:center')}>
-            <span onClick={V.backupJournal} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);transition:.14s')}>⤓ Back up (.json)</span>
-            <label className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);transition:.14s')}>⤒ Restore from file<input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.restoreJournal(f); e.target.value = ''; }} /></label>
+            <span onClick={V.backupJournal} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);transition:.14s')}>⤓ Back up (.json)</span>
+            <label className="hv-lift" style={css('font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;cursor:pointer;color:#24202B;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.14);transition:.14s')}>⤒ Restore from file<input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.restoreJournal(f); e.target.value = ''; }} /></label>
             <div style={css('flex:1')}></div>
-            <span style={css('font-size:12px;color:#9A9AA4')}>Archive trades older than</span>
+            <span style={css('font-size:12px;color:#746E7D')}>Archive trades older than</span>
             {[6, 12, 24].map((mo) => (
-              <span key={mo} onClick={() => { if (window.confirm('Back up before archiving — done already? (OK = continue)')) V.archiveOldTrades(mo); }} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;color:#DC6A63;background:rgba(220,106,99,.08);border:1px solid rgba(220,106,99,.28);transition:.14s')}>{mo === 24 ? '2 yr' : mo + ' mo'}</span>
+              <span key={mo} onClick={() => { if (window.confirm('Back up before archiving — done already? (OK = continue)')) V.archiveOldTrades(mo); }} className="hv-lift" style={css('font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;color:#E25462;background:rgba(226,84,98,.08);border:1px solid rgba(226,84,98,.28);transition:.14s')}>{mo === 24 ? '2 yr' : mo + ' mo'}</span>
             ))}
           </div>
         </div>
@@ -3553,98 +3587,182 @@ class App extends React.Component {
     );
   }
 
+  renderPremiumDashboard(V) {
+    const stages = [
+      { n: '01', title: 'Backtest', value: V.backtestClosed + ' samples', note: 'ค้นหา pattern และกติกา', color: '#4D7FE8', click: V.goBacktest, live: V.backtestClosed > 0 },
+      { n: '02', title: 'Prove the edge', value: V.readySetups + ' setup ready', note: 'Training + holdout sample', color: '#7658E8', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
+      { n: '03', title: 'Forward test', value: V.forwardClosed + ' samples', note: 'ยืนยันผล out-of-sample', color: '#B64987', click: V.goForward, live: V.readySetups > 0 },
+      { n: '04', title: 'Scale with proof', value: V.confirmedSetups + ' confirmed', note: 'เพิ่มขนาดเมื่อหลักฐานพร้อม', color: '#1C9B68', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
+    ];
+    const kpis = [
+      { label: V.isBacktestMode ? 'Closed samples' : 'Closed trades', value: String(V.totalClosed), note: 'sample size', color: '#7658E8' },
+      { label: 'Average R', value: V.kR, note: 'expectancy per trade', color: '#7658E8' },
+      { label: 'Profit factor', value: V.kPf, note: 'gross win ÷ gross loss', color: '#4D7FE8' },
+      { label: 'Max drawdown', value: V.kDD, note: V.isBacktestMode ? 'from R curve' : 'from equity peak', color: '#E25462' },
+    ];
+    return (
+      <div className="rtm-page rtm-premium-dashboard">
+        <section className="rtm-premium-hero">
+          <div className="rtm-hero-copy">
+            <div className="rtm-hero-kicker"><span></span> EVIDENCE-FIRST TRADING</div>
+            <h1>Build an edge<br/>you can <em>trust.</em></h1>
+            <p>Backtest เพื่อค้นหากติกาที่ทำซ้ำได้ จากนั้น freeze setup แล้วพิสูจน์ด้วย Forward test ก่อนนำไปเพิ่มขนาดจริง</p>
+            <div className="rtm-hero-actions">
+              <button onClick={V.openNew} className="rtm-btn rtm-btn-white">+ Log a sample</button>
+              <button onClick={V.goAna} className="rtm-btn rtm-btn-ghost">Open Edge Lab <span>→</span></button>
+            </div>
+            <div className="rtm-hero-foot"><span>✓ No broker lock-in</span><span>✓ Free stack</span><span>✓ Your data stays portable</span></div>
+          </div>
+          <div onClick={V.focusAction.click} className="rtm-next-card rtm-press">
+            <div className="rtm-next-top"><span className="rtm-next-pulse" style={{ background: V.focusAction.color }}></span><span>{V.focusAction.eyebrow}</span></div>
+            <h2>{V.focusAction.title}</h2>
+            <p>{V.focusAction.body}</p>
+            <div className="rtm-next-action"><span>{V.focusAction.cta}</span><b>↗</b></div>
+            <div className="rtm-next-orb"></div>
+          </div>
+        </section>
+
+        <section className="rtm-flow-surface">
+          <div className="rtm-section-head"><div><span>YOUR RESEARCH LOOP</span><h2>One system. Four clear stages.</h2></div><p>แต่ละ phase แยกข้อมูลออกจากกันเพื่อไม่ให้ Backtest ปนกับผลเงินจริง</p></div>
+          <div className="rtm-flow-grid">
+            {stages.map((s, i) => (
+              <div key={s.n} onClick={s.click} className={'rtm-flow-step rtm-press' + (s.live ? ' live' : '')}>
+                <div className="rtm-flow-meta"><span style={{ color: s.color }}>{s.n}</span><i style={{ background: s.live ? s.color : '#D9D4E0' }}></i></div>
+                <h3>{s.title}</h3><b style={{ color: s.color }}>{s.value}</b><p>{s.note}</p>
+                {i < stages.length - 1 && <div className="rtm-flow-arrow">→</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="rtm-view-strip">
+          <div><span className="rtm-eyebrow">CURRENT LENS</span><b>{V.modeLabel}</b><small>แสดงสถิติจาก phase นี้เท่านั้น</small></div>
+          <div className="rtm-mode-toggle"><button onClick={V.selectBacktest} className={V.isBacktestMode ? 'active' : ''}>Backtest</button><button onClick={V.selectForward} className={!V.isBacktestMode ? 'active' : ''}>Forward test</button></div>
+        </div>
+
+        <section className="rtm-premium-kpis">
+          {kpis.map((m) => <div key={m.label} className="rtm-premium-kpi"><div className="rtm-kpi-label">{m.label}</div><div className="rtm-kpi-value" style={{ color: m.color }}><CountUp value={m.value}/></div><div className="rtm-kpi-note">{m.note}</div></div>)}
+        </section>
+
+        <section className="rtm-main-insights">
+          <div className="rtm-white-surface rtm-growth-panel">
+            <div className="rtm-panel-head"><div><span>PERFORMANCE</span><h2>Growth curve</h2><p>Cumulative P&amp;L · breakeven = 0</p></div><div className="rtm-range-pills">{['ALL','3M','1M'].map(r => <button key={r} onClick={() => V.setEqRange(r)} className={V.eqRange === r ? 'active' : ''}>{r}</button>)}</div></div>
+            <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY}/>
+            <div className="rtm-chart-foot"><span><i style={{ background:'#7658E8' }}></i>{V.totalClosed} closed</span><span>Net <b style={{ color: V.netProfitColor }}>{V.netProfitStr}</b></span><span>Data quality <b>{V.selectedQuality}</b></span></div>
+          </div>
+          <div className="rtm-white-surface rtm-proof-panel">
+            <div className="rtm-panel-head"><div><span>SYSTEM EVIDENCE</span><h2>What the data says</h2></div><button onClick={V.goAna}>Full analysis →</button></div>
+            <div className="rtm-proof-score"><div className="rtm-proof-ring" style={{ background: V.donut }}><span>{V.kWin}</span></div><div><small>Win rate</small><strong>{V.winsN}W · {V.lossesN}L</strong><p>{V.totalClosed} closed samples</p></div></div>
+            <div className="rtm-proof-list">
+              <div><span>Expectancy / trade</span><b>{V.expectancyStr}</b></div>
+              <div><span>Setups ready for forward</span><b>{V.readySetups}</b></div>
+              <div><span>Confirmed edge</span><b>{V.confirmedSetups}</b></div>
+              <div><span>Avg captured move</span><b>{V.edge.avgCapture}</b></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rtm-goal-surface">
+          <div><span>FORWARD GOAL · REAL P&amp;L ONLY</span><h2>{V.milestoneEquity} <small>of {V.goalStr}</small></h2></div>
+          <div className="rtm-goal-track"><div style={{ width: V.milestoneWidth }}></div><span>Backtest never changes this goal</span></div>
+          <div className="rtm-goal-value"><b>{V.milestonePct}</b>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus/> : <button onClick={V.startGoal}>Edit target</button>}</div>
+        </section>
+      </div>
+    );
+  }
+
   renderDashboard(V) {
     return (
       <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div className="rtm-system-map rtm-insight-hero liquid-glass" style={css('position:relative;overflow:hidden;padding:30px 30px 24px;border-radius:22px;background:linear-gradient(125deg,rgba(108,77,255,.13),rgba(255,255,255,.018) 46%,rgba(236,72,153,.09));border:1px solid rgba(171,139,255,.25);box-shadow:0 30px 90px -44px rgba(125,88,255,.88);animation:rise .55s both')}>
+        <div className="rtm-system-map rtm-insight-hero liquid-glass" style={css('position:relative;overflow:hidden;padding:30px 30px 24px;border-radius:22px;background:linear-gradient(125deg,rgba(108,77,255,.13),rgba(49,35,73,.018) 46%,rgba(236,72,153,.09));border:1px solid rgba(171,139,255,.25);box-shadow:0 30px 90px -44px rgba(125,88,255,.88);animation:rise .55s both')}>
           <div className="rtm-mesh rtm-mesh-a"></div><div className="rtm-mesh rtm-mesh-b"></div>
           <div className="rtm-hero-head" style={css('position:relative;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);align-items:stretch;gap:28px;margin-bottom:24px')}>
             <div style={css('display:flex;flex-direction:column;justify-content:center;min-height:178px')}>
-              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px')}><span className="rtm-live-pip"></span><span style={css('font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#BFAEFF')}>Evidence-first trade journal</span></div>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:clamp(36px,4.3vw,58px);color:#FAF8FF;line-height:.98;letter-spacing:-.025em;max-width:760px')}>See the edge.<br/><span className="rtm-gradient-text">Remove the guesswork.</span></div>
-              <div style={css('font-size:13px;color:#AAA5B5;margin-top:15px;line-height:1.65;max-width:660px')}>ค้นหา setup จาก Backtest แยกตาม ruleset version แล้วพิสูจน์ซ้ำด้วย Forward test — ทุกการตัดสินใจอิง R, drawdown และหลักฐาน out-of-sample</div>
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px')}><span className="rtm-live-pip"></span><span style={css('font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#8B6CF0')}>Evidence-first trade journal</span></div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:clamp(36px,4.3vw,58px);color:#24202B;line-height:.98;letter-spacing:-.025em;max-width:760px')}>See the edge.<br/><span className="rtm-gradient-text">Remove the guesswork.</span></div>
+              <div style={css('font-size:13px;color:#746E7D;margin-top:15px;line-height:1.65;max-width:660px')}>ค้นหา setup จาก Backtest แยกตาม ruleset version แล้วพิสูจน์ซ้ำด้วย Forward test — ทุกการตัดสินใจอิง R, drawdown และหลักฐาน out-of-sample</div>
             </div>
             <div onClick={V.focusAction.click} className="rtm-focus-card rtm-press" style={{ ...css('position:relative;padding:20px 21px;border-radius:17px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:rgba(8,7,14,.7);backdrop-filter:blur(18px);transition:.2s'), border: '1px solid ' + V.focusAction.color + '55' }}>
               <div className="rtm-focus-glow" style={{ background: 'radial-gradient(circle,' + V.focusAction.color + '42,transparent 68%)' }}></div>
-              <div style={css('position:relative')}><div style={{ ...css('font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px'), color: V.focusAction.color }}>{V.focusAction.eyebrow}</div><div style={css('font-family:Instrument Serif;font-size:24px;line-height:1.05;color:#F5F2FA;margin-bottom:10px')}>{V.focusAction.title}</div><div style={css('font-size:11.5px;color:#8F8A99;line-height:1.6')}>{V.focusAction.body}</div></div>
+              <div style={css('position:relative')}><div style={{ ...css('font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px'), color: V.focusAction.color }}>{V.focusAction.eyebrow}</div><div style={css('font-family:Instrument Serif;font-size:24px;line-height:1.05;color:#24202B;margin-bottom:10px')}>{V.focusAction.title}</div><div style={css('font-size:11.5px;color:#8F8A99;line-height:1.6')}>{V.focusAction.body}</div></div>
               <div style={css('position:relative;display:flex;align-items:center;justify-content:space-between;margin-top:17px')}><span style={{ ...css('font-size:11.5px;font-weight:700'), color: V.focusAction.color }}>{V.focusAction.cta}</span><span className="rtm-arrow">→</span></div>
             </div>
           </div>
           <div style={css('position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
             <div className="rtm-flow-line"></div>
             {[
-              { n: '01', t: 'Backtest', v: V.backtestClosed + ' samples', s: 'ค้นหา pattern และกติกา', c: '#7BA7D9', click: V.goBacktest, live: V.backtestClosed > 0 },
-              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: 'Training + chronological holdout', c: '#E2C588', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
-              { n: '03', t: 'Forward Test', v: V.forwardClosed + ' samples', s: 'ยืนยันผลแบบ out-of-sample', c: '#9B8CFF', click: V.goForward, live: V.readySetups > 0 },
-              { n: '04', t: 'Trading goal', v: V.milestonePct, s: V.confirmedSetups + ' confirmed edge · Forward only', c: '#5FC08D', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
+              { n: '01', t: 'Backtest', v: V.backtestClosed + ' samples', s: 'ค้นหา pattern และกติกา', c: '#4D7FE8', click: V.goBacktest, live: V.backtestClosed > 0 },
+              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: 'Training + chronological holdout', c: '#7658E8', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
+              { n: '03', t: 'Forward Test', v: V.forwardClosed + ' samples', s: 'ยืนยันผลแบบ out-of-sample', c: '#8B6CF0', click: V.goForward, live: V.readySetups > 0 },
+              { n: '04', t: 'Trading goal', v: V.milestonePct, s: V.confirmedSetups + ' confirmed edge · Forward only', c: '#1C9B68', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
             ].map((x, i) => (
-              <div key={x.n} onClick={x.click} className={'rtm-stage-card rtm-press' + (x.live ? ' is-live' : '')} style={{ ...css('position:relative;z-index:1;padding:15px 15px 14px;border-radius:13px;cursor:pointer;background:rgba(9,9,12,.78);transition:.18s'), border: '1px solid ' + (x.live ? x.c + '66' : 'rgba(255,255,255,.08)'), animationDelay: (i * .08) + 's' }}>
+              <div key={x.n} onClick={x.click} className={'rtm-stage-card rtm-press' + (x.live ? ' is-live' : '')} style={{ ...css('position:relative;z-index:1;padding:15px 15px 14px;border-radius:13px;cursor:pointer;background:rgba(9,9,12,.78);transition:.18s'), border: '1px solid ' + (x.live ? x.c + '66' : 'rgba(49,35,73,.08)'), animationDelay: (i * .08) + 's' }}>
                 <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}><span style={{ ...css('font-family:JetBrains Mono;font-size:10px;letter-spacing:.08em'), color: x.c }}>{x.n}</span><span className={x.live ? 'rtm-stage-dot' : ''} style={{ width: 7, height: 7, borderRadius: '50%', background: x.live ? x.c : '#3d3d45', boxShadow: x.live ? ('0 0 15px ' + x.c) : 'none' }}></span></div>
-                <div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;margin-bottom:5px')}>{x.t}</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;margin-bottom:7px'), color: x.c }}>{x.v}</div><div style={css('font-size:10.5px;color:#71717a;line-height:1.45')}>{x.s}</div>
+                <div style={css('font-size:13.5px;font-weight:700;color:#24202B;margin-bottom:5px')}>{x.t}</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;margin-bottom:7px'), color: x.c }}>{x.v}</div><div style={css('font-size:10.5px;color:#918B99;line-height:1.45')}>{x.s}</div>
               </div>
             ))}
           </div>
         </div>
 
         <div style={css('display:flex;align-items:center;justify-content:space-between;gap:14px')}>
-          <div style={css('font-size:11.5px;color:#83838C')}>Viewing metrics from <b style={css('color:#ECEAE3')}>{V.modeLabel}</b> data only</div>
+          <div style={css('font-size:11.5px;color:#928B9B')}>Viewing metrics from <b style={css('color:#24202B')}>{V.modeLabel}</b> data only</div>
           <div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}>
-            <span onClick={V.selectBacktest} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? 'linear-gradient(180deg,#A9C9EB,#7BA7D9)' : 'transparent' }}>Backtest</span>
-            <span onClick={V.selectForward} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? 'linear-gradient(180deg,#8FD3B0,#5FC08D)' : 'transparent' }}>Forward</span>
+            <span onClick={V.selectBacktest} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: V.isBacktestMode ? '#071018' : '#928B9B', background: V.isBacktestMode ? 'linear-gradient(180deg,#5E86D6,#4D7FE8)' : 'transparent' }}>Backtest</span>
+            <span onClick={V.selectForward} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: !V.isBacktestMode ? '#07140e' : '#928B9B', background: !V.isBacktestMode ? 'linear-gradient(180deg,#1C9B68,#1C9B68)' : 'transparent' }}>Forward</span>
           </div>
         </div>
 
         <div className="rtm-kpi-grid" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:11px')}>
           {[
-            { l: V.isBacktestMode ? 'Closed samples' : 'Closed trades', v: String(V.totalClosed), c: '#BFAEFF' },
-            { l: 'Avg R', v: V.kR, c: '#9B8CFF' },
-            { l: 'Profit factor', v: V.kPf, c: '#7BA7D9' },
-            { l: 'Max drawdown', v: V.kDD, c: '#DC6A63' },
+            { l: V.isBacktestMode ? 'Closed samples' : 'Closed trades', v: String(V.totalClosed), c: '#8B6CF0' },
+            { l: 'Avg R', v: V.kR, c: '#8B6CF0' },
+            { l: 'Profit factor', v: V.kPf, c: '#4D7FE8' },
+            { l: 'Max drawdown', v: V.kDD, c: '#E25462' },
           ].map((m, i) => (
-            <div key={m.l} className="rtm-kpi-card liquid-glass" style={{ ...css('position:relative;overflow:hidden;padding:17px 18px;border-radius:14px;background:linear-gradient(180deg,' + m.c + '14,rgba(255,255,255,.014));border:1px solid rgba(255,255,255,.075);animation:rise .5s both;transition:.18s'), animationDelay: (.04 + i * .05) + 's' }}><div className="rtm-kpi-line" style={{ background: m.c }}></div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#85808F;margin-bottom:9px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:650'), color: m.c }}><CountUp value={m.v} /></div></div>
+            <div key={m.l} className="rtm-kpi-card liquid-glass" style={{ ...css('position:relative;overflow:hidden;padding:17px 18px;border-radius:14px;background:linear-gradient(180deg,' + m.c + '14,rgba(49,35,73,.014));border:1px solid rgba(49,35,73,.075);animation:rise .5s both;transition:.18s'), animationDelay: (.04 + i * .05) + 's' }}><div className="rtm-kpi-line" style={{ background: m.c }}></div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#85808F;margin-bottom:9px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:650'), color: m.c }}><CountUp value={m.v} /></div></div>
           ))}
         </div>
 
-        <div className="liquid-glass" style={css('display:grid;grid-template-columns:220px 1fr 120px;align-items:center;gap:20px;padding:16px 20px;border-radius:15px;background:linear-gradient(105deg,rgba(95,192,141,.06),rgba(201,166,95,.06));border:1px solid rgba(201,166,95,.16);animation:rise .5s .26s both')}>
-          <div><div style={css('font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward goal · real P&amp;L only</div><div style={css('font-family:Instrument Serif;font-size:20px;color:#ECEAE3')}>{V.milestoneEquity} <span style={css('font-family:Plus Jakarta Sans;font-size:10.5px;color:#83838C')}>of {V.goalStr}</span></div></div>
-          <div><div style={css('height:8px;border-radius:99px;background:rgba(0,0,0,.38);overflow:hidden;position:relative')}><div className="rtm-progress" style={{ height: '100%', borderRadius: 99, width: V.milestoneWidth, background: 'linear-gradient(90deg,#5FC08D,#E2C588)', transition: 'width .8s ease' }}></div></div><div style={css('display:flex;justify-content:space-between;font-size:9.5px;color:#5f5f67;margin-top:6px')}><span>Backtest excluded</span><span>{V.confirmedSetups} edge confirmed</span></div></div>
-          <div style={css('text-align:right')}><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:700;color:#E2C588')}>{V.milestonePct}</div>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={css('width:110px;margin-top:4px;background:rgba(0,0,0,.35);border:1px solid rgba(201,166,95,.45);border-radius:7px;padding:5px 7px;color:#ECEAE3;font-size:11px;font-family:JetBrains Mono;outline:none;text-align:right')} /> : <span onClick={V.startGoal} className="hv-op" style={css('font-size:9.5px;color:#83838C;cursor:pointer')}>Edit target</span>}</div>
+        <div className="liquid-glass" style={css('display:grid;grid-template-columns:220px 1fr 120px;align-items:center;gap:20px;padding:16px 20px;border-radius:15px;background:linear-gradient(105deg,rgba(28,155,104,.06),rgba(118,88,232,.06));border:1px solid rgba(118,88,232,.16);animation:rise .5s .26s both')}>
+          <div><div style={css('font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#1C9B68;margin-bottom:5px')}>Forward goal · real P&amp;L only</div><div style={css('font-family:Instrument Serif;font-size:20px;color:#24202B')}>{V.milestoneEquity} <span style={css('font-family:Plus Jakarta Sans;font-size:10.5px;color:#928B9B')}>of {V.goalStr}</span></div></div>
+          <div><div style={css('height:8px;border-radius:99px;background:rgba(0,0,0,.38);overflow:hidden;position:relative')}><div className="rtm-progress" style={{ height: '100%', borderRadius: 99, width: V.milestoneWidth, background: 'linear-gradient(90deg,#1C9B68,#7658E8)', transition: 'width .8s ease' }}></div></div><div style={css('display:flex;justify-content:space-between;font-size:9.5px;color:#5f5f67;margin-top:6px')}><span>Backtest excluded</span><span>{V.confirmedSetups} edge confirmed</span></div></div>
+          <div style={css('text-align:right')}><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:700;color:#7658E8')}>{V.milestonePct}</div>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={css('width:110px;margin-top:4px;background:rgba(0,0,0,.35);border:1px solid rgba(118,88,232,.45);border-radius:7px;padding:5px 7px;color:#24202B;font-size:11px;font-family:JetBrains Mono;outline:none;text-align:right')} /> : <span onClick={V.startGoal} className="hv-op" style={css('font-size:9.5px;color:#928B9B;cursor:pointer')}>Edit target</span>}</div>
         </div>
 
         <div className="rtm-dashboard-grid" style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .28s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Growth <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#83838C;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .55s .28s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Growth <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#928B9B;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
               {['ALL', '3M', '1M'].map((rg) => (
-                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#9A9AA4;padding:5px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);cursor:pointer')}>{rg}</span>
+                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#746E7D;padding:5px 11px;border-radius:7px;border:1px solid rgba(49,35,73,.1);cursor:pointer')}>{rg}</span>
               ))}
             </div></div>
             <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
             {V.isBacktestMode ? (
-              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Closed samples</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#A9C9EB')}>{V.totalClosed}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative result</div><div style={{ ...css('font-family:JetBrains Mono;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Avg R</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#9B8CFF')}>{V.kR}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Data quality</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#E2C588')}>{V.selectedQuality}</div></div>
+              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(49,35,73,.06)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Closed samples</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#5E86D6')}>{V.totalClosed}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Cumulative result</div><div style={{ ...css('font-family:JetBrains Mono;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Avg R</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#8B6CF0')}>{V.kR}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Data quality</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#7658E8')}>{V.selectedQuality}</div></div>
               </div>
             ) : (
-              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)')}>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#9A9AA4')}>{V.capitalInStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#DC6A63' : '#7BA7D9' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#E2C588')}>{V.balanceStr}</div></div>
+              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(49,35,73,.06)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#746E7D')}>{V.capitalInStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#E25462' : '#4D7FE8' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
+                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#7658E8')}>{V.balanceStr}</div></div>
               </div>
             )}
           </div>
           <div style={css('display:flex;flex-direction:column;gap:16px')}>
-            <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
-              <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#5FC08D')}><CountUp value={V.kWin} /></span><span style={css('font-size:10px;color:#83838C;letter-spacing:.1em')}>WIN RATE</span></div></div>
-              <div><div style={css('font-size:11px;color:#83838C;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#5FC08D;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#DC6A63;font-family:JetBrains Mono')}>● {V.lossesN} losses</div>{V.archNote ? <div style={css('font-size:10.5px;color:#7BA7D9;margin-top:7px;line-height:1.4')}>{V.archNote}</div> : null}</div>
+            <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
+              <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#1C9B68')}><CountUp value={V.kWin} /></span><span style={css('font-size:10px;color:#928B9B;letter-spacing:.1em')}>WIN RATE</span></div></div>
+              <div><div style={css('font-size:11px;color:#928B9B;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#1C9B68;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#E25462;font-family:JetBrains Mono')}>● {V.lossesN} losses</div>{V.archNote ? <div style={css('font-size:10.5px;color:#4D7FE8;margin-top:7px;line-height:1.4')}>{V.archNote}</div> : null}</div>
             </div>
-            <div className="hv-brd-gold liquid-glass" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .55s .36s both;transition:.18s')}>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>By setup</div><span style={css('font-size:11px;color:#83838C')}>net P&amp;L</span></div>
+            <div className="hv-brd-gold liquid-glass" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .55s .36s both;transition:.18s')}>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>By setup</div><span style={css('font-size:11px;color:#928B9B')}>net P&amp;L</span></div>
               <div style={css('display:flex;flex-direction:column;gap:11px')}>
                 {V.setupBars.map((s, i) => (
-                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
+                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#24202B')}>{s.name} <span style={css('color:#928B9B;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
                 ))}
               </div>
             </div>
@@ -3652,30 +3770,30 @@ class App extends React.Component {
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
-          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);animation:rise .55s .4s both;background:rgba(255,255,255,.02);padding:20px 22px')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Edge snapshot <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Analytics →</span></div>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);animation:rise .55s .4s both;background:rgba(49,35,73,.02);padding:20px 22px')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Edge snapshot <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#6747D8;cursor:pointer')}>Analytics →</span></div>
             <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
               {[
-                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588', s: 'avg $ per trade' },
-                { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9', s: 'gross win ÷ loss' },
-                { l: 'Green days', v: V.consistencyStr, c: '#5FC08D', s: 'days in profit' },
+                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#7658E8', s: 'avg $ per trade' },
+                { l: 'Profit factor', v: V.anaPf, c: '#4D7FE8', s: 'gross win ÷ loss' },
+                { l: 'Green days', v: V.consistencyStr, c: '#1C9B68', s: 'days in profit' },
                 { l: 'Avg MFE', v: V.edge.avgMfe, c: V.edge.avgMfeColor, s: 'how far price runs per trade' },
                 { l: 'Avg captured', v: V.edge.avgCapture, c: V.edge.avgCaptureColor, s: 'of the best move, on winners' },
                 { l: 'Avg TF aligned', v: V.edge.avgAlign, c: '#B79CE8', s: 'timeframes in agreement' },
               ].map((m, i) => (
-                <div key={i} className="liquid-glass" style={css('padding:14px 15px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '12,rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06);border-top:2px solid ' + m.c)}>
-                  <div style={css('font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:8px')}>{m.l}</div>
+                <div key={i} className="liquid-glass" style={css('padding:14px 15px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '12,rgba(49,35,73,.01));border:1px solid rgba(49,35,73,.06);border-top:2px solid ' + m.c)}>
+                  <div style={css('font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#928B9B;margin-bottom:8px')}>{m.l}</div>
                   <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: m.c }}>{m.v}</div>
-                  <div style={css('font-size:10px;color:#6a6a72;margin-top:7px;line-height:1.35')}>{m.s}</div>
+                  <div style={css('font-size:10px;color:#9A93A1;margin-top:7px;line-height:1.35')}>{m.s}</div>
                 </div>
               ))}
             </div>
-            {(!V.edge.heatReady && !V.edge.capReady) && <div style={css('font-size:11.5px;color:#6a6a72;margin-top:14px;line-height:1.5')}>Fill <b style={css('color:#9A9AA4')}>MFE</b> (how far price ran) on your trades in the log modal to unlock the capture edge metrics.</div>}
+            {(!V.edge.heatReady && !V.edge.capReady) && <div style={css('font-size:11.5px;color:#9A93A1;margin-top:14px;line-height:1.5')}>Fill <b style={css('color:#746E7D')}>MFE</b> (how far price ran) on your trades in the log modal to unlock the capture edge metrics.</div>}
           </div>
-          <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#C9A65F;cursor:pointer')}>Calendar →</span></div>
+          <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.02);border:1px solid rgba(49,35,73,.07);animation:rise .55s .44s both')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#6747D8;cursor:pointer')}>Calendar →</span></div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
-              {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
+              {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#928B9B' }}>{d}</div>))}
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px')}>
               {V.heat.map((d, i) => (
@@ -3692,87 +3810,90 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.calMonthShort}</span><Sel value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;color:#ECEAE3;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</Sel></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>Today</span></div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Trading calendar</div><div style={css('display:flex;align-items:center;gap:12px')}><div onClick={V.calPrev} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(49,35,73,.12);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg></div><div style={css('display:flex;align-items:center;gap:10px;min-width:230px;justify-content:center')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>{V.calMonthShort}</span><Sel value={V.calYearNum} onChange={V.setCalYear} className="hv-focus" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.14);border-radius:8px;padding:6px 10px;color:#24202B;font-size:16px;font-family:JetBrains Mono;outline:none;cursor:pointer')}>{V.calYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}</Sel></div><div onClick={V.calNext} className="hv-close" style={css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(49,35,73,.12);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg></div><span onClick={V.calToday} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;color:#7658E8;background:rgba(118,88,232,.1);border:1px solid rgba(118,88,232,.3)')}>Today</span></div></div>
           <div style={css('display:flex;align-items:center;gap:16px')}>
-            <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#83838C;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
+            <div style={css('text-align:right')}><div style={css('font-size:10.5px;color:#928B9B;letter-spacing:.1em;text-transform:uppercase')}>Month P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: V.monthColor }}>{V.monthPnl}</div></div>
           </div>
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 240px;gap:16px;animation:rise .5s .08s both')}>
-          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);padding:16px')}>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02);padding:16px')}>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:10px')}>
-              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase'), color: i >= 5 ? '#6a5f48' : '#83838C' }}>{d}</div>))}
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase'), color: i >= 5 ? '#6a5f48' : '#928B9B' }}>{d}</div>))}
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:8px')}>
               {V.calDays.map((d, i) => (
                 <div key={i} onClick={d.click || undefined} className={d.cursor === 'pointer' ? 'hv-day' : undefined} style={{ ...css('aspect-ratio:1.05;border-radius:10px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-between;transition:.14s'), background: d.bg, border: d.border, cursor: d.cursor }}>
                   <div style={css('display:flex;justify-content:space-between;align-items:center')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: d.dayColor }}>{d.day}</span><span style={{ ...css('font-size:8px'), color: d.dotColor }}>{d.dot}</span></div>
-                  <div><div style={{ ...css('font-size:12.5px;font-family:JetBrains Mono;font-weight:600'), color: d.fg }}>{d.pnl}</div><div style={css('font-size:10px;color:#83838C')}>{d.trades}</div></div>
+                  <div><div style={{ ...css('font-size:12.5px;font-family:JetBrains Mono;font-weight:600'), color: d.fg }}>{d.pnl}</div><div style={css('font-size:10px;color:#928B9B')}>{d.trades}</div></div>
                 </div>
               ))}
             </div>
           </div>
           <div style={css('display:flex;flex-direction:column;gap:10px')}>
-            <div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>Weekly</div>
+            <div style={css('font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#928B9B;margin-bottom:2px')}>Weekly</div>
             {V.weeks.map((w, i) => (
-              <div key={i} className="hv-brd-gold liquid-glass" style={css('padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);transition:.16s')}><div style={css('font-size:11px;color:#9A9AA4;margin-bottom:5px')}>{w.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:18px;font-weight:600'), color: w.color }}>{w.pnl}</div><div style={css('font-size:10.5px;color:#83838C;margin-top:3px')}>{w.meta}</div></div>
+              <div key={i} className="hv-brd-gold liquid-glass" style={css('padding:14px 16px;border-radius:13px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);transition:.16s')}><div style={css('font-size:11px;color:#746E7D;margin-bottom:5px')}>{w.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:18px;font-weight:600'), color: w.color }}>{w.pnl}</div><div style={css('font-size:10.5px;color:#928B9B;margin-top:3px')}>{w.meta}</div></div>
             ))}
           </div>
         </div>
-        <div style={css('margin-top:14px;font-size:12px;color:#83838C;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" strokeLinecap="round"/></svg>Click a day with trades to see all its orders</div>
+        <div style={css('margin-top:14px;font-size:12px;color:#928B9B;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6747D8" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" strokeLinecap="round"/></svg>Click a day with trades to see all its orders</div>
       </div>
     );
   }
 
   renderTradeLog(V) {
-    // one wide row per order (horizontally scrollable) — full overview at a glance
-    // Header cells, grid tracks and row cells are generated from one list: they can never drift
-    // apart and silently put a value under the wrong heading.
+    // Default to a compact decision view. Detailed execution columns are revealed together
+    // with analysis tools, keeping 1,000+ trade journals readable instead of permanently wide.
+    const expanded = V.logToolsOpen;
     const PORT_COL = 'minmax(120px,1.05fr)';
-    const gcols = ['128px', '92px', '70px', 'minmax(92px,1fr)', '46px']
+    const compactCols = ['118px', 'minmax(120px,1.15fr)', '60px']
       .concat(V.showPort ? [PORT_COL] : [])
-      .concat(['minmax(84px,1fr)', '70px', 'minmax(100px,1.1fr)', '50px', 'minmax(108px,1.2fr)', '50px', '60px', '68px', '56px', '86px'])
-      .join(' ');
-    const gminw = V.showPort ? 1632 : 1500;
+      .concat(['minmax(110px,1fr)', '92px', '72px', '94px']);
+    const detailCols = ['128px', '92px', '70px', 'minmax(92px,1fr)', '46px']
+      .concat(V.showPort ? [PORT_COL] : [])
+      .concat(['minmax(84px,1fr)', '70px', 'minmax(100px,1.1fr)', '50px', 'minmax(108px,1.2fr)', '50px', '60px', '68px', '56px', '86px']);
+    const gcols = (expanded ? detailCols : compactCols).join(' ');
+    const gminw = expanded ? (V.showPort ? 1632 : 1500) : (V.showPort ? 930 : 790);
     const anaCell = (val, color) => (
       <span title={val || ''} style={{ ...css('font-size:11px;font-family:JetBrains Mono;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: val ? color : '#5a5a63' }}>{val || '—'}</span>
     );
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>{V.journalEyebrow}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.journalTitle} <span style={css('font-size:15px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} samples</span></div><div style={css('font-size:11.5px;color:#71717a;margin-top:4px')}>{V.journalSubtitle}</div></div>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>{V.journalEyebrow}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>{V.journalTitle} <span style={css('font-size:15px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>{V.tradeCount} samples</span></div><div style={css('font-size:11.5px;color:#918B99;margin-top:4px')}>{V.journalSubtitle}</div></div>
           <div style={css('display:flex;gap:8px;align-items:center;flex-wrap:wrap')}>
-            <div className="liquid-glass" style={css('display:flex;gap:3px;padding:3px;border-radius:9px')}><span onClick={V.goBacktest} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? '#7BA7D9' : 'transparent' }}>Backtest</span><span onClick={V.goForward} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? '#5FC08D' : 'transparent' }}>Forward</span></div>
-            <label className="hv-lift" title={'Import rows into ' + V.modeLabel} style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#A9C9EB;background:rgba(123,167,217,.08);border:1px solid rgba(123,167,217,.28);display:flex;align-items:center;gap:5px;transition:.14s;white-space:nowrap')}>⇧ Import CSV<input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.importCSV(f); e.target.value = ''; }} /></label>
-            <Sel value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);outline:none;transition:.14s')}>
+            <div className="liquid-glass" style={css('display:flex;gap:3px;padding:3px;border-radius:9px')}><span onClick={V.goBacktest} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#928B9B', background: V.isBacktestMode ? '#4D7FE8' : 'transparent' }}>Backtest</span><span onClick={V.goForward} className="rtm-press" style={{ ...css('font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#928B9B', background: !V.isBacktestMode ? '#1C9B68' : 'transparent' }}>Forward</span></div>
+            <label className="hv-lift" title={'Import rows into ' + V.modeLabel} style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#5E86D6;background:rgba(77,127,232,.08);border:1px solid rgba(77,127,232,.28);display:flex;align-items:center;gap:5px;transition:.14s;white-space:nowrap')}>⇧ Import CSV<input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files && e.target.files[0]; V.importCSV(f); e.target.value = ''; }} /></label>
+            <Sel value={V.exportRange} onChange={V.setExportRange} className="hv-focus rtm-select" title="Choose export range (Word/CSV)" style={css('font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;color:#746E7D;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.12);outline:none;transition:.14s')}>
               <option value="all">Export: All</option>
               <option value="week">Export: This week</option>
               <option value="month">Export: This month</option>
             </Sel>
-            <span onClick={V.exportCSV} className="hv-lift" title="Download as CSV (Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
-            <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
-            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New sample</span>
+            <span onClick={V.exportCSV} className="hv-lift" title="Download as CSV (Excel/Sheets)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;color:#746E7D;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.12);display:flex;align-items:center;gap:5px;transition:.14s')}>⤓ CSV</span>
+            <span onClick={V.exporting ? undefined : V.exportWord} className="hv-lift" title="Download weekly trade history as Word (with images)" style={css('font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:' + (V.exporting ? 'progress' : 'pointer') + ';color:#7658E8;background:rgba(118,88,232,.1);border:1px solid rgba(118,88,232,.3);display:flex;align-items:center;gap:5px;transition:.14s')}>{V.exporting ? 'กำลังสร้าง…' : '⤓ Word'}</span>
+            <span onClick={V.openNew} className="hv-lift" style={css('font-size:12px;font-weight:600;padding:7px 15px;border-radius:8px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New sample</span>
           </div>
         </div>
         <div style={css('display:flex;gap:10px;margin-bottom:14px;animation:rise .5s .04s both')}>
-          <input value={V.logSearch} onChange={V.setLogSearch} placeholder="🔍 Search symbol / setup / notes…" className="hv-focus" style={css('flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none')} />
-          <Sel value={V.logSort} onChange={V.setLogSort} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 14px;color:#ECEAE3;font-size:13px;outline:none;cursor:pointer')}>
+          <input value={V.logSearch} onChange={V.setLogSearch} placeholder="🔍 Search symbol / setup / notes…" className="hv-focus" style={css('flex:1;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:9px 14px;color:#24202B;font-size:13px;outline:none')} />
+          <Sel value={V.logSort} onChange={V.setLogSort} className="hv-focus rtm-select" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:9px 14px;color:#24202B;font-size:13px;outline:none;cursor:pointer')}>
             <option value="date-desc">Newest → oldest</option>
             <option value="date-asc">Oldest → newest</option>
             <option value="pnl-desc">Highest P&amp;L</option>
             <option value="pnl-asc">Lowest P&amp;L</option>
           </Sel>
-          <span onClick={V.toggleLogTools} className="hv-lift rtm-press" style={{ ...css('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s'), color: V.logToolsOpen || V.logAgg.anyFilter ? '#E2C588' : '#9A9AA4', background: V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(201,166,95,.1)' : 'rgba(255,255,255,.035)', border: '1px solid ' + (V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(201,166,95,.32)' : 'rgba(255,255,255,.12)') }}>
+          <span onClick={V.toggleLogTools} className="hv-lift rtm-press" style={{ ...css('display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s'), color: V.logToolsOpen || V.logAgg.anyFilter ? '#7658E8' : '#746E7D', background: V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(118,88,232,.1)' : 'rgba(49,35,73,.035)', border: '1px solid ' + (V.logToolsOpen || V.logAgg.anyFilter ? 'rgba(118,88,232,.32)' : 'rgba(49,35,73,.12)') }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round"/></svg>
-            {V.logAgg.anyFilter ? 'Filters active' : 'Filters & analysis'} <span style={css('font-size:10px;opacity:.65')}>{V.logToolsOpen ? '▲' : '▼'}</span>
+            {V.logAgg.anyFilter ? 'Filters active' : (V.logToolsOpen ? 'Hide details' : 'Details & analysis')} <span style={css('font-size:10px;opacity:.65')}>{V.logToolsOpen ? '▲' : '▼'}</span>
           </span>
         </div>
         {V.logToolsOpen && <div style={css('display:flex;flex-direction:column;gap:12px;margin-bottom:14px;animation:rise .28s both')}>
-          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
+          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02)')}>
             <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
-              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Filter &amp; analyse</div>
+              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#928B9B;font-weight:600')}>Filter &amp; analyse</div>
               <div style={css('display:flex;align-items:center;gap:8px')}>
-                {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#E2C588;background:rgba(201,166,95,.1);border:1px solid rgba(201,166,95,.3)')}>✕ Clear filters</span>}
-                <span onClick={V.openFieldCfg} className="hv-lift" title="Add / edit the choices for each field" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#9A9AA4;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:5px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Edit options</span>
+                {V.logAgg.anyFilter && <span onClick={V.clearLogFilters} className="hv-lift" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#7658E8;background:rgba(118,88,232,.1);border:1px solid rgba(118,88,232,.3)')}>✕ Clear filters</span>}
+                <span onClick={V.openFieldCfg} className="hv-lift" title="Add / edit the choices for each field" style={css('font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;color:#746E7D;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.12);display:flex;align-items:center;gap:5px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Edit options</span>
               </div>
             </div>
             <div style={css('display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px')}>
@@ -3783,8 +3904,8 @@ class App extends React.Component {
             <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px')}>
               {V.logFieldFilters.map((f) => (
                 <div key={f.key} style={css('display:flex;flex-direction:column;gap:5px;min-width:0')}>
-                  <span style={css('font-size:10px;color:#83838C;letter-spacing:.04em')}>{f.label}</span>
-                  <Sel value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 12px;color:#ECEAE3;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(201,166,95,.5)' : 'rgba(255,255,255,.12)') }}>
+                  <span style={css('font-size:10px;color:#928B9B;letter-spacing:.04em')}>{f.label}</span>
+                  <Sel value={f.value} onChange={(e) => V.setLogField(f.key, e.target.value)} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border-radius:9px;padding:9px 12px;color:#24202B;font-size:12.5px;outline:none;cursor:pointer'), border: '1px solid ' + (f.value !== 'all' ? 'rgba(118,88,232,.5)' : 'rgba(49,35,73,.12)') }}>
                     <option value="all">All</option>
                     {f.options.map((o) => (<option key={o.v} value={o.v}>{o.label}</option>))}
                   </Sel>
@@ -3793,98 +3914,100 @@ class App extends React.Component {
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px')}>
               {[
-                { l: 'Trades', v: V.logAgg.n, c: '#E2C588', sub: (V.logAgg.n === 1 ? 'order' : 'orders') + ' in view' },
+                { l: 'Trades', v: V.logAgg.n, c: '#7658E8', sub: (V.logAgg.n === 1 ? 'order' : 'orders') + ' in view' },
                 { l: 'Win rate', v: V.logAgg.wrStr, c: V.logAgg.wrColor, sub: V.logAgg.record },
                 { l: 'Net P&L', v: V.logAgg.netStr, c: V.logAgg.netColor, sub: 'after commission' },
                 { l: 'Avg R', v: V.logAgg.avgRStr, c: V.logAgg.avgRColor, sub: 'per trade' },
               ].map((s, i) => (
-                <div key={i} className="liquid-glass" style={css('padding:13px 16px;border-radius:13px;background:linear-gradient(180deg,' + s.c + '14,rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + s.c)}>
-                  <div style={css('font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#83838C;margin-bottom:8px')}>{s.l}</div>
+                <div key={i} className="liquid-glass" style={css('padding:13px 16px;border-radius:13px;background:linear-gradient(180deg,' + s.c + '14,rgba(49,35,73,.012));border:1px solid rgba(49,35,73,.07);border-top:2px solid ' + s.c)}>
+                  <div style={css('font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#928B9B;margin-bottom:8px')}>{s.l}</div>
                   <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: s.c }}>{s.v}</div>
-                  {s.sub && <div style={css('font-size:10.5px;color:#83838C;margin-top:7px')}>{s.sub}</div>}
+                  {s.sub && <div style={css('font-size:10.5px;color:#928B9B;margin-top:7px')}>{s.sub}</div>}
                 </div>
               ))}
             </div>
           </div>
-          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)')}>
+          <div className="liquid-glass" style={css('padding:15px 17px;border-radius:14px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02)')}>
             <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap')}>
-              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>Compare</div>
+              <div style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#928B9B;font-weight:600')}>Compare</div>
               {V.logBreakdown.hasCompare && (
-                <Sel value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(201,166,95,.4);border-radius:9px;padding:7px 12px;color:#E2C588;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+                <Sel value={V.logBreakdown.dim} onChange={V.setLogDim} className="hv-focus rtm-select" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(118,88,232,.4);border-radius:9px;padding:7px 12px;color:#7658E8;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                   {V.logBreakdown.dims.map((d) => (<option key={d.v} value={d.v}>{d.label}</option>))}
                 </Sel>
               )}
-              <span style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#83838C;font-weight:600')}>by</span>
-              <Sel value={V.logBreakdown.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร — Expectancy เหมาะกับระบบที่ปล่อยให้กำไรวิ่ง" className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(123,167,217,.4);border-radius:9px;padding:7px 12px;color:#9CC2E8;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
+              <span style={css('font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#928B9B;font-weight:600')}>by</span>
+              <Sel value={V.logBreakdown.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร — Expectancy เหมาะกับระบบที่ปล่อยให้กำไรวิ่ง" className="hv-focus rtm-select" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(77,127,232,.4);border-radius:9px;padding:7px 12px;color:#9CC2E8;font-size:12.5px;font-weight:600;outline:none;cursor:pointer')}>
                 {V.logBreakdown.metrics.map((m) => (<option key={m.v} value={m.v}>{m.label}</option>))}
               </Sel>
             </div>
-            <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>แบ่ง {V.filteredCount} ไม้ที่กรองอยู่ตามปัจจัยเดียว แล้วเทียบกับค่าเฉลี่ยรวมของคุณ (<b style={css('color:#9A9AA4')}>{V.logBreakdown.baselineStr}</b>) — กลุ่มที่มีน้อยกว่า <b style={css('color:#9A9AA4')}>{V.logBreakdown.minSample}</b> ไม้จะถูกหรี่ไว้ เพราะยังเป็น noise</div>
+            <div style={css('font-size:11px;color:#928B9B;margin-bottom:14px;line-height:1.5')}>แบ่ง {V.filteredCount} ไม้ที่กรองอยู่ตามปัจจัยเดียว แล้วเทียบกับค่าเฉลี่ยรวมของคุณ (<b style={css('color:#746E7D')}>{V.logBreakdown.baselineStr}</b>) — กลุ่มที่มีน้อยกว่า <b style={css('color:#746E7D')}>{V.logBreakdown.minSample}</b> ไม้จะถูกหรี่ไว้ เพราะยังเป็น noise</div>
             {V.logBreakdown.bestEdge && (
-              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:linear-gradient(100deg,rgba(95,192,141,.12),rgba(201,166,95,.06));border:1px solid rgba(95,192,141,.28);font-size:12px;color:#B7E6CE')}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5FC08D" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z" strokeLinejoin="round"/></svg>
-                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#5FC08D')}>{V.logBreakdown.bestEdge.wr}</b> ({V.logBreakdown.metricLabel}) <span style={css('color:#83838C')}>· {V.logBreakdown.bestEdge.n} ไม้ · เหนือค่าเฉลี่ย {V.logBreakdown.bestEdge.baseWr} อยู่ {V.logBreakdown.bestEdge.lift}</span> <span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px'), color: V.logBreakdown.bestEdge.conf.color, border: '1px solid ' + V.logBreakdown.bestEdge.conf.color + '55' }}>{V.logBreakdown.bestEdge.conf.label}</span></span>
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:linear-gradient(100deg,rgba(28,155,104,.12),rgba(118,88,232,.06));border:1px solid rgba(28,155,104,.28);font-size:12px;color:#B7E6CE')}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#1C9B68" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z" strokeLinejoin="round"/></svg>
+                <span>Best edge here: <b style={css('color:#EAF7F0')}>{V.logBreakdown.dimLabel} = {V.logBreakdown.bestEdge.name}</b> → <b style={css('color:#1C9B68')}>{V.logBreakdown.bestEdge.wr}</b> ({V.logBreakdown.metricLabel}) <span style={css('color:#928B9B')}>· {V.logBreakdown.bestEdge.n} ไม้ · เหนือค่าเฉลี่ย {V.logBreakdown.bestEdge.baseWr} อยู่ {V.logBreakdown.bestEdge.lift}</span> <span style={{ ...css('font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;margin-left:4px'), color: V.logBreakdown.bestEdge.conf.color, border: '1px solid ' + V.logBreakdown.bestEdge.conf.color + '55' }}>{V.logBreakdown.bestEdge.conf.label}</span></span>
               </div>
             )}
             {V.logBreakdown.noEdgeNote && (
-              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);font-size:12px;color:#9A9AA4')}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#83838C" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01" strokeLinecap="round"/></svg>
+              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px;padding:9px 13px;border-radius:10px;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.09);font-size:12px;color:#746E7D')}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#928B9B" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01" strokeLinecap="round"/></svg>
                 <span>{V.logBreakdown.noEdgeNote}</span>
               </div>
             )}
             {V.logBreakdown.hasCompare ? (
               <div className="rtm-scroll" style={css('display:flex;flex-direction:column;gap:15px;max-height:340px;overflow-y:auto;padding-right:4px')}>
-                <div style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6a6a72;padding-right:2px')}><span></span><span style={css('text-align:right')}>Win rate</span><span style={css('text-align:right')}>Net · record</span><span style={css('text-align:right')}>Avg R</span></div>
+                <div style={css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#9A93A1;padding-right:2px')}><span></span><span style={css('text-align:right')}>Win rate</span><span style={css('text-align:right')}>Net · record</span><span style={css('text-align:right')}>Avg R</span></div>
                 {V.logBreakdown.rows.map((r, i) => (
                   <div key={i} style={{ ...css('display:grid;grid-template-columns:minmax(180px,1fr) 84px 128px 74px;gap:20px;align-items:center'), opacity: r.thin ? 0.45 : 1 }}>
                     <div>
-                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#ECEAE3')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}{r.best && <span title={'ดีกว่าค่าเฉลี่ยรวมอย่างมีนัย และมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้'} style={css('font-size:9px;font-weight:700;letter-spacing:.04em;color:#5FC08D;border:1px solid rgba(95,192,141,.4);background:rgba(95,192,141,.12);padding:1px 6px;border-radius:5px')}>BEST</span>}{r.thin && <span title={'ต้องมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้ถึงจะเชื่อตัวเลขนี้ได้'} style={css('font-size:9px;font-weight:600;color:#83838C;border:1px solid rgba(255,255,255,.16);padding:1px 6px;border-radius:5px')}>ยังไม่พอ</span>}</span><span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
-                      <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
+                      <div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px')}><span style={css('display:flex;align-items:center;gap:8px;color:#24202B')}><span style={{ ...css('width:8px;height:8px;border-radius:50%;flex:none'), background: r.dot, boxShadow: '0 0 7px ' + r.dot + '99' }}></span>{r.name}{r.best && <span title={'ดีกว่าค่าเฉลี่ยรวมอย่างมีนัย และมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้'} style={css('font-size:9px;font-weight:700;letter-spacing:.04em;color:#1C9B68;border:1px solid rgba(28,155,104,.4);background:rgba(28,155,104,.12);padding:1px 6px;border-radius:5px')}>BEST</span>}{r.thin && <span title={'ต้องมีอย่างน้อย ' + V.logBreakdown.minSample + ' ไม้ถึงจะเชื่อตัวเลขนี้ได้'} style={css('font-size:9px;font-weight:600;color:#928B9B;border:1px solid rgba(49,35,73,.16);padding:1px 6px;border-radius:5px')}>ยังไม่พอ</span>}</span><span style={css('color:#928B9B;font-size:10.5px;font-family:JetBrains Mono')}>{r.nStr}</span></div>
+                      <div style={css('height:7px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: r.barColor, width: r.w, animationDelay: (i * 0.05) + 's' }}></div></div>
                     </div>
                     <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.wrColor, opacity: V.logBreakdown.metric === 'wr' ? 1 : 0.55 }}>{r.wr}</div>
-                    <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13.5px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#83838C;margin-top:2px')}>{r.record}</div></div>
-                    <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: V.logBreakdown.metric === 'r' ? r.avgRColor : '#9A9AA4', opacity: V.logBreakdown.metric === 'r' ? 1 : 0.6 }}>{r.avgR}</div>
+                    <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13.5px'), color: r.netColor }}>{r.net}</span><div style={css('font-size:9.5px;color:#928B9B;margin-top:2px')}>{r.record}</div></div>
+                    <div style={{ ...css('text-align:right;font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: V.logBreakdown.metric === 'r' ? r.avgRColor : '#746E7D', opacity: V.logBreakdown.metric === 'r' ? 1 : 0.6 }}>{r.avgR}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={css('font-size:12.5px;color:#83838C;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1)')}>{V.filteredCount <= 1 ? 'Only one trade in this selection — nothing to compare yet.' : 'These trades share the same value on every factor — widen the filter to compare (e.g. clear a factor).'}</div>
+              <div style={css('font-size:12.5px;color:#928B9B;padding:10px 12px;border-radius:10px;background:rgba(49,35,73,.02);border:1px dashed rgba(49,35,73,.1)')}>{V.filteredCount <= 1 ? 'Only one trade in this selection — nothing to compare yet.' : 'These trades share the same value on every factor — widen the filter to compare (e.g. clear a factor).'}</div>
             )}
           </div>
         </div>}
-        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;background:rgba(255,255,255,.02);animation:rise .5s .08s both')}>
+        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);overflow:hidden;background:rgba(49,35,73,.02);animation:rise .5s .08s both')}>
           {V.filteredCount > 0 && (
-            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.018)')}>
-              <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
+            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid rgba(49,35,73,.06);background:rgba(49,35,73,.018)')}>
+              <span style={css('font-size:11.5px;color:#928B9B;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
               <div style={css('display:flex;align-items:center;gap:8px')}>
-                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);color:#9A9AA4'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>←</span>
-                <span style={css('font-size:11px;color:#E2C588;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
-                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);color:#9A9AA4'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>→</span>
+                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(49,35,73,.1);color:#746E7D'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>←</span>
+                <span style={css('font-size:11px;color:#7658E8;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
+                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" style={{ ...css('font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid rgba(49,35,73,.1);color:#746E7D'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>→</span>
               </div>
             </div>
           )}
           <div className="rtm-scroll" style={css('overflow:auto;max-height:60vh')}>
             <div style={{ minWidth: gminw }}>
-              <div style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;font-weight:600;position:sticky;top:0;z-index:3;background:#0c0c0f;box-shadow:0 1px 0 rgba(255,255,255,.06)'), gridTemplateColumns: gcols }}><span>Date</span><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span><span>Symbol</span><span>Side</span>{V.showPort && (<span title="ออเดอร์นี้อยู่พอร์ตไหน">Port</span>)}<span>Setup</span><span title="Session ที่เทรด">Session</span><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span><span>R</span><span>P&amp;L</span></div>
+              <div className="rtm-log-head" style={{ ...css('display:grid;gap:12px;padding:13px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;font-weight:600;position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 rgba(49,35,73,.08)'), gridTemplateColumns: gcols }}>
+                <span>Date</span>{expanded && <><span title="เวลาเข้า → ออก (เวลา server)">Time</span><span title="ถือนานแค่ไหน">Hold</span></>}<span>Symbol</span><span>Side</span>{V.showPort && (<span title="ออเดอร์นี้อยู่พอร์ตไหน">Port</span>)}<span>Setup</span><span title="Session ที่เทรด">Session</span>{expanded && <><span title="จุดเข้าของไม้แรก">Entry</span><span title="Timeframes aligned">TF</span><span title="Retest แล้ว fibo โซนไหน">Retest · Fibo</span><span title="Max cumulative lot across legs">Lot</span><span title="ราคาวิ่งไปไกลสุด ($)">MFE</span><span title="Drawdown ของไม้ (pip) หรือ heat R">Max DD</span></>}<span>R</span><span>P&amp;L</span>
+              </div>
               {V.filteredTrades.map((t, i) => (
-                <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
-                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#B7A981')}>{t.dateShort}</span></span>
-                  <span title="เวลาเข้า → ออก" style={css('font-family:JetBrains Mono;font-size:11.5px;white-space:nowrap')}><span style={{ color: t.entryHM ? '#C9CAD2' : '#5a5a62' }}>{t.entryHM || '—'}</span><span style={css('color:#5a5a62')}> → </span><span style={{ color: t.exitHM ? '#8FBFA6' : '#5a5a62' }}>{t.exitHM || '—'}</span></span>
-                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:10.5px;color:#E2C588;padding:3px 7px;border-radius:7px;border:1px solid rgba(201,166,95,.28);background:rgba(201,166,95,.05);white-space:nowrap')}>{t.holdShort}</span>
-                  <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#ECEAE3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#E2C588;padding:2px 6px;border-radius:6px;border:1px solid rgba(201,166,95,.32);background:rgba(201,166,95,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
+                <div key={t.id} onClick={t.open} className="hv-row rtm-cascade" style={{ ...css('display:grid;gap:12px;padding:12px 20px;border-top:1px solid rgba(49,35,73,.05);font-size:12.5px;cursor:pointer;transition:.12s;align-items:center'), gridTemplateColumns: gcols, animationDelay: (Math.min(i, 14) * 0.035) + 's' }}>
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;width:fit-content;padding:3px 8px 3px 9px;border-radius:8px;border:1px solid rgba(118,88,232,.3);background:rgba(118,88,232,.06)')}><span style={{ ...css('font-size:13px;font-weight:700;letter-spacing:.02em'), color: t.dowColor }}>{t.dowShort}</span><span style={css('font-family:JetBrains Mono;font-size:11px;color:#7563A6')}>{t.dateShort}</span></span>
+                  {expanded && <><span title="เวลาเข้า → ออก" style={css('font-family:JetBrains Mono;font-size:11.5px;white-space:nowrap')}><span style={{ color: t.entryHM ? '#5F5967' : '#5a5a62' }}>{t.entryHM || '—'}</span><span style={css('color:#5a5a62')}> → </span><span style={{ color: t.exitHM ? '#8FBFA6' : '#5a5a62' }}>{t.exitHM || '—'}</span></span>
+                  <span title={'Held ' + t.holding} style={css('width:fit-content;font-family:JetBrains Mono;font-size:10.5px;color:#7658E8;padding:3px 7px;border-radius:7px;border:1px solid rgba(118,88,232,.20);background:rgba(118,88,232,.06);white-space:nowrap')}>{t.holdShort}</span></>}
+                  <span style={css('display:inline-flex;align-items:center;gap:7px;min-width:0')}><span style={css('color:#24202B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.sym}</span>{t.isMulti && (<span title={t.legN + ' legs · max lot ' + t.legMaxLot + (t.legAvgEntry ? ' · avg ' + t.legAvgEntry : '')} style={css('flex:none;display:inline-flex;align-items:center;gap:3px;font-family:JetBrains Mono;font-size:10px;font-weight:600;color:#7658E8;padding:2px 6px;border-radius:6px;border:1px solid rgba(118,88,232,.32);background:rgba(118,88,232,.08)')}><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18V7M10 18v-8M16 18v-5M22 18v-3" strokeLinecap="round"/></svg>×{t.legN}</span>)}</span>
                   <span style={{ ...css('font-weight:600'), color: t.sideColor }}>{t.side}</span>
                   {V.showPort && (<span title={'พอร์ต: ' + t.portName} style={{ ...css('font-size:11px;font-weight:600;width:fit-content;max-width:100%;padding:3px 8px;border-radius:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.portColor, border: '1px solid ' + t.portColor + '44', background: t.portColor + '14' }}>{t.portName}</span>)}
-                  <span style={css('color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
+                  <span style={css('color:#746E7D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={t.setupName}>{t.setupName}</span>
                   <span title={'เทรดช่วง ' + (t.session || '—')} style={{ ...css('font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'), color: t.sessionColor }}>{t.session || '—'}</span>
-                  <span title={'จุดเข้า: ' + (t.entryModel || '—')} style={css('font-size:11.5px;color:#C9CAD2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.entryModel || '—'}</span>
+                  {expanded && <><span title={'จุดเข้า: ' + (t.entryModel || '—')} style={css('font-size:11.5px;color:#5F5967;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.entryModel || '—'}</span>
                   <span title={t.alignN + ' of 3 timeframes aligned'} style={{ ...css('font-family:JetBrains Mono;font-size:12.5px;font-weight:600'), color: t.alignColor }}>{t.alignStr}</span>
                   <span title={'Retest ' + (t.retestStr || '—') + ' · ' + (t.fiboShort || '—')} style={css('display:flex;align-items:center;gap:6px;min-width:0')}>
                     <span style={{ ...css('font-size:11px;font-weight:700;flex:none'), color: t.retestColor }}>{t.retestStr}</span>
-                    <span style={css('font-size:11px;color:#9A9AA4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.fiboShort}</span>
+                    <span style={css('font-size:11px;color:#746E7D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{t.fiboShort}</span>
                   </span>
-                  <span title="Max cumulative lot across legs" style={css('font-family:JetBrains Mono;font-size:12px;color:#C9CAD2')}>{t.maxLotStr}</span>
+                  <span title="Max cumulative lot across legs" style={css('font-family:JetBrains Mono;font-size:12px;color:#5F5967')}>{t.maxLotStr}</span>
                   <span title="ราคาวิ่งไปไกลสุด ($) — กรอกราคา TP + peak ในหน้าบันทึกเพื่อให้คำนวณอัตโนมัติ" style={css('font-family:JetBrains Mono;font-size:12px;color:#8FBFA6')}>{t.mfeStr}</span>
-                  <span title="Max drawdown of the position" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span>
+                  <span title="Max drawdown of the position" style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: t.heatColor }}>{t.heatStr}</span></>}
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.rColor }}>{t.rStr}</span>
                   <span style={{ ...css('font-family:JetBrains Mono;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</span>
                 </div>
@@ -3892,21 +4015,21 @@ class App extends React.Component {
             </div>
           </div>
           {V.filteredTrades.length === 0 && (
-            <div style={css('padding:48px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05)')}>
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#83838C" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-              <div style={css('font-size:14px;color:#9A9AA4;margin-bottom:6px')}>{V.tradeCount === 0 ? 'No trades yet' : 'No trades match the filter'}</div>
-              <div style={css('font-size:12.5px;color:#83838C')}>{V.tradeCount === 0 ? 'Press “+ New trade” or N to start logging' : 'Try clearing the search / changing the filter'}</div>
+            <div style={css('padding:48px 20px;text-align:center;border-top:1px solid rgba(49,35,73,.05)')}>
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#928B9B" strokeWidth="1.4" style={{ marginBottom: 12 }}><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              <div style={css('font-size:14px;color:#746E7D;margin-bottom:6px')}>{V.tradeCount === 0 ? 'No trades yet' : 'No trades match the filter'}</div>
+              <div style={css('font-size:12.5px;color:#928B9B')}>{V.tradeCount === 0 ? 'Press “+ New trade” or N to start logging' : 'Try clearing the search / changing the filter'}</div>
             </div>
           )}
           {V.filteredCount > 0 && (
-            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.14)')}>
-              <span style={css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
+            <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 18px;border-top:1px solid rgba(49,35,73,.06);background:rgba(0,0,0,.14)')}>
+              <span style={css('font-size:11.5px;color:#928B9B;font-family:JetBrains Mono')}>{V.logRangeLabel}</span>
               <div style={css('display:flex;align-items:center;gap:7px')}>
-                <span onClick={V.logCanPrev ? V.logFirst : undefined} className="rtm-press" title="First page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>«</span>
-                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" title="Previous page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;font-size:12px'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>← Prev</span>
-                <span style={css('min-width:88px;text-align:center;font-size:11.5px;color:#E2C588;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
-                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" title="Next page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;font-size:12px'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>Next →</span>
-                <span onClick={V.logCanNext ? V.logLast : undefined} className="rtm-press" title="Last page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>»</span>
+                <span onClick={V.logCanPrev ? V.logFirst : undefined} className="rtm-press" title="First page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>«</span>
+                <span onClick={V.logCanPrev ? V.logPrev : undefined} className="rtm-press" title="Previous page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;font-size:12px'), cursor: V.logCanPrev ? 'pointer' : 'default', opacity: V.logCanPrev ? 1 : .3 }}>← Prev</span>
+                <span style={css('min-width:88px;text-align:center;font-size:11.5px;color:#7658E8;font-family:JetBrains Mono')}>{V.logPageLabel}</span>
+                <span onClick={V.logCanNext ? V.logNext : undefined} className="rtm-press" title="Next page" style={{ ...css('height:30px;padding:0 11px;border-radius:8px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;font-size:12px'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>Next →</span>
+                <span onClick={V.logCanNext ? V.logLast : undefined} className="rtm-press" title="Last page" style={{ ...css('width:30px;height:30px;border-radius:8px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D'), cursor: V.logCanNext ? 'pointer' : 'default', opacity: V.logCanNext ? 1 : .3 }}>»</span>
               </div>
               <span style={css('font-size:11px;color:#666670')}>50 trades / page</span>
             </div>
@@ -3919,45 +4042,51 @@ class App extends React.Component {
   renderAnalytics(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;animation:rise .5s both')}><div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Edge lab · {V.modeLabel}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>{V.isBacktestMode ? 'Discover the edge' : 'Validate the edge'} <span style={css('font-style:italic;color:#E2C588')}>— evidence before conviction</span></div></div><div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}><span onClick={V.showBacktestAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#83838C', background: V.isBacktestMode ? '#7BA7D9' : 'transparent' }}>Backtest</span><span onClick={V.showForwardAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#83838C', background: !V.isBacktestMode ? '#5FC08D' : 'transparent' }}>Forward</span></div></div>
-        <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(120deg,rgba(201,166,95,.07),rgba(255,255,255,.018));border:1px solid rgba(201,166,95,.2);margin-bottom:16px;animation:rise .5s .02s both')}>
-          <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Setup validation gates</div><div style={css('font-size:11px;color:#83838C;margin-top:4px;line-height:1.55')}>Backtest: ≥30 ไม้, Avg R &gt; 0, PF ≥1.20, DD ≤10R และช่วง holdout ล่าสุดต้องเป็นบวก · Forward: ≥30 ไม้, PF ≥1.10 และขอบล่าง 95% CI ของ Avg R ต้องมากกว่า 0 <span style={css('color:#A69BC0')}>· นับเฉพาะไม้ที่มีผลลัพธ์และ Risk (1R) ครบ</span></div></div><span style={css('flex:none;font-size:10.5px;color:#5FC08D;padding:5px 10px;border-radius:999px;background:rgba(95,192,141,.08);border:1px solid rgba(95,192,141,.24)')}>{V.confirmedSetups} confirmed</span></div>
+        <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;animation:rise .5s both')}><div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Edge lab · {V.modeLabel}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>{V.isBacktestMode ? 'Discover the edge' : 'Validate the edge'} <span style={css('font-style:italic;color:#7658E8')}>— evidence before conviction</span></div></div><div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}><span onClick={V.showBacktestAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: V.isBacktestMode ? '#071018' : '#928B9B', background: V.isBacktestMode ? '#4D7FE8' : 'transparent' }}>Backtest</span><span onClick={V.showForwardAnalytics} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer'), color: !V.isBacktestMode ? '#07140e' : '#928B9B', background: !V.isBacktestMode ? '#1C9B68' : 'transparent' }}>Forward</span></div></div>
+        <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(120deg,rgba(118,88,232,.07),rgba(49,35,73,.018));border:1px solid rgba(118,88,232,.2);margin-bottom:16px;animation:rise .5s .02s both')}>
+          <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Setup validation gates</div><div style={css('font-size:11px;color:#928B9B;margin-top:4px;line-height:1.55')}>Backtest: ≥30 ไม้, Avg R &gt; 0, PF ≥1.20, DD ≤10R และช่วง holdout ล่าสุดต้องเป็นบวก · Forward: ≥30 ไม้, PF ≥1.10 และขอบล่าง 95% CI ของ Avg R ต้องมากกว่า 0 <span style={css('color:#A69BC0')}>· นับเฉพาะไม้ที่มีผลลัพธ์และ Risk (1R) ครบ</span></div></div><span style={css('flex:none;font-size:10.5px;color:#1C9B68;padding:5px 10px;border-radius:999px;background:rgba(28,155,104,.08);border:1px solid rgba(28,155,104,.24)')}>{V.confirmedSetups} confirmed</span></div>
           <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px')}>
             {V.setupGates.map((g, i) => (
               <div key={g.id} onClick={g.open} className="rtm-gate-card rtm-press" style={{ ...css('padding:14px 15px;border-radius:13px;background:rgba(5,5,8,.46);cursor:pointer;transition:.17s;animation:rise .45s both'), border: '1px solid ' + g.color + '44', animationDelay: (i * .055) + 's' }}>
-                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px')}><div style={css('font-size:13.5px;font-weight:700;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{g.name} <span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#9B8CFF')}>{g.versionLabel}</span></div><span style={{ ...css('font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap'), color: g.color, background: g.color + '14', border: '1px solid ' + g.color + '44' }}>{g.stageLabel}</span></div>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px')}><div style={css('font-size:13.5px;font-weight:700;color:#24202B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{g.name} <span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#8B6CF0')}>{g.versionLabel}</span></div><span style={{ ...css('font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap'), color: g.color, background: g.color + '14', border: '1px solid ' + g.color + '44' }}>{g.stageLabel}</span></div>
                 <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px')}>
-                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(123,167,217,.06)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7BA7D9;margin-bottom:5px')}>Backtest</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.btN} · {g.btR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.btPf} · DD {g.btDd}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:3px')}>Holdout {g.holdoutN} · {g.holdoutR}</div></div>
-                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(95,192,141,.05)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#5FC08D;margin-bottom:5px')}>Forward</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#ECEAE3')}>{g.fwN} · {g.fwR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.fwPf} · quality {g.fwQuality}</div><div title="95% confidence interval of average R" style={css('font-size:9.5px;color:#77717F;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>95% CI {g.fwCi}</div></div>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(77,127,232,.06)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#4D7FE8;margin-bottom:5px')}>Backtest</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#24202B')}>{g.btN} · {g.btR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.btPf} · DD {g.btDd}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:3px')}>Holdout {g.holdoutN} · {g.holdoutR}</div></div>
+                  <div style={css('padding:9px 10px;border-radius:9px;background:rgba(28,155,104,.05)')}><div style={css('font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#1C9B68;margin-bottom:5px')}>Forward</div><div style={css('font-family:JetBrains Mono;font-size:12px;color:#24202B')}>{g.fwN} · {g.fwR}</div><div style={css('font-size:9.5px;color:#77717F;margin-top:4px')}>PF {g.fwPf} · quality {g.fwQuality}</div><div title="95% confidence interval of average R" style={css('font-size:9.5px;color:#77717F;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>95% CI {g.fwCi}</div></div>
                 </div>
-                <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px')}><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.btProgress, height: '100%', borderRadius: 99, background: '#7BA7D9' }}></div></div><div style={css('height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.fwProgress, height: '100%', borderRadius: 99, background: '#5FC08D' }}></div></div></div>
+                <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px')}><div style={css('height:4px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.btProgress, height: '100%', borderRadius: 99, background: '#4D7FE8' }}></div></div><div style={css('height:4px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ width: g.fwProgress, height: '100%', borderRadius: 99, background: '#1C9B68' }}></div></div></div>
                 <div style={{ ...css('font-size:10.5px;line-height:1.4'), color: g.color }}>{g.stageNote}</div>
               </div>
             ))}
           </div>
         </div>
+        <div className="rtm-execution-audit liquid-glass" style={css('display:grid;grid-template-columns:minmax(220px,1.2fr) repeat(3,minmax(135px,.7fr));gap:12px;padding:18px 20px;border-radius:16px;margin-bottom:16px')}>
+          <div style={css('padding:4px 10px 4px 2px')}><div style={css('font-size:9.5px;font-weight:800;letter-spacing:.16em;color:#7658E8;margin-bottom:7px')}>EXECUTION AUDIT</div><div style={css('font-family:Instrument Serif;font-size:21px;color:#24202B;margin-bottom:6px')}>System edge vs. execution leak</div><div style={css('font-size:10.5px;color:#746E7D;line-height:1.55')}>เทียบไม้ที่ทำตามแผนกับไม้ที่หลุดกฎ โดยเก็บทุกไม้ไว้เพื่อป้องกันการเลือกข้อมูลย้อนหลัง · coverage {V.executionAudit.coverage}</div></div>
+          <div style={css('padding:13px 15px;border-radius:12px;background:rgba(28,155,104,.07);border:1px solid rgba(28,155,104,.15)')}><div style={css('font-size:9.5px;color:#746E7D;margin-bottom:8px')}>ON PLAN · {V.executionAudit.onN} trades</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#1C9B68')}>{V.executionAudit.onR}</div><div style={css('font-size:10px;color:#746E7D;margin-top:6px')}>Win rate {V.executionAudit.onWr}</div></div>
+          <div style={css('padding:13px 15px;border-radius:12px;background:rgba(226,84,98,.06);border:1px solid rgba(226,84,98,.14)')}><div style={css('font-size:9.5px;color:#746E7D;margin-bottom:8px')}>DEVIATED · {V.executionAudit.offN} trades</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#E25462')}>{V.executionAudit.offR}</div><div style={css('font-size:10px;color:#746E7D;margin-top:6px')}>Win rate {V.executionAudit.offWr}</div></div>
+          <div style={css('padding:13px 15px;border-radius:12px;background:rgba(118,88,232,.07);border:1px solid rgba(118,88,232,.15)')}><div style={css('font-size:9.5px;color:#746E7D;margin-bottom:8px')}>EDGE LOST TO EXECUTION</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#7658E8')}>{V.executionAudit.leak}</div><div style={css('font-size:10px;color:#746E7D;margin-top:6px')}>{V.executionAudit.ready ? 'comparison active' : 'เก็บอย่างน้อย 10 ไม้ที่ติดป้าย'}</div></div>
+        </div>
         <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
-            { l: 'Expectancy / trade', v: V.expectancyStr, c: '#E2C588' },
-            { l: 'Profit factor', v: V.anaPf, c: '#7BA7D9' },
-            { l: 'Max Drawdown', v: V.anaDD, c: '#DC6A63' },
-            { l: 'Green days', v: V.consistencyStr, c: '#5FC08D' },
+            { l: 'Expectancy / trade', v: V.expectancyStr, c: '#7658E8' },
+            { l: 'Profit factor', v: V.anaPf, c: '#4D7FE8' },
+            { l: 'Max Drawdown', v: V.anaDD, c: '#E25462' },
+            { l: 'Green days', v: V.consistencyStr, c: '#1C9B68' },
             { l: 'Current streak', v: V.curStreakStr, c: V.curStreakColor, count: false },  // prose, not a figure
           ].map((m, i) => (
-            <div key={i} className="hv-k-gold liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-top:2px solid ' + m.c + ';transition:.16s;animation:rise .5s both'), animationDelay: (0.04 + i * 0.06) + 's' }}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.count === false ? m.v : <CountUp value={m.v} />}</div></div>
+            <div key={i} className="hv-k-gold liquid-glass" style={{ ...css('padding:15px 16px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '17,rgba(49,35,73,.015));border:1px solid rgba(49,35,73,.07);border-top:2px solid ' + m.c + ';transition:.16s;animation:rise .5s both'), animationDelay: (0.04 + i * 0.06) + 's' }}><div style={css('font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:10px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:600'), color: m.c }}>{m.count === false ? m.v : <CountUp value={m.v} />}</div></div>
           ))}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .06s both;transition:.18s')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>P&amp;L by day of week</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .06s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B;margin-bottom:18px')}>P&amp;L by day of week</div>
             <div style={css('display:flex;align-items:flex-end;gap:14px;height:150px')}>
               {V.dowBars.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, animationDelay: (i * 0.07) + 's' }}></div><span style={css('font-size:11px;color:#9A9AA4')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, animationDelay: (i * 0.07) + 's' }}></div><span style={css('font-size:11px;color:#746E7D')}>{b.label}</span></div>
               ))}
             </div>
           </div>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .1s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by session</div><span style={css('font-size:11px;color:#83838C')}>coloured by market</span></div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .1s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:18px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>P&amp;L by session</div><span style={css('font-size:11px;color:#928B9B')}>coloured by market</span></div>
             <div style={css('display:flex;align-items:flex-end;gap:18px;height:150px')}>
               {V.sessionBars.map((b, i) => (
                 <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end')}><span style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: b.color }}>{b.val}</span><div className="bar-grow" style={{ ...css('width:100%;border-radius:7px 7px 0 0;transition:.3s'), background: b.bg, height: b.h, boxShadow: b.glow, animationDelay: (i * 0.09) + 's' }}></div><span style={{ ...css('font-size:11px;font-weight:600'), color: b.labelColor }}>{b.label}</span></div>
@@ -3966,97 +4095,97 @@ class App extends React.Component {
           </div>
         </div>
         {/* Edge finder — which confluence factors actually lift the win-rate (the "know your edge" panel) */}
-        <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);margin-bottom:16px;animation:rise .5s .12s both;transition:.18s')}>
+        <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);margin-bottom:16px;animation:rise .5s .12s both;transition:.18s')}>
           <div style={css('display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;flex-wrap:wrap;gap:8px')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Edge finder <span style={css('font-style:italic;color:#E2C588')}>— เงื่อนไขไหนทำให้ผลดีขึ้นจริง</span></div>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>Edge finder <span style={css('font-style:italic;color:#7658E8')}>— เงื่อนไขไหนทำให้ผลดีขึ้นจริง</span></div>
             <div style={css('display:flex;align-items:center;gap:10px;flex-wrap:wrap')}>
-              <Sel value={V.edgeFinder.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร" className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(123,167,217,.4);border-radius:9px;padding:6px 11px;color:#9CC2E8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
+              <Sel value={V.edgeFinder.metric} onChange={V.setEdgeMetric} title="วัดด้วยอะไร" className="hv-focus rtm-select" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(77,127,232,.4);border-radius:9px;padding:6px 11px;color:#9CC2E8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
                 <option value="r">Expectancy (avg R)</option>
                 <option value="wr">Win rate</option>
               </Sel>
-              <div style={css('font-size:11.5px;color:#83838C')}>ค่าเฉลี่ยคุณ <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.baselineStr}</b> · ต้องดีกว่านี้อย่างน้อย <b style={css('color:#C9CAD2;font-family:JetBrains Mono')}>{V.edgeFinder.minLiftStr}</b> และมี ≥<b style={css('color:#C9CAD2')}>{V.edgeFinder.minSample}</b> ไม้</div>
+              <div style={css('font-size:11.5px;color:#928B9B')}>ค่าเฉลี่ยคุณ <b style={css('color:#5F5967;font-family:JetBrains Mono')}>{V.edgeFinder.baselineStr}</b> · ต้องดีกว่านี้อย่างน้อย <b style={css('color:#5F5967;font-family:JetBrains Mono')}>{V.edgeFinder.minLiftStr}</b> และมี ≥<b style={css('color:#5F5967')}>{V.edgeFinder.minSample}</b> ไม้</div>
             </div>
           </div>
           {V.edgeFinder.hasData ? (
             <div style={css('margin-top:14px;display:flex;flex-direction:column;gap:7px')}>
               {V.edgeFinder.rows.map((r, i) => (
-                <div key={i} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:132px 1fr 74px 84px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(95,192,141,.1),rgba(255,255,255,.015))' : 'rgba(255,255,255,.02)', border: '1px solid ' + (i === 0 ? 'rgba(95,192,141,.32)' : 'rgba(255,255,255,.055)'), animationDelay: (i * 0.06) + 's' }}>
-                  <div style={css('min-width:0')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:2px')}>{r.factor}</div><div style={css('font-size:13px;font-weight:600;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={r.value}>{r.value}</div></div>
-                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#5FC08D,#8FD3B0)' : 'linear-gradient(90deg,#C9A65F,#E2C588)', animationDelay: (0.1 + i * 0.06) + 's' }}></div></div><span style={css('font-size:10.5px;color:#83838C;font-family:JetBrains Mono;white-space:nowrap')}>{r.n} ไม้ · {r.record}</span></div>
-                  <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.lift > 0 ? '#5FC08D' : '#E0B15A' }}>{r.valueStr}</div>
-                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: '#5FC08D', background: 'rgba(95,192,141,.12)' }}>{r.liftStr}</span></div>
+                <div key={i} className="hv-row rtm-cascade" style={{ ...css('display:grid;grid-template-columns:132px 1fr 74px 84px 92px;gap:14px;align-items:center;padding:10px 12px;border-radius:11px;transition:.14s'), background: i === 0 ? 'linear-gradient(100deg,rgba(28,155,104,.1),rgba(49,35,73,.015))' : 'rgba(49,35,73,.02)', border: '1px solid ' + (i === 0 ? 'rgba(28,155,104,.32)' : 'rgba(49,35,73,.055)'), animationDelay: (i * 0.06) + 's' }}>
+                  <div style={css('min-width:0')}><div style={css('font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#928B9B;margin-bottom:2px')}>{r.factor}</div><div style={css('font-size:13px;font-weight:600;color:#24202B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')} title={r.value}>{r.value}</div></div>
+                  <div style={css('display:flex;align-items:center;gap:10px')}><div style={css('flex:1;height:7px;border-radius:5px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.w, background: i === 0 ? 'linear-gradient(90deg,#1C9B68,#1C9B68)' : 'linear-gradient(90deg,#6747D8,#7658E8)', animationDelay: (0.1 + i * 0.06) + 's' }}></div></div><span style={css('font-size:10.5px;color:#928B9B;font-family:JetBrains Mono;white-space:nowrap')}>{r.n} ไม้ · {r.record}</span></div>
+                  <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600;text-align:right'), color: r.lift > 0 ? '#1C9B68' : '#E0B15A' }}>{r.valueStr}</div>
+                  <div style={css('text-align:right')}><span style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:3px 8px;border-radius:7px'), color: '#1C9B68', background: 'rgba(28,155,104,.12)' }}>{r.liftStr}</span></div>
                   <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600'), color: r.netColor }}>{r.net}</div><div style={{ ...css('font-size:9px;font-weight:600;margin-top:2px'), color: r.confColor }}>{r.confLabel}</div></div>
                 </div>
               ))}
-              <div style={css('font-size:11px;color:#6f6f78;margin-top:4px;line-height:1.55')}>อ่านว่า: ตัวเลขสีเขียวคือ<b style={css('color:#9CD3C0')}>ส่วนที่ดีกว่าค่าเฉลี่ยของคุณเอง</b> — เข้าไม้เฉพาะตอนเงื่อนไขเหล่านี้ครบ จะดันผลรวมขึ้น · ป้าย <b style={css('color:#E2C588')}>พอประเมินได้</b> = {V.edgeFinder.minSample}+ ไม้, <b style={css('color:#5FC08D')}>น่าเชื่อถือ</b> = {V.edgeFinder.strongSample}+ ไม้ · เจอแล้วอย่าเพิ่งเชื่อ เก็บอีก 30 ไม้ยืนยันก่อน</div>
+              <div style={css('font-size:11px;color:#9A93A1;margin-top:4px;line-height:1.55')}>อ่านว่า: ตัวเลขสีเขียวคือ<b style={css('color:#9CD3C0')}>ส่วนที่ดีกว่าค่าเฉลี่ยของคุณเอง</b> — เข้าไม้เฉพาะตอนเงื่อนไขเหล่านี้ครบ จะดันผลรวมขึ้น · ป้าย <b style={css('color:#7658E8')}>พอประเมินได้</b> = {V.edgeFinder.minSample}+ ไม้, <b style={css('color:#1C9B68')}>น่าเชื่อถือ</b> = {V.edgeFinder.strongSample}+ ไม้ · เจอแล้วอย่าเพิ่งเชื่อ เก็บอีก 30 ไม้ยืนยันก่อน</div>
             </div>
           ) : (
-            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(201,166,95,.24);background:rgba(201,166,95,.03);font-size:12.5px;color:#9A9AA4;line-height:1.6')}>
+            <div style={css('margin-top:14px;text-align:center;padding:26px 16px;border-radius:12px;border:1px dashed rgba(118,88,232,.24);background:rgba(118,88,232,.03);font-size:12.5px;color:#746E7D;line-height:1.6')}>
               {!V.edgeFinder.sampleReady
-                ? (<span>ยังสรุปไม่ได้ — ต้องมีอย่างน้อย <b style={css('color:#E2C588')}>{V.edgeFinder.minSample} ไม้ต่อกลุ่ม</b> ถึงจะแยก edge ออกจาก noise ได้<br/>ตอนนี้ปิดไปแล้ว <b style={css('color:#E2C588')}>{V.edgeFinder.closedN}</b> ไม้ · กลุ่มใหญ่สุดมี <b style={css('color:#E2C588')}>{V.edgeFinder.bestSample}</b> ไม้</span>)
-                : (<span>มีข้อมูลพอแล้ว แต่<b style={css('color:#E2C588')}>ยังไม่มีเงื่อนไขไหนดีกว่าค่าเฉลี่ยของคุณ ({V.edgeFinder.baselineStr}) ถึง {V.edgeFinder.minLiftStr}</b><br/>แปลว่ายังไม่เจอ edge ที่ชัดพอจะเอาไปกรองไม้ — เก็บต่อ หรือลองสลับไปดูอีกมุมหนึ่ง</span>)}
+                ? (<span>ยังสรุปไม่ได้ — ต้องมีอย่างน้อย <b style={css('color:#7658E8')}>{V.edgeFinder.minSample} ไม้ต่อกลุ่ม</b> ถึงจะแยก edge ออกจาก noise ได้<br/>ตอนนี้ปิดไปแล้ว <b style={css('color:#7658E8')}>{V.edgeFinder.closedN}</b> ไม้ · กลุ่มใหญ่สุดมี <b style={css('color:#7658E8')}>{V.edgeFinder.bestSample}</b> ไม้</span>)
+                : (<span>มีข้อมูลพอแล้ว แต่<b style={css('color:#7658E8')}>ยังไม่มีเงื่อนไขไหนดีกว่าค่าเฉลี่ยของคุณ ({V.edgeFinder.baselineStr}) ถึง {V.edgeFinder.minLiftStr}</b><br/>แปลว่ายังไม่เจอ edge ที่ชัดพอจะเอาไปกรองไม้ — เก็บต่อ หรือลองสลับไปดูอีกมุมหนึ่ง</span>)}
             </div>
           )}
         </div>
         <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .14s both;transition:.18s')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:18px')}>R-multiple distribution</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .14s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B;margin-bottom:18px')}>R-multiple distribution</div>
             <div style={css('display:flex;align-items:flex-end;gap:8px;height:140px')}>
               {V.rDist.map((b, i) => (
-                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h, animationDelay: (i * 0.05) + 's' }}></div><span style={css('font-size:10px;color:#83838C;font-family:JetBrains Mono')}>{b.label}</span></div>
+                <div key={i} style={css('flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end')}><div className="bar-grow" style={{ ...css('width:100%;border-radius:5px 5px 0 0'), background: b.bg, height: b.h, animationDelay: (i * 0.05) + 's' }}></div><span style={css('font-size:10px;color:#928B9B;font-family:JetBrains Mono')}>{b.label}</span></div>
               ))}
             </div>
           </div>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .18s both;transition:.18s')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:16px')}>Key stats</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .18s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B;margin-bottom:16px')}>Key stats</div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
               {V.anaStats.map((s, i) => (
-                <div key={i} style={css('padding:15px 17px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06)')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#83838C;margin-bottom:10px')}>{s.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: s.color }}>{s.val}</div></div>
+                <div key={i} style={css('padding:15px 17px;border-radius:12px;background:linear-gradient(180deg,rgba(49,35,73,.03),rgba(49,35,73,.01));border:1px solid rgba(49,35,73,.06)')}><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:10px')}>{s.label}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:22px;font-weight:600'), color: s.color }}>{s.val}</div></div>
               ))}
             </div>
           </div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px')}>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .22s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>Drawdown</div><span style={css('font-size:11px;color:#83838C')}>{V.ddUnitLabel}</span></div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .22s both;transition:.18s')}>
+            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>Drawdown</div><span style={css('font-size:11px;color:#928B9B')}>{V.ddUnitLabel}</span></div>
             <svg viewBox="0 0 640 120" preserveAspectRatio="none" style={css('width:100%;height:120px;display:block')}>
-              <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#DC6A63" stopOpacity="0"/><stop offset="100%" stopColor="#DC6A63" stopOpacity=".4"/></linearGradient></defs>
-              <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(255,255,255,.1)"/>
+              <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E25462" stopOpacity="0"/><stop offset="100%" stopColor="#E25462" stopOpacity=".4"/></linearGradient></defs>
+              <line x1="0" y1="1" x2="640" y2="1" stroke="rgba(49,35,73,.1)"/>
               <path d={V.ddArea} fill="url(#ddg)"/>
-              <path className="eq-line" d={V.ddLine} fill="none" stroke="#DC6A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path className="eq-line" d={V.ddLine} fill="none" stroke="#E25462" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .26s both;transition:.18s')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;margin-bottom:14px')}>P&amp;L by symbol</div>
+          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .26s both;transition:.18s')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B;margin-bottom:14px')}>P&amp;L by symbol</div>
             <div style={css('display:flex;flex-direction:column;gap:11px')}>
               {V.symbolBars.length ? V.symbolBars.map((s, i) => (
-                <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#ECEAE3')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
-              )) : <div style={css('font-size:12.5px;color:#83838C')}>No data yet</div>}
-              {V.symbolMore > 0 && <div style={css('font-size:11.5px;color:#83838C;text-align:center;margin-top:2px')}>+ {V.symbolMore} more symbols (top 15 by P&amp;L)</div>}
+                <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#24202B')}>{s.name} <span style={css('color:#928B9B;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
+              )) : <div style={css('font-size:12.5px;color:#928B9B')}>No data yet</div>}
+              {V.symbolMore > 0 && <div style={css('font-size:11.5px;color:#928B9B;text-align:center;margin-top:2px')}>+ {V.symbolMore} more symbols (top 15 by P&amp;L)</div>}
             </div>
           </div>
         </div>
 
-        <div className="hv-brd-gold liquid-glass" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:rise .5s .3s both;transition:.18s')}>
+        <div className="hv-brd-gold liquid-glass" style={css('margin-top:16px;padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .5s .3s both;transition:.18s')}>
           <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>P&amp;L by feeling <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>— อารมณ์ไหนทำให้ผลออกมาแบบนั้น</span></div>
-            <Sel value={V.feelMoment} onChange={V.setFeelMoment} className="hv-focus rtm-select" style={css('background:rgba(255,255,255,.04);border:1px solid rgba(155,140,255,.4);border-radius:9px;padding:6px 11px;color:#B79CE8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>P&amp;L by feeling <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>— อารมณ์ไหนทำให้ผลออกมาแบบนั้น</span></div>
+            <Sel value={V.feelMoment} onChange={V.setFeelMoment} className="hv-focus rtm-select" style={css('background:rgba(49,35,73,.04);border:1px solid rgba(139,108,240,.4);border-radius:9px;padding:6px 11px;color:#B79CE8;font-size:12px;font-weight:600;outline:none;cursor:pointer')}>
               {V.feelMoments.map(m => (<option key={m.v} value={m.v}>{m.label}</option>))}
             </Sel>
           </div>
-          <div style={css('font-size:11px;color:#83838C;margin-bottom:14px;line-height:1.5')}>เรียงจาก <b style={css('color:#9A9AA4')}>แย่สุดขึ้นก่อน</b> ตาม Expectancy — อารมณ์ที่ทำให้ avg R ติดลบคือสิ่งที่ต้องแก้ก่อน</div>
+          <div style={css('font-size:11px;color:#928B9B;margin-bottom:14px;line-height:1.5')}>เรียงจาก <b style={css('color:#746E7D')}>แย่สุดขึ้นก่อน</b> ตาม Expectancy — อารมณ์ที่ทำให้ avg R ติดลบคือสิ่งที่ต้องแก้ก่อน</div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:13px 24px')}>
             {V.feelRows.length ? V.feelRows.map((s, i) => (
               <div key={i} className="rtm-cascade" style={{ animationDelay: (i * 0.05) + 's' }}>
                 <div style={css('display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:6px;gap:8px')}>
-                  <span style={css('color:#ECEAE3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{s.name} <span style={css('color:#83838C;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span>
+                  <span style={css('color:#24202B;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{s.name} <span style={css('color:#928B9B;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span>
                   <span style={css('display:flex;align-items:baseline;gap:9px;flex:none')}><span style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600'), color: s.avgRColor }}>{s.avgR}</span><span style={{ ...css('font-family:JetBrains Mono;font-size:12px'), color: s.color }}>{s.pnl}</span></span>
                 </div>
-                <div style={css('height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div>
+                <div style={css('height:6px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div>
               </div>
-            )) : <div style={css('grid-column:1/-1;font-size:12.5px;color:#83838C')}>ยังไม่มีข้อมูล Feeling ในช่วงนี้ — เลือกอารมณ์ตอนบันทึกเทรด แล้วระบบจะบอกว่าอารมณ์ไหนกินกำไรคุณ</div>}
-            {V.feelMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#83838C;text-align:center')}>+ อีก {V.feelMore} อารมณ์</div>}
+            )) : <div style={css('grid-column:1/-1;font-size:12.5px;color:#928B9B')}>ยังไม่มีข้อมูล Feeling ในช่วงนี้ — เลือกอารมณ์ตอนบันทึกเทรด แล้วระบบจะบอกว่าอารมณ์ไหนกินกำไรคุณ</div>}
+            {V.feelMore > 0 && <div style={css('grid-column:1/-1;font-size:11.5px;color:#928B9B;text-align:center')}>+ อีก {V.feelMore} อารมณ์</div>}
           </div>
         </div>
       </div>
@@ -4067,23 +4196,23 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>System library</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Trade setups <span style={css('font-style:italic;color:#E2C588')}>— promote only proven rules</span></div></div>
-          <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>System library</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>Trade setups <span style={css('font-style:italic;color:#7658E8')}>— promote only proven rules</span></div></div>
+          <span onClick={V.openNewSetup} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);display:flex;align-items:center;gap:5px;transition:.14s')}>+ New setup</span>
         </div>
         <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:16px')}>
           {V.setupCards.map((s) => (
-            <div key={s.id} onClick={s.open} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:22px 24px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);animation:pop .3s both;cursor:pointer;transition:.18s'), borderLeft: '3px solid ' + s.accent }}>
-              <div onClick={s.del} title="Delete setup" className="hv-del" style={css('position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#83838C;transition:.14s;z-index:2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Instrument Serif\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0;flex:1')}><div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:20px;color:#ECEAE3')}>{s.name}</div>{s.gate && <span style={{ ...css('font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px'), color: s.gate.color, background: s.gate.color + '14', border: '1px solid ' + s.gate.color + '44' }}>{s.gate.stageLabel}</span>}</div><div style={css('font-size:12px;color:#9A9AA4;margin-top:2px')}>{s.desc}</div></div></div>
+            <div key={s.id} onClick={s.open} className="hv-card liquid-glass" style={{ ...css('position:relative;padding:22px 24px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:pop .3s both;cursor:pointer;transition:.18s'), borderLeft: '3px solid ' + s.accent }}>
+              <div onClick={s.del} title="Delete setup" className="hv-del" style={css('position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(49,35,73,.08);display:flex;align-items:center;justify-content:center;color:#928B9B;transition:.14s;z-index:2')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div style={css('display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-right:34px')}><div style={{ ...css('width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:\'Instrument Serif\',serif;font-size:18px;flex:none'), background: s.iconBg, color: s.accent }}>{s.glyph}</div><div style={css('min-width:0;flex:1')}><div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:20px;color:#24202B')}>{s.name}</div>{s.gate && <span style={{ ...css('font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px'), color: s.gate.color, background: s.gate.color + '14', border: '1px solid ' + s.gate.color + '44' }}>{s.gate.stageLabel}</span>}</div><div style={css('font-size:12px;color:#746E7D;margin-top:2px')}>{s.desc}</div></div></div>
               <div style={css('display:flex;gap:24px;margin-bottom:16px')}>
-                <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.wrStr}</div></div>
-                <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Trades</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#ECEAE3')}>{s.tradesStr}</div></div>
-                <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Avg R</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.rColor }}>{s.avgRStr}</div></div>
-                <div><div style={css('font-size:10px;color:#83838C;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.pnlColor }}>{s.pnlStr}</div></div>
+                <div><div style={css('font-size:10px;color:#928B9B;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Win rate</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#24202B')}>{s.wrStr}</div></div>
+                <div><div style={css('font-size:10px;color:#928B9B;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Trades</div><div style={css('font-family:\'JetBrains Mono\';font-size:16px;color:#24202B')}>{s.tradesStr}</div></div>
+                <div><div style={css('font-size:10px;color:#928B9B;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Avg R</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.rColor }}>{s.avgRStr}</div></div>
+                <div><div style={css('font-size:10px;color:#928B9B;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px')}>Net P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px'), color: s.pnlColor }}>{s.pnlStr}</div></div>
               </div>
-              <div style={css('height:7px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:12px')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
-              {s.gate && <div style={{ ...css('font-size:10.5px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px'), color: s.gate.color }}><span>{s.gate.stageNote}</span><span style={css('font-family:JetBrains Mono;white-space:nowrap;color:#83838C')}>BT {s.gate.btN} · FW {s.gate.fwN}</span></div>}
-              <div style={css('font-size:11.5px;color:#C9A65F;display:flex;align-items:center;gap:5px')}>View details &amp; example chart <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div style={css('height:7px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden;margin-bottom:12px')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.accent, width: s.wrW }}></div></div>
+              {s.gate && <div style={{ ...css('font-size:10.5px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px'), color: s.gate.color }}><span>{s.gate.stageNote}</span><span style={css('font-family:JetBrains Mono;white-space:nowrap;color:#928B9B')}>BT {s.gate.btN} · FW {s.gate.fwN}</span></div>}
+              <div style={css('font-size:11.5px;color:#6747D8;display:flex;align-items:center;gap:5px')}>View details &amp; example chart <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             </div>
           ))}
         </div>
@@ -4108,14 +4237,14 @@ class App extends React.Component {
             <span style={css('display:flex;gap:2.5px')}><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span><span style={css('width:2.5px;height:2.5px;border-radius:50%;background:currentColor')}></span></span>
           </div>
         )}
-        <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg key={'tick' + c.checkOp} className={c.checkOp ? 'rtm-tick' : undefined} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+        <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg key={'tick' + c.checkOp} className={c.checkOp ? 'rtm-tick' : undefined} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#FFFFFF" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
         {c.editing ? (
-          <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+          <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#24202B;background:rgba(0,0,0,.25);border:1px solid rgba(118,88,232,.4);border-radius:7px;padding:5px 10px;outline:none')} />
         ) : (
           <Fragment>
             <span onClick={c.toggle} style={{ ...css('flex:1;font-size:14px;cursor:pointer'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
-            <div onClick={c.edit} className="hv-edittext" style={css('flex:none;color:#83838C;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-            <div onClick={c.del} className="hv-deltext" style={css('flex:none;color:#83838C;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+            <div onClick={c.edit} className="hv-edittext" style={css('flex:none;color:#928B9B;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+            <div onClick={c.del} className="hv-deltext" style={css('flex:none;color:#928B9B;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
           </Fragment>
         )}
       </div>
@@ -4124,11 +4253,11 @@ class App extends React.Component {
 
   _renderReadiness(stroke, offset, pct, msg, frac) {
     return (
-      <div className="rtm-float" style={css('position:sticky;top:0;padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(201,166,95,.1),rgba(255,255,255,.015));border:1px solid rgba(201,166,95,.22);text-align:center')}>
-        <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Readiness</div>
-        <div style={css('position:relative;width:130px;height:130px;margin:0 auto')}><svg viewBox="0 0 120 120" style={css('width:130px;height:130px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="9"/><circle cx="60" cy="60" r="52" fill="none" stroke={stroke} strokeWidth="9" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .5s' }}/></svg><div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600'), color: stroke }}>{pct}</span></div></div>
-        {msg ? <div style={css('font-size:13px;color:#9A9AA4;margin-top:16px;line-height:1.5')}>{msg}</div> : null}
-        <div style={{ ...css('font-size:11.5px;color:#83838C;font-family:JetBrains Mono'), marginTop: msg ? 10 : 16 }}>{frac}</div>
+      <div className="rtm-float" style={css('position:sticky;top:0;padding:22px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(118,88,232,.1),rgba(49,35,73,.015));border:1px solid rgba(118,88,232,.22);text-align:center')}>
+        <div style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6747D8;margin-bottom:14px')}>Readiness</div>
+        <div style={css('position:relative;width:130px;height:130px;margin:0 auto')}><svg viewBox="0 0 120 120" style={css('width:130px;height:130px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(49,35,73,.07)" strokeWidth="9"/><circle cx="60" cy="60" r="52" fill="none" stroke={stroke} strokeWidth="9" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .5s' }}/></svg><div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600'), color: stroke }}>{pct}</span></div></div>
+        {msg ? <div style={css('font-size:13px;color:#746E7D;margin-top:16px;line-height:1.5')}>{msg}</div> : null}
+        <div style={{ ...css('font-size:11.5px;color:#928B9B;font-family:JetBrains Mono'), marginTop: msg ? 10 : 16 }}>{frac}</div>
       </div>
     );
   }
@@ -4137,19 +4266,19 @@ class App extends React.Component {
   _renderDiscipline(V) {
     const d = V.disc;
     return (
-      <div className="rtm-float" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(180deg,rgba(155,140,255,.08),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.09)')}>
+      <div className="rtm-float" style={css('padding:18px 20px;border-radius:16px;background:linear-gradient(180deg,rgba(139,108,240,.08),rgba(49,35,73,.015));border:1px solid rgba(49,35,73,.09)')}>
         <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}>
-          <span style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F')}>Discipline</span>
-          <span style={{ ...css('font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px'), color: d.color, background: 'rgba(255,255,255,.05)' }}>{d.grade}</span>
+          <span style={css('font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6747D8')}>Discipline</span>
+          <span style={{ ...css('font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px'), color: d.color, background: 'rgba(49,35,73,.05)' }}>{d.grade}</span>
         </div>
         {d.hasData ? (
           <Fragment>
             <div style={css('display:flex;align-items:baseline;gap:8px')}>
               <span style={{ ...css('font-family:\'JetBrains Mono\';font-size:38px;font-weight:600;line-height:1'), color: d.color }}>{d.pct}</span>
-              <span style={css('font-size:11.5px;color:#9A9AA4')}>on-target</span>
+              <span style={css('font-size:11.5px;color:#746E7D')}>on-target</span>
             </div>
-            <div style={css('height:6px;border-radius:4px;background:rgba(255,255,255,.07);margin:12px 0 6px;overflow:hidden')}><div style={{ ...css('height:100%;border-radius:4px;transition:width .5s'), width: d.pctNum + '%', background: d.color }}></div></div>
-            <div style={css('font-size:11px;color:#83838C;margin-bottom:14px')}>{d.caption}</div>
+            <div style={css('height:6px;border-radius:4px;background:rgba(49,35,73,.07);margin:12px 0 6px;overflow:hidden')}><div style={{ ...css('height:100%;border-radius:4px;transition:width .5s'), width: d.pctNum + '%', background: d.color }}></div></div>
+            <div style={css('font-size:11px;color:#928B9B;margin-bottom:14px')}>{d.caption}</div>
             {d.spark.length > 1 && (
               <div style={css('display:flex;align-items:flex-end;gap:3px;height:34px;margin-bottom:14px')}>
                 {d.spark.map((s, i) => (
@@ -4157,22 +4286,22 @@ class App extends React.Component {
                 ))}
               </div>
             )}
-            <div style={css('font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AA4;margin-bottom:9px')}>{d.allClear ? 'Nothing missed ✓' : 'Most missed'}</div>
+            <div style={css('font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#746E7D;margin-bottom:9px')}>{d.allClear ? 'Nothing missed ✓' : 'Most missed'}</div>
             {d.allClear ? (
               <div style={css('font-size:12px;color:#5FD0C8;line-height:1.5')}>Completed every item every round — keep it up</div>
             ) : d.missed.map((m, i) => (
               <div key={i} style={css('margin-bottom:10px')}>
                 <div style={css('display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px')}>
                   <span style={css('font-size:12px;color:#D6D2C6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{m.text}</span>
-                  <span style={css('font-size:10.5px;color:#9A9AA4;flex:none;font-family:JetBrains Mono')}>{m.pct}</span>
+                  <span style={css('font-size:10.5px;color:#746E7D;flex:none;font-family:JetBrains Mono')}>{m.pct}</span>
                 </div>
-                <div style={css('height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:3px'), width: m.w + '%', background: m.barBg }}></div></div>
-                <div style={css('font-size:10px;color:#83838C;margin-top:3px')}>{m.sub}</div>
+                <div style={css('height:4px;border-radius:3px;background:rgba(49,35,73,.06);overflow:hidden')}><div style={{ ...css('height:100%;border-radius:3px'), width: m.w + '%', background: m.barBg }}></div></div>
+                <div style={css('font-size:10px;color:#928B9B;margin-top:3px')}>{m.sub}</div>
               </div>
             ))}
           </Fragment>
         ) : (
-          <div style={css('font-size:12.5px;color:#83838C;line-height:1.6;padding:8px 0')}>{d.caption}<br/>Start checking items each round and stats build automatically</div>
+          <div style={css('font-size:12.5px;color:#928B9B;line-height:1.6;padding:8px 0')}>{d.caption}<br/>Start checking items each round and stats build automatically</div>
         )}
       </div>
     );
@@ -4183,22 +4312,22 @@ class App extends React.Component {
     const s = size || 52; const sw = 6; const r = (s - sw - 1) / 2; const c = 2 * Math.PI * r; const off = c * (1 - Math.min(100, pct) / 100);
     return (
       <svg width={s} height={s} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth={sw} />
+        <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke="rgba(49,35,73,.1)" strokeWidth={sw} />
         <circle cx={s / 2} cy={s / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1)', filter: 'drop-shadow(0 0 3px ' + color + '66)' }} />
       </svg>
     );
   }
   // ช่องกริดหนึ่งช่อง (วันหนึ่งของนิสัยหนึ่ง)
   _renderHabitCell(c, accent) {
-    if (c.isFuture) return <div key={c.key} style={css('display:flex;align-items:center;justify-content:center')}><span style={css('width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.05)')}></span></div>;
+    if (c.isFuture) return <div key={c.key} style={css('display:flex;align-items:center;justify-content:center')}><span style={css('width:7px;height:7px;border-radius:50%;background:rgba(49,35,73,.05)')}></span></div>;
     const wrap = 'display:flex;align-items:center;justify-content:center;position:relative';
     if (c.isMeasure) {
-      if (c.editing) return <div key={c.key} style={css(wrap)}><input autoFocus defaultValue={c.display} onBlur={c.commit} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} inputMode="decimal" style={{ width: 42, textAlign: 'center', fontSize: 12.5, fontFamily: 'JetBrains Mono', color: '#ECEAE3', background: 'rgba(0,0,0,.4)', border: '1px solid ' + accent, borderRadius: 8, padding: '4px 2px', outline: 'none' }} /></div>;
+      if (c.editing) return <div key={c.key} style={css(wrap)}><input autoFocus defaultValue={c.display} onBlur={c.commit} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} inputMode="decimal" style={{ width: 42, textAlign: 'center', fontSize: 12.5, fontFamily: 'JetBrains Mono', color: '#24202B', background: 'rgba(0,0,0,.4)', border: '1px solid ' + accent, borderRadius: 8, padding: '4px 2px', outline: 'none' }} /></div>;
       return (
         <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
           {c.has
             ? <span className="hb-fill" style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:4px 7px;border-radius:8px;line-height:1'), color: accent, background: accent + '24', border: '1px solid ' + accent + '55' }}>{c.display}</span>
-            : <span style={{ ...css('font-size:15px;color:rgba(255,255,255,.16)'), fontWeight: 300 }}>+</span>}
+            : <span style={{ ...css('font-size:15px;color:rgba(49,35,73,.16)'), fontWeight: 300 }}>+</span>}
         </div>
       );
     }
@@ -4206,26 +4335,26 @@ class App extends React.Component {
       <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
         {c.has
           ? <span className="hb-fill" style={{ ...css('width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center'), background: 'radial-gradient(circle at 35% 30%,' + accent + ',' + accent + 'cc)', boxShadow: '0 2px 10px ' + accent + '55' }}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#12100b" strokeWidth="3.2"><path className="hb-draw" d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-          : <span style={{ ...css('width:22px;height:22px;border-radius:50%'), border: '1.6px solid rgba(255,255,255,.14)' }}></span>}
+          : <span style={{ ...css('width:22px;height:22px;border-radius:50%'), border: '1.6px solid rgba(49,35,73,.14)' }}></span>}
       </div>
     );
   }
   _renderHabitRow(r, V, idx) {
     return (
-      <div key={r.id} className="hb-row" onDragEnter={r.onDragEnter} onDragOver={(e) => e.preventDefault()} style={{ ...css('display:grid;align-items:center;border-top:1px solid rgba(255,255,255,.05);min-height:52px'), gridTemplateColumns: V.gcols, opacity: r.dragging ? 0.4 : 1, animation: 'rise .45s both', animationDelay: (0.04 * idx) + 's' }}>
+      <div key={r.id} className="hb-row" onDragEnter={r.onDragEnter} onDragOver={(e) => e.preventDefault()} style={{ ...css('display:grid;align-items:center;border-top:1px solid rgba(49,35,73,.05);min-height:52px'), gridTemplateColumns: V.gcols, opacity: r.dragging ? 0.4 : 1, animation: 'rise .45s both', animationDelay: (0.04 * idx) + 's' }}>
         {/* ชื่อ นิสัย */}
         <div className="hb-namecell" style={css('display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;min-width:0')}>
           <span draggable onDragStart={r.onDragStart} onDragEnd={r.onDragEnd} title="Drag to reorder" style={css('flex:none;cursor:grab;color:#4a4a52;display:flex;font-size:13px;line-height:1;letter-spacing:-2px')}>⋮⋮</span>
           <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '88' }}></span>
           <div style={css('min-width:0;flex:1')}>
             {r.editing
-              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
-              : <div onClick={r.startRename} title="Click to rename" style={css('font-size:13.5px;color:#ECEAE3;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25')}>{r.name}</div>}
-            <div style={css('font-size:10px;color:#83838C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px')}>{r.targetLabel}</div>
+              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(118,88,232,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
+              : <div onClick={r.startRename} title="Click to rename" style={css('font-size:13.5px;color:#24202B;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25')}>{r.name}</div>}
+            <div style={css('font-size:10px;color:#928B9B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px')}>{r.targetLabel}</div>
           </div>
           <div className="hb-actions" style={css('flex:none;display:flex;gap:5px')}>
-            <span onClick={r.cfg} title="Settings" className="hv-op" style={css('color:#9A9AA4;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H1a2 2 0 110-4h.1A1.6 1.6 0 002.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V1a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H23a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" transform="scale(.72) translate(4.7 4.7)" /></svg></span>
-            <span onClick={r.del} title="Delete" className="hv-deltext" style={css('color:#83838C;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
+            <span onClick={r.cfg} title="Settings" className="hv-op" style={css('color:#746E7D;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H1a2 2 0 110-4h.1A1.6 1.6 0 002.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V1a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H23a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" transform="scale(.72) translate(4.7 4.7)" /></svg></span>
+            <span onClick={r.del} title="Delete" className="hv-deltext" style={css('color:#928B9B;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
           </div>
         </div>
         {/* ช่องรายวัน */}
@@ -4234,7 +4363,7 @@ class App extends React.Component {
         <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:6px 12px 6px 4px')}>
           <div style={css('text-align:right')}>
             <div style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;line-height:1'), color: r.ring }}>{r.curPct}%</div>
-            <div title="Consecutive days" style={css('font-size:11px;color:#9CA0A6;margin-top:2px;white-space:nowrap')}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span> {r.streak}</span> : <span style={css('color:#6a6a72')}>—</span>}</div>
+            <div title="Consecutive days" style={css('font-size:11px;color:#9CA0A6;margin-top:2px;white-space:nowrap')}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span> {r.streak}</span> : <span style={css('color:#9A93A1')}>—</span>}</div>
           </div>
           <div style={css('position:relative;flex:none')}>{this._hbRing(r.curPct, r.ring, 54)}<div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}>{r.done ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={r.ring} strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span style={{ ...css('width:7px;height:7px;border-radius:50%'), background: r.ring }}></span>}</div></div>
         </div>
@@ -4245,15 +4374,15 @@ class App extends React.Component {
     const m = V.habitCfgVM; if (!m) return null;
     return (
       <div onClick={m.close} style={css('position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(4px);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s both')}>
-        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(201,166,95,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
-          <div style={css('padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
-            <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#9A9AA4;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
+        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(118,88,232,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
+          <div style={css('padding:18px 22px;border-bottom:1px solid rgba(49,35,73,.06);display:flex;justify-content:space-between;align-items:center')}>
+            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
+            <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#746E7D;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
           </div>
           <div style={css('padding:20px 22px;display:flex;flex-direction:column;gap:16px')}>
             <div>
-              <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Habit name</div>
-              <input autoFocus defaultValue={m.name} onChange={m.setName} placeholder="e.g. Read, Journal every trade" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+              <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Habit name</div>
+              <input autoFocus defaultValue={m.name} onChange={m.setName} placeholder="e.g. Read, Journal every trade" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <div>
               <div style={css('font-size:11.5px;color:#B9B9C0;margin-bottom:7px')}>How to measure</div>
@@ -4264,12 +4393,12 @@ class App extends React.Component {
             </div>
             <div style={css('display:flex;gap:12px')}>
               <div style={css('flex:1')}>
-                <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Target per period</div>
-                <input defaultValue={m.target} onChange={m.setTarget} inputMode="decimal" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono' }} />
+                <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Target per period</div>
+                <input defaultValue={m.target} onChange={m.setTarget} inputMode="decimal" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono' }} />
               </div>
               <div style={css('flex:1')}>
-                <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Unit</div>
-                <input defaultValue={m.unit} onChange={m.setUnit} placeholder="times / pages / min" style={{ width: '100%', fontSize: 14, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
+                <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Unit</div>
+                <input defaultValue={m.unit} onChange={m.setUnit} placeholder="times / pages / min" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
             <div>
@@ -4278,21 +4407,21 @@ class App extends React.Component {
                 <span onClick={m.pickWeekly} className={'rtm-seg' + (m.period === 'weekly' ? ' on' : '')} style={{ flex: 1 }}>Week</span>
                 <span onClick={m.pickMonthly} className={'rtm-seg' + (m.period === 'monthly' ? ' on' : '')} style={{ flex: 1 }}>Month</span>
               </div>
-              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#C9A65F')}> {m.derivedHint}</span> : null}</div>
+              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#6747D8')}> {m.derivedHint}</span> : null}</div>
               <div style={css('font-size:11px;color:#8a8a92;margin-top:5px;line-height:1.5')}>Yearly ambitions go in “Yearly goals” below the tracker.</div>
             </div>
             <div>
-              <div style={css('font-size:11px;color:#9A9AA4;margin-bottom:8px')}>Colour</div>
+              <div style={css('font-size:11px;color:#746E7D;margin-bottom:8px')}>Colour</div>
               <div style={css('display:flex;gap:9px')}>
                 {m.accents.map(a => <span key={a} onClick={() => m.setAccent(a)} style={{ ...css('width:26px;height:26px;border-radius:50%;cursor:pointer;transition:.14s'), background: a, border: m.accent === a ? '2px solid #fff' : '2px solid transparent', transform: m.accent === a ? 'scale(1.12)' : 'scale(1)', boxShadow: '0 2px 8px ' + a + '66' }}></span>)}
               </div>
             </div>
           </div>
-          <div style={css('padding:16px 22px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}>
-            {m.del ? <span onClick={m.del} className="hv-deltext" style={css('font-size:13px;color:#DC6A63;cursor:pointer')}>Delete habit</span> : <span></span>}
+          <div style={css('padding:16px 22px;border-top:1px solid rgba(49,35,73,.06);display:flex;justify-content:space-between;align-items:center')}>
+            {m.del ? <span onClick={m.del} className="hv-deltext" style={css('font-size:13px;color:#E25462;cursor:pointer')}>Delete habit</span> : <span></span>}
             <div style={css('display:flex;gap:10px')}>
-              <span onClick={m.close} className="hv-close" style={css('font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#ECEAE3;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)')}>Cancel</span>
-              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F)')}>Save</span>
+              <span onClick={m.close} className="hv-close" style={css('font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#24202B;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12)')}>Cancel</span>
+              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8)')}>Save</span>
             </div>
           </div>
         </div>
@@ -4304,21 +4433,21 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#E2C588')}>— build the streak</span></div></div>
-          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#7658E8')}>— build the streak</span></div></div>
+          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
         </div>
 
         {/* daily grid */}
-        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden;animation:rise .5s .05s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.06);gap:14px;flex-wrap:wrap')}>
+        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02);overflow:hidden;animation:rise .5s .05s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid rgba(49,35,73,.06);gap:14px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:baseline;gap:12px')}>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3')}>{V.gridRangeLabel}</div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#24202B')}>{V.gridRangeLabel}</div>
               <div style={css('font-size:12px;color:#7d7d86')}>Tap a box to log · number cells: tap to type an amount · drag to reorder</div>
             </div>
             <div style={css('display:flex;align-items:center;gap:8px')}>
-              {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(201,166,95,.3);background:rgba(201,166,95,.1);color:#E2C588;cursor:pointer')}>Today</span>}
-              <span onClick={V.pageHabitOlder} title="Previous week" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Next week" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+              {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(118,88,232,.3);background:rgba(118,88,232,.1);color:#7658E8;cursor:pointer')}>Today</span>}
+              <span onClick={V.pageHabitOlder} title="Previous week" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Next week" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
             </div>
           </div>
           <div style={css('overflow-x:auto')} className="rtm-scroll">
@@ -4327,30 +4456,30 @@ class App extends React.Component {
                 <div style={css('padding:10px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a92')}>Habit</div>
                 {V.dayCols.map((d, i) => (
                   <div key={i} style={css('text-align:center;padding:9px 0 7px')}>
-                    <div style={{ ...css('font-size:11px;font-weight:600;letter-spacing:.02em'), color: d.isToday ? '#E2C588' : (d.weekend ? '#8a7a52' : '#9CA0A6') }}>{d.dow}</div>
-                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13.5px;font-weight:600;margin-top:3px;width:28px;height:28px;line-height:28px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#1a1408' : '#ECEAE3', background: d.isToday ? 'linear-gradient(180deg,#E2C588,#C9A65F)' : 'transparent' }}>{d.day}</div>
+                    <div style={{ ...css('font-size:11px;font-weight:600;letter-spacing:.02em'), color: d.isToday ? '#7658E8' : (d.weekend ? '#8a7a52' : '#9CA0A6') }}>{d.dow}</div>
+                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13.5px;font-weight:600;margin-top:3px;width:28px;height:28px;line-height:28px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#FFFFFF' : '#24202B', background: d.isToday ? 'linear-gradient(180deg,#7658E8,#6747D8)' : 'transparent' }}>{d.day}</div>
                   </div>
                 ))}
                 <div style={css('text-align:right;padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a92')}>Streak</div>
               </div>
               {R.gridEmpty
-                ? <div style={css('padding:52px 20px;text-align:center;border-top:1px solid rgba(255,255,255,.05)')}><div style={css('font-size:15px;color:#B9B9C0;margin-bottom:8px')}>No habits yet</div><div style={css('font-size:13px;color:#7d7d86')}>Press “New habit” to start building your discipline.</div></div>
+                ? <div style={css('padding:52px 20px;text-align:center;border-top:1px solid rgba(49,35,73,.05)')}><div style={css('font-size:15px;color:#B9B9C0;margin-bottom:8px')}>No habits yet</div><div style={css('font-size:13px;color:#7d7d86')}>Press “New habit” to start building your discipline.</div></div>
                 : V.habitRows.map((r, i) => this._renderHabitRow(r, V, i))}
             </div>
           </div>
-          {!R.gridEmpty && <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(255,255,255,.05);color:#C9A65F;font-size:13px;cursor:pointer;transition:.14s')}>
-            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>New habit
+          {!R.gridEmpty && <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(49,35,73,.05);color:#6747D8;font-size:13px;cursor:pointer;transition:.14s')}>
+            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(118,88,232,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>New habit
           </div>}
         </div>
 
         {/* progress roll-up: weekly / monthly, streak + % to goal */}
-        <div style={css('border-radius:16px;border:1px solid rgba(201,166,95,.2);background:linear-gradient(180deg,rgba(201,166,95,.06),rgba(255,255,255,.012));overflow:hidden;margin-top:16px;animation:rise .5s .12s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);gap:12px;flex-wrap:wrap')}>
+        <div style={css('border-radius:16px;border:1px solid rgba(118,88,232,.2);background:linear-gradient(180deg,rgba(118,88,232,.06),rgba(49,35,73,.012));overflow:hidden;margin-top:16px;animation:rise .5s .12s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(49,35,73,.06);gap:12px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:center;gap:10px')}>
-              <span style={css('font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F')}>Progress</span>
-              <span onClick={R.older} title="Previous" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+              <span style={css('font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#6747D8')}>Progress</span>
+              <span onClick={R.older} title="Previous" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
               <span style={css('font-size:13px;color:#D6D2C6;min-width:120px;text-align:center')}>{R.periodLabel}</span>
-              <span onClick={R.atPresent ? undefined : R.newer} title="Next" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: R.atPresent ? 'default' : 'pointer', opacity: R.atPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+              <span onClick={R.atPresent ? undefined : R.newer} title="Next" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: R.atPresent ? 'default' : 'pointer', opacity: R.atPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
             </div>
             <div className="rtm-segwrap">
               <span onClick={R.setW} className={'rtm-seg' + (R.isW ? ' on' : '')}>Weekly</span>
@@ -4361,12 +4490,12 @@ class App extends React.Component {
             ? <div style={css('padding:34px 20px;text-align:center;color:#7d7d86;font-size:13.5px')}>Add a habit to see its weekly &amp; monthly progress here.</div>
             : (
               <div style={css('display:grid;grid-template-columns:190px 1fr;align-items:stretch')}>
-                <div style={css('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 16px;border-right:1px solid rgba(255,255,255,.06)')}>
+                <div style={css('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 16px;border-right:1px solid rgba(49,35,73,.06)')}>
                   <div style={css('position:relative;width:104px;height:104px')}>
-                    <svg viewBox="0 0 120 120" style={css('width:104px;height:104px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="10" /><circle cx="60" cy="60" r="52" fill="none" stroke={R.pctColor} strokeWidth="10" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={R.offset} style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.2,.7,.3,1)' }} /></svg>
+                    <svg viewBox="0 0 120 120" style={css('width:104px;height:104px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(49,35,73,.08)" strokeWidth="10" /><circle cx="60" cy="60" r="52" fill="none" stroke={R.pctColor} strokeWidth="10" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={R.offset} style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.2,.7,.3,1)' }} /></svg>
                     <div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:26px;font-weight:600'), color: R.pctColor }}>{R.pct}%</span></div>
                   </div>
-                  <div style={css('text-align:center')}><div style={css('font-family:JetBrains Mono;font-size:16px;color:#ECEAE3')}>{R.met} / {R.total}</div><div style={css('font-size:11px;color:#9CA0A6;margin-top:2px')}>targets met</div></div>
+                  <div style={css('text-align:center')}><div style={css('font-family:JetBrains Mono;font-size:16px;color:#24202B')}>{R.met} / {R.total}</div><div style={css('font-size:11px;color:#9CA0A6;margin-top:2px')}>targets met</div></div>
                 </div>
                 <div style={css('padding:10px 6px')}>
                   {R.rows.map((r, i) => (
@@ -4374,22 +4503,22 @@ class App extends React.Component {
                       <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '99' }}></span>
                       <div style={css('flex:1;min-width:0')}>
                         <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px')}>
-                          <span style={css('font-size:14px;color:#ECEAE3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span>
-                          <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;flex:none'), color: r.done ? '#5FC08D' : '#B9B9C0' }}>{r.cur}/{r.target} {r.unit}</span>
+                          <span style={css('font-size:14px;color:#24202B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span>
+                          <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;flex:none'), color: r.done ? '#1C9B68' : '#B9B9C0' }}>{r.cur}/{r.target} {r.unit}</span>
                         </div>
-                        <div style={css('height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.pct + '%', background: r.done ? 'linear-gradient(90deg,#5FC08D,#7DDca0)' : 'linear-gradient(90deg,' + r.accent + ',' + r.accent + 'cc)' }}></div></div>
+                        <div style={css('height:8px;border-radius:5px;background:rgba(49,35,73,.07);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.pct + '%', background: r.done ? 'linear-gradient(90deg,#1C9B68,#7DDca0)' : 'linear-gradient(90deg,' + r.accent + ',' + r.accent + 'cc)' }}></div></div>
                       </div>
                       <div style={css('flex:none;display:flex;align-items:center;gap:16px')}>
                         <div style={css('text-align:center;min-width:50px')}>
-                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.streak > 0 ? '#E2A34B' : '#6a6a72' }}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span>{r.streak}</span> : '—'}</div>
+                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.streak > 0 ? '#E2A34B' : '#9A93A1' }}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span>{r.streak}</span> : '—'}</div>
                           <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>current</div>
                         </div>
                         <div style={css('text-align:center;min-width:50px')}>
-                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#C9A65F' : '#6a6a72' }}>{r.best > 0 ? <span><span className="hb-flame">🔥</span>{r.best}</span> : '—'}</div>
+                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#6747D8' : '#9A93A1' }}>{r.best > 0 ? <span><span className="hb-flame">🔥</span>{r.best}</span> : '—'}</div>
                           <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>longest</div>
                         </div>
                       </div>
-                      <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap;text-align:center;box-sizing:border-box'), minWidth: 116, color: r.done ? '#12100b' : '#E2C588', background: r.done ? 'linear-gradient(180deg,#7DDca0,#5FC08D)' : 'rgba(201,166,95,.14)', border: r.done ? 'none' : '1px solid rgba(201,166,95,.3)' }}>{r.badge}</span>
+                      <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap;text-align:center;box-sizing:border-box'), minWidth: 116, color: r.done ? '#12100b' : '#7658E8', background: r.done ? 'linear-gradient(180deg,#7DDca0,#1C9B68)' : 'rgba(118,88,232,.14)', border: r.done ? 'none' : '1px solid rgba(118,88,232,.3)' }}>{r.badge}</span>
                     </div>
                   ))}
                 </div>
@@ -4398,42 +4527,42 @@ class App extends React.Component {
         </div>
 
         {/* yearly goals — editable checklist per year (the dreams your discipline serves) */}
-        <div style={css('border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(155,140,255,.06),rgba(255,255,255,.012));overflow:hidden;margin-top:16px;animation:rise .5s .16s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);gap:12px;flex-wrap:wrap')}>
+        <div style={css('border-radius:16px;border:1px solid rgba(49,35,73,.08);background:linear-gradient(180deg,rgba(139,108,240,.06),rgba(49,35,73,.012));overflow:hidden;margin-top:16px;animation:rise .5s .16s both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(49,35,73,.06);gap:12px;flex-wrap:wrap')}>
             <div style={css('display:flex;align-items:center;gap:11px')}>
               <span style={css('font-size:17px')}>🎯</span>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#ECEAE3')}>Yearly goals</div>
+              <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Yearly goals</div>
               <span style={css('font-size:12px;color:#8a8a92')}>the dreams your daily discipline serves</span>
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
               <span style={css('font-family:JetBrains Mono;font-size:12px;color:#9CA0A6')}>{YG.done}/{YG.total}</span>
               <div style={css('display:flex;align-items:center;gap:8px')}>
-                <span onClick={YG.prev} title="Previous year" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-                <span style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#E2C588;min-width:44px;text-align:center')}>{YG.year}</span>
-                <span onClick={YG.atThisYear ? undefined : YG.next} title="Next year" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: YG.atThisYear ? 'default' : 'pointer', opacity: YG.atThisYear ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
+                <span onClick={YG.prev} title="Previous year" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
+                <span style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#7658E8;min-width:44px;text-align:center')}>{YG.year}</span>
+                <span onClick={YG.atThisYear ? undefined : YG.next} title="Next year" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: YG.atThisYear ? 'default' : 'pointer', opacity: YG.atThisYear ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
               </div>
             </div>
           </div>
           {YG.items.map((it) => (
-            <div key={it.id} className="hb-row" style={css('display:flex;align-items:center;gap:14px;padding:13px 20px;border-top:1px solid rgba(255,255,255,.04)')}>
-              <span onClick={it.toggle} style={{ ...css('width:23px;height:23px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s'), border: it.done ? '1.5px solid #9B8CFF' : '1.5px solid rgba(255,255,255,.2)', background: it.done ? 'linear-gradient(150deg,#B3A6FF,#9B8CFF)' : 'transparent' }}>{it.done && <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#12100b" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
+            <div key={it.id} className="hb-row" style={css('display:flex;align-items:center;gap:14px;padding:13px 20px;border-top:1px solid rgba(49,35,73,.04)')}>
+              <span onClick={it.toggle} style={{ ...css('width:23px;height:23px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s'), border: it.done ? '1.5px solid #8B6CF0' : '1.5px solid rgba(49,35,73,.2)', background: it.done ? 'linear-gradient(150deg,#B3A6FF,#8B6CF0)' : 'transparent' }}>{it.done && <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#12100b" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
               {it.editing
-                ? <input autoFocus defaultValue={it.text} onBlur={it.commit} onKeyDown={it.key} style={{ flex: 1, fontSize: 14.5, color: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(155,140,255,.5)', borderRadius: 7, padding: '6px 11px', outline: 'none' }} />
-                : <span onClick={it.edit} style={{ ...css('flex:1;font-size:14.5px;cursor:text'), color: it.done ? '#7d7d86' : '#ECEAE3', textDecoration: it.done ? 'line-through' : 'none' }}>{it.text}</span>}
+                ? <input autoFocus defaultValue={it.text} onBlur={it.commit} onKeyDown={it.key} style={{ flex: 1, fontSize: 14.5, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(139,108,240,.5)', borderRadius: 7, padding: '6px 11px', outline: 'none' }} />
+                : <span onClick={it.edit} style={{ ...css('flex:1;font-size:14.5px;cursor:text'), color: it.done ? '#7d7d86' : '#24202B', textDecoration: it.done ? 'line-through' : 'none' }}>{it.text}</span>}
               <span onClick={it.del} className="hv-deltext" style={css('flex:none;color:#7d7d86;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
             </div>
           ))}
-          <div style={css('display:flex;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-            <span style={css('width:23px;height:23px;border-radius:7px;flex:none;border:1.5px dashed rgba(155,140,255,.45);display:flex;align-items:center;justify-content:center;color:#9B8CFF')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>
-            <input key={'yg-' + YG.year} placeholder={'Add a goal for ' + YG.year + ', then Enter'} onKeyDown={YG.addKey} style={css('flex:1;font-size:14.5px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+          <div style={css('display:flex;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid rgba(49,35,73,.05)')}>
+            <span style={css('width:23px;height:23px;border-radius:7px;flex:none;border:1.5px dashed rgba(139,108,240,.45);display:flex;align-items:center;justify-content:center;color:#8B6CF0')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>
+            <input key={'yg-' + YG.year} placeholder={'Add a goal for ' + YG.year + ', then Enter'} onKeyDown={YG.addKey} style={css('flex:1;font-size:14.5px;color:#24202B;background:transparent;border:none;outline:none')} />
           </div>
         </div>
 
-        <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(201,166,95,.12),rgba(155,140,255,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(201,166,95,.22);cursor:pointer;animation:rise .55s .2s both')}>
-          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
-          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(201,166,95,.3)' }}>{V.affirmation}</span>
-          <span style={css('width:24px;height:1px;background:rgba(201,166,95,.45);flex:none')}></span>
-          <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
+        <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(118,88,232,.12),rgba(139,108,240,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(118,88,232,.22);cursor:pointer;animation:rise .55s .2s both')}>
+          <span style={css('width:24px;height:1px;background:rgba(118,88,232,.45);flex:none')}></span>
+          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(118,88,232,.3)' }}>{V.affirmation}</span>
+          <span style={css('width:24px;height:1px;background:rgba(118,88,232,.45);flex:none')}></span>
+          <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(49,35,73,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
         </div>
 
         {this._renderHabitCfg(V)}
@@ -4444,46 +4573,46 @@ class App extends React.Component {
   renderPlaybook(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#E2C588')}>— the rules I live by</span></div></div>
+        <div style={css('margin-bottom:20px;animation:rise .5s both')}><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Playbook · Mindset</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>Mindset &amp; readiness before trading <span style={css('font-style:italic;color:#7658E8')}>— the rules I live by</span></div></div>
 
-        <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
-          <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.16),transparent 70%);pointer-events:none')}></div>
-          <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:14px')}>Trader affirmation</div>
+        <div style={css('position:relative;overflow:hidden;padding:26px 30px;border-radius:18px;background:linear-gradient(120deg,rgba(118,88,232,.16),rgba(139,108,240,.08));border:1px solid rgba(118,88,232,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
+          <div style={css('position:absolute;top:-30%;right:-5%;width:38%;height:90%;background:radial-gradient(circle,rgba(118,88,232,.16),transparent 70%);pointer-events:none')}></div>
+          <div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:14px')}>Trader affirmation</div>
           <div style={css('display:flex;align-items:flex-start;gap:14px;margin-bottom:18px')}>
             {V.editAffirm ? (
-              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:6px 12px;outline:none')} />
+              <input defaultValue={V.affirmation} onBlur={V.commitAffirm} onKeyDown={V.onAffirmKey} autoFocus style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;color:#F3E9D2;background:rgba(0,0,0,.25);border:1px solid rgba(118,88,232,.4);border-radius:8px;padding:6px 12px;outline:none')} />
             ) : (
               <Fragment>
                 <div onClick={V.startAffirm} title="Click to edit" style={css('flex:1;font-family:\'Instrument Serif\',serif;font-style:italic;font-size:22px;line-height:1.4;color:#F3E9D2;cursor:text')}>{V.affirmation}</div>
-                <div onClick={V.startAffirm} className="hv-op" style={css('flex:none;color:#C9A65F;cursor:pointer;opacity:.7')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={V.startAffirm} className="hv-op" style={css('flex:none;color:#6747D8;cursor:pointer;opacity:.7')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               </Fragment>
             )}
           </div>
           <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:10px')}>
             {V.affirmDetails.map((a, i) => (
-              <div key={i} style={css('display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06)')}>
-                <span style={css('color:#C9A65F;flex:none')}>▸</span>
+              <div key={i} style={css('display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.06)')}>
+                <span style={css('color:#6747D8;flex:none')}>▸</span>
                 {a.editing ? (
-                  <input defaultValue={a.text} onBlur={a.commit} onKeyDown={a.key} autoFocus style={css('flex:1;font-size:13.5px;color:#ECEAE3;background:rgba(0,0,0,.3);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:4px 9px;outline:none')} />
+                  <input defaultValue={a.text} onBlur={a.commit} onKeyDown={a.key} autoFocus style={css('flex:1;font-size:13.5px;color:#24202B;background:rgba(0,0,0,.3);border:1px solid rgba(118,88,232,.4);border-radius:7px;padding:4px 9px;outline:none')} />
                 ) : (
                   <Fragment>
                     <span onClick={a.edit} style={css('flex:1;font-size:13.5px;color:#D6D2C6;cursor:text;line-height:1.4')}>{a.text}</span>
-                    <div onClick={a.del} className="hv-deltext" style={css('flex:none;color:#83838C;cursor:pointer')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+                    <div onClick={a.del} className="hv-deltext" style={css('flex:none;color:#928B9B;cursor:pointer')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
                   </Fragment>
                 )}
               </div>
             ))}
-            <div onClick={V.addAffirmDetail} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.12);border:1px dashed rgba(201,166,95,.3);color:#C9A65F;font-size:13px;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a line</div>
+            <div onClick={V.addAffirmDetail} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.12);border:1px dashed rgba(118,88,232,.3);color:#6747D8;font-size:13px;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a line</div>
           </div>
         </div>
 
         <div style={css('display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;animation:rise .5s .1s both')}>
-          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);overflow:hidden')}>
-            <div style={css('padding:15px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:17px;color:#ECEAE3')}>Pre-trade checklist <span style={css('font-size:12px;color:#83838C;font-family:\'Plus Jakarta Sans\'')}>Daily</span></div><span style={css('font-size:11px;color:#83838C')}>Resets daily</span></div>
+          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02);overflow:hidden')}>
+            <div style={css('padding:15px 20px;border-bottom:1px solid rgba(49,35,73,.06);display:flex;justify-content:space-between;align-items:center')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:17px;color:#24202B')}>Pre-trade checklist <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>Daily</span></div><span style={css('font-size:11px;color:#928B9B')}>Resets daily</span></div>
             {V.preItems.map((c, i) => this._renderCheckRow(c, i))}
-            <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-              <input placeholder="Add a pre-trade item, then Enter" onKeyDown={V.addPreKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+            <div style={css('display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid rgba(49,35,73,.05)')}>
+              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(118,88,232,.4);display:flex;align-items:center;justify-content:center;color:#6747D8')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <input placeholder="Add a pre-trade item, then Enter" onKeyDown={V.addPreKey} style={css('flex:1;font-size:14px;color:#24202B;background:transparent;border:none;outline:none')} />
             </div>
           </div>
           {this._renderReadiness(V.preStroke, V.preOffset, V.prePct, V.preMsg, V.preFrac)}
@@ -4496,35 +4625,35 @@ class App extends React.Component {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
         <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#C9A65F;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#ECEAE3')}>Road to a million <span style={css('font-style:italic;color:#E2C588')}>— your why</span></div></div>
-          <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
+          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Vision board</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>Road to a million <span style={css('font-style:italic;color:#7658E8')}>— your why</span></div></div>
+          <span onClick={V.addVision} className="hv-setbtn rtm-press" style={css('font-size:12px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);display:flex;align-items:center;gap:5px;transition:.14s')}>+ Add a dream</span>
         </div>
 
-        <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08));border:1px solid rgba(201,166,95,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
-          <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
+        <div style={css('position:relative;overflow:hidden;padding:30px 34px;border-radius:18px;background:linear-gradient(120deg,rgba(118,88,232,.16),rgba(139,108,240,.08));border:1px solid rgba(118,88,232,.26);margin-bottom:16px;animation:rise .5s .05s both')}>
+          <div style={css('position:absolute;top:-30%;right:-5%;width:40%;height:90%;background:radial-gradient(circle,rgba(118,88,232,.18),transparent 70%);pointer-events:none')}></div>
           <div style={css('display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px')}>
-            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;margin-bottom:8px')}>Milestone progress <span title="เป้าหมายนับรวมทุกพอร์ตเสมอ ไม่เปลี่ยนตามพอร์ตที่เลือก" style={css('text-transform:none;letter-spacing:0;color:#83838C')}>· {V.milestoneScope}</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#C9A65F);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
-              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#ECEAE3', WebkitTextFillColor: '#ECEAE3', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(201,166,95,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
+            <div><div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6747D8;margin-bottom:8px')}>Milestone progress <span title="เป้าหมายนับรวมทุกพอร์ตเสมอ ไม่เปลี่ยนตามพอร์ตที่เลือก" style={css('text-transform:none;letter-spacing:0;color:#928B9B')}>· {V.milestoneScope}</span></div><div className="rtm-goldshine" style={css('font-family:\'Instrument Serif\',serif;font-size:40px;font-weight:600;line-height:1;background:linear-gradient(180deg,#FBF3DF,#6747D8);-webkit-background-clip:text;background-clip:text;color:transparent')}>{V.milestoneEquity} {V.editGoal ? (
+              <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={{ fontFamily: "'Instrument Serif',serif", fontSize: 20, width: 160, color: '#24202B', WebkitTextFillColor: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(118,88,232,.4)', borderRadius: 8, padding: '2px 8px', outline: 'none' }} />
             ) : (
-              <span onClick={V.startGoal} title="Click to edit goal" style={css('font-size:20px;color:#9A9AA4;-webkit-text-fill-color:#9A9AA4;cursor:pointer')}>/ {V.goalStr} ✎</span>
+              <span onClick={V.startGoal} title="Click to edit goal" style={css('font-size:20px;color:#746E7D;-webkit-text-fill-color:#746E7D;cursor:pointer')}>/ {V.goalStr} ✎</span>
             )}</div></div>
-            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#E2C588')}>{V.milestonePct}</div>
+            <div style={css('font-family:\'JetBrains Mono\';font-size:30px;font-weight:600;color:#7658E8')}>{V.milestonePct}</div>
           </div>
-          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#C9A65F,#E2C588);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
-          <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#83838C')}>{V.milestoneMarks.map((m, i) => (<span key={i}>{m}</span>))}</div>
+          <div style={css('height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;position:relative')}><div style={{ ...css('height:100%;border-radius:99px;background:linear-gradient(90deg,#6747D8,#7658E8);position:relative;overflow:hidden;transition:width .8s ease'), width: V.milestoneWidth }}><div style={css('position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(49,35,73,.4),transparent);animation:sweep 3s ease-in-out infinite')}></div></div></div>
+          <div style={css('display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-family:JetBrains Mono;color:#928B9B')}>{V.milestoneMarks.map((m, i) => (<span key={i}>{m}</span>))}</div>
         </div>
 
-        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#83838C;margin:22px 0 12px')}>Your dreams · drop images into the frames</div>
+        <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#928B9B;margin:22px 0 12px')}>Your dreams · drop images into the frames</div>
         <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:16px;animation:rise .5s .12s both')}>
           {V.visionItems.map((v) => (
-            <div key={v.id} className="hv-card liquid-glass" style={css('position:relative;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);overflow:hidden;transition:.18s')}>
-              <div onClick={v.del} title="Delete" className="hv-visdel" style={css('position:absolute;top:10px;right:10px;z-index:3;width:28px;height:28px;border-radius:8px;background:rgba(8,8,11,.7);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#ECEAE3;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+            <div key={v.id} className="hv-card liquid-glass" style={css('position:relative;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);overflow:hidden;transition:.18s')}>
+              <div onClick={v.del} title="Delete" className="hv-visdel" style={css('position:absolute;top:10px;right:10px;z-index:3;width:28px;height:28px;border-radius:8px;background:rgba(8,8,11,.7);backdrop-filter:blur(4px);border:1px solid rgba(49,35,73,.12);display:flex;align-items:center;justify-content:center;color:#24202B;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
               <ImageSlot slotId={'vision-' + v.id} value={this.state.images['vision-' + v.id]} onChange={(p) => this.setImage('vision-' + v.id, p)} placeholder="Drop a dream image" style={{ width: '100%', height: '190px' }} />
               <div style={css('padding:14px 16px')}>
                 {v.editing ? (
-                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                  <input defaultValue={v.title} onBlur={v.commit} onKeyDown={v.key} autoFocus style={css('width:100%;font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B;background:rgba(0,0,0,.25);border:1px solid rgba(118,88,232,.4);border-radius:7px;padding:5px 10px;outline:none')} />
                 ) : (
-                  <div onClick={v.edit} style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#ECEAE3')}>{v.title}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                  <div onClick={v.edit} style={css('display:flex;align-items:center;gap:8px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>{v.title}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#928B9B" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 )}
               </div>
             </div>
@@ -4538,17 +4667,17 @@ class App extends React.Component {
   renderDayModal(V) {
     return (
       <div onClick={V.closeDay} style={css('position:fixed;inset:0;z-index:28;background:rgba(4,4,7,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:92vw;max-height:86vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(49,35,73,.07)')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:4px')}>Orders</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#24202B')}>{V.dayTitle}</div></div><div onClick={V.closeDay} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:18px 22px;display:flex;flex-direction:column;gap:10px')}>
-            <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#9A9AA4')}><span>{V.dayCount} trades</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
+            <div style={css('display:flex;justify-content:space-between;padding:4px 4px 10px;font-size:12px;color:#746E7D')}><span>{V.dayCount} trades</span><span style={{ ...css('font-family:JetBrains Mono'), color: V.dayPnlColor }}>{V.dayPnlStr}</span></div>
             {V.dayTrades.map((t) => (
-              <div key={t.id} onClick={t.open} className="hv-slide" style={{ ...css('display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:.14s'), borderLeft: '3px solid ' + t.accent }}>
-                <div><div style={css('font-size:15px;color:#ECEAE3;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#9A9AA4')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#C9A65F;background:rgba(201,166,95,.12);border:1px solid rgba(201,166,95,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
+              <div key={t.id} onClick={t.open} className="hv-slide" style={{ ...css('display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:13px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);cursor:pointer;transition:.14s'), borderLeft: '3px solid ' + t.accent }}>
+                <div><div style={css('font-size:15px;color:#24202B;font-weight:600;margin-bottom:4px')}>{t.sym} <span style={{ ...css('font-size:11px;font-weight:600'), color: t.sideColor }}>{t.side}</span></div><div style={css('font-size:11.5px;color:#746E7D')}>{t.setupName} · {t.session} · {t.lotStr} lot · {t.holding}</div>{t.tags.length > 0 && <div style={css('display:flex;flex-wrap:wrap;gap:5px;margin-top:6px')}>{t.tags.map((tg, i) => (<span key={i} style={css('font-size:10px;color:#6747D8;background:rgba(118,88,232,.12);border:1px solid rgba(118,88,232,.25);border-radius:6px;padding:2px 7px')}>{tg}</span>))}</div>}</div>
                 <div style={css('text-align:right')}><div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: t.pnlColor }}>{t.pnlStr}</div><div style={{ ...css('font-size:11px;font-family:JetBrains Mono'), color: t.rColor }}>{t.rStr}</div></div>
               </div>
             ))}
-            <div onClick={V.openNewForDay} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:13px;border:1px dashed rgba(201,166,95,.35);color:#C9A65F;font-size:13px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a trade for this day</div>
+            <div onClick={V.openNewForDay} className="hv-goldbg" style={css('display:flex;align-items:center;justify-content:center;gap:7px;padding:13px;border-radius:13px;border:1px dashed rgba(118,88,232,.35);color:#6747D8;font-size:13px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add a trade for this day</div>
           </div>
         </div>
       </div>
@@ -4559,178 +4688,184 @@ class App extends React.Component {
     const fieldInput = (style) => ({ ...css(style), });
     return (
       <div onClick={V.closeTrade} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:1040px;max-width:96vw;max-height:92vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:1040px;max-width:96vw;max-height:92vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(49,35,73,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:4px')}>{V.tradeModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#24202B')}>{V.tradeModalTitle}</div></div><div onClick={V.closeTrade} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:26px 34px 30px;display:flex;flex-direction:column;gap:17px')}>
-            <div className="liquid-glass" style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08)')}>
-              <div onClick={V.setBacktestMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'backtest' ? 'linear-gradient(120deg,rgba(123,167,217,.2),rgba(123,167,217,.08))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'backtest' ? 'rgba(123,167,217,.46)' : 'transparent') }}>
-                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'backtest' ? '#A9C9EB' : '#9A9AA4' }}>Backtest sample</div>
-                <div style={css('font-size:10.5px;color:#6f6f78;line-height:1.45')}>ข้อมูลจำลองเพื่อค้นหา setup · ไม่รวมในยอดเงินจริง</div>
+            <div className="liquid-glass" style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;border-radius:14px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.08)')}>
+              <div onClick={V.setBacktestMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'backtest' ? 'linear-gradient(120deg,rgba(77,127,232,.2),rgba(77,127,232,.08))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'backtest' ? 'rgba(77,127,232,.46)' : 'transparent') }}>
+                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'backtest' ? '#5E86D6' : '#746E7D' }}>Backtest sample</div>
+                <div style={css('font-size:10.5px;color:#9A93A1;line-height:1.45')}>ข้อมูลจำลองเพื่อค้นหา setup · ไม่รวมในยอดเงินจริง</div>
               </div>
-              <div onClick={V.setForwardMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'forward' ? 'linear-gradient(120deg,rgba(95,192,141,.18),rgba(201,166,95,.06))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'forward' ? 'rgba(95,192,141,.42)' : 'transparent') }}>
-                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'forward' ? '#8FD3B0' : '#9A9AA4' }}>Forward test</div>
-                <div style={css('font-size:10.5px;color:#6f6f78;line-height:1.45')}>ผล out-of-sample · นับในพอร์ตและเป้าหมายจริง</div>
+              <div onClick={V.setForwardMode} className="rtm-press" style={{ ...css('padding:12px 14px;border-radius:10px;cursor:pointer;transition:.16s'), background: V.dTestMode === 'forward' ? 'linear-gradient(120deg,rgba(28,155,104,.18),rgba(118,88,232,.06))' : 'transparent', border: '1px solid ' + (V.dTestMode === 'forward' ? 'rgba(28,155,104,.42)' : 'transparent') }}>
+                <div style={{ ...css('font-size:13px;font-weight:700;margin-bottom:3px'), color: V.dTestMode === 'forward' ? '#1C9B68' : '#746E7D' }}>Forward test</div>
+                <div style={css('font-size:10.5px;color:#9A93A1;line-height:1.45')}>ผล out-of-sample · นับในพอร์ตและเป้าหมายจริง</div>
               </div>
             </div>
             <div style={{ ...css('display:grid;gap:14px'), gridTemplateColumns: V.dTestMode === 'backtest' ? '1fr 1fr' : '1fr 1fr 1fr' }}>
-              {V.dTestMode === 'forward' && <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><Sel value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>}
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup</div><Sel value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
+              {V.dTestMode === 'forward' && <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Portfolio</div><Sel value={V.dPortfolio} onChange={V.setPortfolio} className="hv-focus rtm-select" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;cursor:pointer')}>{V.portfolioOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>}
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Symbol</div><input value={V.dSym} onChange={V.setSym} placeholder="XAUUSD" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none')} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Setup</div><Sel value={V.dSetup} onChange={V.setSetup} className="hv-focus rtm-select" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;cursor:pointer')}>{V.setupOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</Sel></div>
             </div>
             {V.dTestMode === 'forward' && V.dSetupGate && !V.dSetupGate.btPass && <div style={css('display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:10px;background:rgba(224,161,90,.09);border:1px solid rgba(224,161,90,.3);font-size:11.5px;color:#E8B875')}><span style={css('font-size:15px')}>!</span><span>Setup นี้ยังไม่ผ่าน Backtest Gate — บันทึกได้ แต่ระบบจะยังไม่ถือว่าเป็น Forward validation ที่พร้อมเพิ่มขนาด</span></div>}
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Session</div><Sel value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></Sel></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Direction</div><div style={css('display:flex;gap:10px')}><div onClick={V.setBuy} className="rtm-press" style={css(V.buyStyle)}>BUY / Long</div><div onClick={V.setSell} className="rtm-press" style={css(V.sellStyle)}>SELL / Short</div></div></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Session</div><Sel value={V.dSession} onChange={V.setSession} className="hv-focus rtm-select" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;cursor:pointer')}><option value="Tokyo">Tokyo</option><option value="London">London</option><option value="New York">New York</option></Sel></div>
             </div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Entry — opened <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Exit — closed <span style={css('color:#83838C')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dExitDate} onChange={V.setExitDate} className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dExitHM} onChange={V.setExitHM} onBlur={V.blurExitHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Entry — opened <span style={css('color:#928B9B')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dEntryDate} onChange={V.setEntryDate} className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:10px 14px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dEntryHM} onChange={V.setEntryHM} onBlur={V.blurEntryHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:10px 12px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Exit — closed <span style={css('color:#928B9B')}>· เวลา server 24 ชม.</span></div><div style={css('display:grid;grid-template-columns:1fr 104px;gap:8px')}><DateField value={V.dExitDate} onChange={V.setExitDate} className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:10px 14px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono;color-scheme:dark')} /><input value={V.dExitHM} onChange={V.setExitHM} onBlur={V.blurExitHM} inputMode="numeric" maxLength={5} placeholder="00:00" title="เวลา 24 ชม. (00:00–23:59)" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:10px 12px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono;text-align:center;letter-spacing:.06em')} /></div></div>
             </div>
-            <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(201,166,95,.12),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E2C588" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <div style={css('font-size:12px;color:#9A9AA4')}>Holding time</div>
-              <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#E2C588')}>{V.holdingDur}</div>
+            <div style={css('display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:linear-gradient(100deg,rgba(118,88,232,.12),rgba(49,35,73,.02));border:1px solid rgba(118,88,232,.2)')}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7658E8" strokeWidth="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div style={css('font-size:12px;color:#746E7D')}>Holding time</div>
+              <div style={css('margin-left:auto;font-family:\'JetBrains Mono\';font-size:16px;font-weight:600;color:#7658E8')}>{V.holdingDur}</div>
             </div>
-            <div onClick={V.toggleTradeAdvanced} className="rtm-advanced-toggle rtm-press" style={css('display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border-radius:12px;background:rgba(155,140,255,.055);border:1px solid rgba(155,140,255,.2);cursor:pointer;transition:.18s')}>
+            <div onClick={V.toggleTradeAdvanced} className="rtm-advanced-toggle rtm-press" style={css('display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border-radius:12px;background:rgba(139,108,240,.055);border:1px solid rgba(139,108,240,.2);cursor:pointer;transition:.18s')}>
               <div><div style={css('font-size:12px;font-weight:700;color:#C9BEFF;margin-bottom:3px')}>Advanced analysis</div><div style={css('font-size:10.5px;color:#77717F')}>Timeframes · scaled entries · emotions · MFE</div></div>
-              <div style={css('display:flex;align-items:center;gap:10px')}><span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#8E8897')}>{V.tradeAdvancedFilled ? V.tradeAdvancedFilled + ' saved' : 'optional'}</span><span style={{ ...css('font-size:17px;color:#BFAEFF;transition:transform .2s'), transform: V.tradeAdvancedOpen ? 'rotate(45deg)' : 'none' }}>+</span></div>
+              <div style={css('display:flex;align-items:center;gap:10px')}><span style={css('font-family:JetBrains Mono;font-size:9.5px;color:#8E8897')}>{V.tradeAdvancedFilled ? V.tradeAdvancedFilled + ' saved' : 'optional'}</span><span style={{ ...css('font-size:17px;color:#8B6CF0;transition:transform .2s'), transform: V.tradeAdvancedOpen ? 'rotate(45deg)' : 'none' }}>+</span></div>
             </div>
             {V.tradeAdvancedOpen && (<>
-            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
+            <div style={css('height:1px;background:rgba(49,35,73,.07);margin:2px 0')}></div>
             <div style={css('display:flex;align-items:center;justify-content:space-between')}>
-              <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
-              <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#9A9AA4;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#5FC08D;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
+              <div style={css('font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6747D8;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6747D8" strokeWidth="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round"/></svg>Trade analysis</div>
+              <div style={css('display:flex;align-items:center;gap:12px')}><span onClick={V.openFieldCfg} className="hv-op" style={css('font-size:11px;color:#746E7D;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>edit choices</span><span style={css('font-size:11.5px;color:#1C9B68;font-family:JetBrains Mono')}>Entered: {V.dDayLabel}</span></div>
+            </div>
+            <div className="rtm-research-context" style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:15px;border-radius:14px;background:rgba(139,108,240,.055);border:1px solid rgba(139,108,240,.18)')}>
+              <div><div style={css('font-size:11px;color:#746E7D;margin-bottom:7px')}>Market regime</div><Sel value={V.dMarketRegime} onChange={V.setMarketRegime} className="hv-focus" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:10px 12px;font-size:12.5px;outline:none'), color: V.dMarketRegime ? '#24202B' : '#9A93A1' }}><option value="">เลือกบริบทตลาด…</option>{V.optsMarketRegime.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:11px;color:#746E7D;margin-bottom:7px')}>Exit reason</div><Sel value={V.dExitReason} onChange={V.setExitReason} className="hv-focus" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:10px 12px;font-size:12.5px;outline:none'), color: V.dExitReason ? '#24202B' : '#9A93A1' }}><option value="">เลือกเหตุผลที่ออก…</option>{V.optsExitReason.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:11px;color:#746E7D;margin-bottom:7px')}>Rule adherence</div><Sel value={V.dRuleAdherence} onChange={V.setRuleAdherence} className="hv-focus" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:10px 12px;font-size:12.5px;outline:none'), color: V.dRuleAdherence ? '#24202B' : '#9A93A1' }}><option value="">ทำตามแผนหรือไม่…</option>{V.optsRuleAdherence.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div style={css('grid-column:1/-1;font-size:10.5px;color:#77717F;line-height:1.55')}>สามช่องนี้ช่วยแยก “ระบบไม่มี edge” ออกจาก “ระบบมี edge แต่ execution หลุด” — ข้อมูลทุกไม้ยังถูกเก็บไว้ ไม่ตัดไม้ผิดแผนทิ้งเพื่อป้องกัน hindsight bias</div>
             </div>
             {/* ① ปัจจัย 3 Timeframe — per-TF card: name + condition + factors + image + aligned */}
             {/* "รอบเทรด · Round context" (SOT + HH/LL ครั้งที่) ถูกตัดออก: ตอบยากเมื่อดูหลาย timeframe
                พร้อมกัน ค่าที่ได้จึงไม่น่าเชื่อถือพอจะเอาไปหา edge */}
-            <div style={css('font-size:12px;color:#9A9AA4;margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#C9A65F')}>①</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#E2C588')}>{V.dAlignN}/3 aligned</span></div>
+            <div style={css('font-size:12px;color:#746E7D;margin:8px 0 2px;display:flex;justify-content:space-between;align-items:center')}><span><b style={css('color:#6747D8')}>①</b> ปัจจัย 3 Timeframe · เปิด Aligned เมื่อ TF ไปทางเดียวกับ bias</span><span style={css('font-family:JetBrains Mono;color:#7658E8')}>{V.dAlignN}/3 aligned</span></div>
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px')}>
               {V.tfCards.map((c) => (
-                <div key={c.tf} className="liquid-glass" style={{ ...css('border-radius:13px;padding:12px'), background: c.aligned ? 'rgba(95,192,141,.06)' : 'rgba(255,255,255,.02)', border: '1px solid ' + (c.aligned ? 'rgba(95,192,141,.4)' : 'rgba(255,255,255,.1)') }}>
+                <div key={c.tf} className="liquid-glass" style={{ ...css('border-radius:13px;padding:12px'), background: c.aligned ? 'rgba(28,155,104,.06)' : 'rgba(49,35,73,.02)', border: '1px solid ' + (c.aligned ? 'rgba(28,155,104,.4)' : 'rgba(49,35,73,.1)') }}>
                   <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:9px')}>
-                    <div><span style={css('font-family:JetBrains Mono;font-size:13px;font-weight:700;color:#E2C588')}>{c.role}</span><span style={css('font-size:10px;color:#83838C;margin-left:6px')}>{c.sub}</span></div>
-                    <span onClick={() => V.toggleAlign(c.alignKey)} className="rtm-press" title="Aligned กับ bias?" style={css('display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;transition:.14s;' + (c.aligned ? 'background:rgba(95,192,141,.16);border:1px solid rgba(95,192,141,.5);color:#5FC08D' : 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.14);color:#9A9AA4'))}><span style={css('width:5px;height:5px;border-radius:50%;background:currentColor')}></span>Aligned</span>
+                    <div><span style={css('font-family:JetBrains Mono;font-size:13px;font-weight:700;color:#7658E8')}>{c.role}</span><span style={css('font-size:10px;color:#928B9B;margin-left:6px')}>{c.sub}</span></div>
+                    <span onClick={() => V.toggleAlign(c.alignKey)} className="rtm-press" title="Aligned กับ bias?" style={css('display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;transition:.14s;' + (c.aligned ? 'background:rgba(28,155,104,.16);border:1px solid rgba(28,155,104,.5);color:#1C9B68' : 'background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.14);color:#746E7D'))}><span style={css('width:5px;height:5px;border-radius:50%;background:currentColor')}></span>Aligned</span>
                   </div>
-                  <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px;box-sizing:border-box')} />
-                  <Sel value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px;box-sizing:border-box'), color: c.cond ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก condition…</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
-                  <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 10px;color:#ECEAE3;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
+                  <input value={c.timeframe} onChange={c.setTimeframe} placeholder={c.tf === 'htf' ? 'Day' : (c.tf === 'mtf' ? 'H4' : 'H1')} title="Timeframe" className="hv-focus" style={css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.09);border-radius:8px;padding:8px 10px;color:#24202B;font-size:12.5px;outline:none;font-family:JetBrains Mono;margin-bottom:7px;box-sizing:border-box')} />
+                  <Sel value={c.cond} onChange={c.setCond} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.09);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;cursor:pointer;margin-bottom:7px;box-sizing:border-box'), color: c.cond ? '#24202B' : '#9A93A1' }}><option value="">เลือก condition…</option>{c.condOpts.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
+                  <textarea value={c.factors} onChange={c.setFactors} placeholder="Factors: Saucer, คืน Zone ครึ่ง, S/R…" className="hv-focus" style={css('width:100%;min-height:50px;resize:vertical;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.09);border-radius:8px;padding:8px 10px;color:#24202B;font-size:12px;outline:none;line-height:1.45;margin-bottom:8px;font-family:inherit;box-sizing:border-box')} />
                   <ImageSlot slotId={c.slotId} value={this.state.images[c.slotId]} onChange={(p) => this.setImage(c.slotId, p)} rounded placeholder={'+ ภาพ ' + c.role} style={{ width: '100%', height: 96 }} />
                 </div>
               ))}
             </div>
             {/* ② ไม้ที่เบิ้ล · Entry legs (multi-leg scaling-in) */}
             <div style={css('display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:4px')}>
-              <div style={css('font-size:11px;color:#9A9AA4')}><b style={css('color:#C9A65F')}>②</b> ไม้ที่เบิ้ล · Entry legs</div>
-              <span onClick={V.addLeg} className="rtm-press hv-addbtn" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#E2C588,#C9A65F);color:#1a1408')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มไม้ (เบิ้ล)</span>
+              <div style={css('font-size:11px;color:#746E7D')}><b style={css('color:#6747D8')}>②</b> ไม้ที่เบิ้ล · Entry legs</div>
+              <span onClick={V.addLeg} className="rtm-press hv-addbtn" style={css('display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#7658E8,#6747D8);color:#FFFFFF')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>เพิ่มไม้ (เบิ้ล)</span>
             </div>
             {V.dLegs.anyUnder && (
-              <div style={css('display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:10px;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.32);font-size:12px;color:#E79088')}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#DC6A63" strokeWidth="1.9"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div style={css('display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:10px;background:rgba(226,84,98,.1);border:1px solid rgba(226,84,98,.32);font-size:12px;color:#E79088')}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#E25462" strokeWidth="1.9"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 มีไม้ที่วาง SL <b>ใต้แท่ง</b> — เสี่ยง Swing เกี่ยว order ควรใช้ Dow / รวมแท่ง
               </div>
             )}
             {V.dLegs.count > 0 ? (
-              <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.02)')}>
+              <div className="liquid-glass" style={css('border-radius:12px;padding:10px 12px;background:rgba(49,35,73,.02)')}>
                 <div className="rtm-xscroll" style={css('overflow-x:auto;padding-bottom:2px')}>
                 <div style={css('min-width:990px')}>
-                <div style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;padding:0 2px 8px;font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:#83838C')}>
+                <div style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;padding:0 2px 8px;font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:#928B9B')}>
                   <span title="ไม้ที่ (1=ไม้แรก, 2+=เบิ้ล)">#</span><span>จุดเข้า</span><span>ราคาเข้า</span><span>Lot</span><span style={css('text-align:right')}>สะสม</span><span>SL basis</span><span>Risk $</span><span>Retest</span><span>Fibo M15</span><span>DD</span><span></span>
                 </div>
                 {V.dLegs.rows.map((r) => (
                   <div key={r.i} style={css('display:grid;grid-template-columns:18px 1.02fr .66fr .46fr .42fr .88fr .55fr .5fr .9fr .46fr 20px;gap:8px;align-items:center;padding:4px 2px')}>
-                    <span title={r.i === 0 ? 'ไม้แรก' : 'ไม้เบิ้ลที่ ' + (r.i + 1)} style={css('font-family:JetBrains Mono;font-size:12px;font-weight:600;color:#B7A981;text-align:center')}>{r.i + 1}</span>
-                    <Sel value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.trigger ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
-                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
-                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
-                    <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#E2C588' : '#83838C' }}>{r.cumStr}</span>
-                    <Sel value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.slBasis ? '#ECEAE3' : '#6a6a72', background: r.danger ? 'rgba(220,106,99,.12)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (r.danger ? 'rgba(220,106,99,.4)' : 'rgba(255,255,255,.12)') }}><option value="">เลือก…</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
-                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
-                    <Sel value={r.retest} onChange={(e) => V.setLegRetest(r.i, e.target.value)} title="ไม้นี้ retest มั้ย" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 6px;font-size:12.5px;outline:none;cursor:pointer'), color: r.retest ? (r.retest === 'yes' ? '#5FC08D' : '#DC6A63') : '#6a6a72' }}><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></Sel>
-                    <Sel value={r.fibo} onChange={(e) => V.setLegFibo(r.i, e)} title="Retest fibo M15 ของไม้นี้" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.fibo ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{r.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
-                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;color:#ECEAE3;font-size:13px;outline:none;font-family:JetBrains Mono')} />
-                    <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#83838C;text-align:center;font-size:16px;line-height:1')}>×</span>
+                    <span title={r.i === 0 ? 'ไม้แรก' : 'ไม้เบิ้ลที่ ' + (r.i + 1)} style={css('font-family:JetBrains Mono;font-size:12px;font-weight:600;color:#7563A6;text-align:center')}>{r.i + 1}</span>
+                    <Sel value={r.trigger} onChange={(e) => V.setLegTrigger(r.i, e)} title="จุดเข้าของไม้นี้ (เช่น M15 Completed Stick) — แก้ตัวเลือกที่ edit choices" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.trigger ? '#24202B' : '#9A93A1' }}><option value="">เลือก…</option>{r.optsTrigger.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
+                    <input value={r.price} onChange={(e) => V.setLegPrice(r.i, e)} placeholder="0.00" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <input value={r.lot} onChange={(e) => V.setLegLot(r.i, e)} placeholder="0" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <span style={{ ...css('font-family:JetBrains Mono;font-size:11.5px;text-align:right;padding-right:2px'), color: r.cum ? '#7658E8' : '#928B9B' }}>{r.cumStr}</span>
+                    <Sel value={r.slBasis} onChange={(e) => V.setLegSL(r.i, e)} className="hv-focus rtm-select" style={{ ...css('width:100%;border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.slBasis ? '#24202B' : '#9A93A1', background: r.danger ? 'rgba(226,84,98,.12)' : 'rgba(49,35,73,.05)', border: '1px solid ' + (r.danger ? 'rgba(226,84,98,.4)' : 'rgba(49,35,73,.12)') }}><option value="">เลือก…</option>{r.optsSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
+                    <input value={r.risk} onChange={(e) => V.setLegRisk(r.i, e)} placeholder="0" title="Risk ($) ของไม้นี้ — รวมกันเป็น 1R ของรอบ" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <Sel value={r.retest} onChange={(e) => V.setLegRetest(r.i, e.target.value)} title="ไม้นี้ retest มั้ย" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 6px;font-size:12.5px;outline:none;cursor:pointer'), color: r.retest ? (r.retest === 'yes' ? '#1C9B68' : '#E25462') : '#9A93A1' }}><option value="">–</option><option value="yes">Yes</option><option value="no">No</option></Sel>
+                    <Sel value={r.fibo} onChange={(e) => V.setLegFibo(r.i, e)} title="Retest fibo M15 ของไม้นี้" className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;font-size:12.5px;outline:none;cursor:pointer'), color: r.fibo ? '#24202B' : '#9A93A1' }}><option value="">เลือก…</option>{r.optsFibo.map(o => (<option key={o} value={o}>{o}</option>))}</Sel>
+                    <input value={r.dd} onChange={(e) => V.setLegDD(r.i, e)} placeholder="0" title="Drawdown ของไม้นี้ (pip)" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:9px 10px;color:#24202B;font-size:13px;outline:none;font-family:JetBrains Mono')} />
+                    <span onClick={() => V.removeLeg(r.i)} className="hv-op" title="ลบไม้" style={css('cursor:pointer;color:#928B9B;text-align:center;font-size:16px;line-height:1')}>×</span>
                   </div>
                 ))}
                 </div>
                 </div>
-                <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.08)')}>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Max lot</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#E2C588')}>{V.dLegs.maxLot}</div></div>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Avg entry</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3')}>{V.dLegs.avgEntry}</div></div>
-                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Total risk <span style={css('color:#6f6a5c')}>(1R)</span></div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#ECEAE3')}>{V.dLegs.totalRiskStr}</div></div>
+                <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(49,35,73,.08)')}>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Max lot</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#7658E8')}>{V.dLegs.maxLot}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Avg entry</div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#24202B')}>{V.dLegs.avgEntry}</div></div>
+                  <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Total risk <span style={css('color:#6f6a5c')}>(1R)</span></div><div style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#24202B')}>{V.dLegs.totalRiskStr}</div></div>
                   <div>
                     <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:4px')}>
-                      <span style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C')}>Max DD</span>
-                      <input value={V.dLegs.ddBaseline} onChange={V.setDdBaseline} placeholder="base" title="DD baseline (pip)" className="hv-focus" style={css('width:52px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:2px 6px;color:#ECEAE3;font-size:10px;outline:none;font-family:JetBrains Mono;text-align:right')} />
+                      <span style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B')}>Max DD</span>
+                      <input value={V.dLegs.ddBaseline} onChange={V.setDdBaseline} placeholder="base" title="DD baseline (pip)" className="hv-focus" style={css('width:52px;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12);border-radius:6px;padding:2px 6px;color:#24202B;font-size:10px;outline:none;font-family:JetBrains Mono;text-align:right')} />
                     </div>
-                    <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.over ? '#DC6A63' : '#E2C588' }}>{V.dLegs.ddShown || 0}<span style={css('font-size:10px;color:#83838C')}>{V.dLegs.baseline ? '/' + V.dLegs.baseline + 'p' : 'p'}</span></div>
-                    <div style={css('height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px')}><div style={{ ...css('height:100%;border-radius:3px'), width: V.dLegs.ddPct + '%', background: V.dLegs.over ? '#DC6A63' : 'linear-gradient(90deg,#E2C588,#C9A65F)' }}></div></div>
+                    <div style={{ ...css('font-family:JetBrains Mono;font-size:15px;font-weight:600'), color: V.dLegs.over ? '#E25462' : '#7658E8' }}>{V.dLegs.ddShown || 0}<span style={css('font-size:10px;color:#928B9B')}>{V.dLegs.baseline ? '/' + V.dLegs.baseline + 'p' : 'p'}</span></div>
+                    <div style={css('height:4px;border-radius:3px;background:rgba(49,35,73,.08);overflow:hidden;margin-top:4px')}><div style={{ ...css('height:100%;border-radius:3px'), width: V.dLegs.ddPct + '%', background: V.dLegs.over ? '#E25462' : 'linear-gradient(90deg,#7658E8,#6747D8)' }}></div></div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div onClick={V.addLeg} className="hv-op" style={css('cursor:pointer;text-align:center;padding:13px;border-radius:11px;border:1px dashed rgba(201,166,95,.28);background:rgba(201,166,95,.04);font-size:12px;color:#9A9AA4')}>
-                + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#E2C588')}>avg entry</b> และ <b style={css('color:#E2C588')}>Max DD</b> ให้อัตโนมัติ
+              <div onClick={V.addLeg} className="hv-op" style={css('cursor:pointer;text-align:center;padding:13px;border-radius:11px;border:1px dashed rgba(118,88,232,.28);background:rgba(118,88,232,.04);font-size:12px;color:#746E7D')}>
+                + เพิ่มไม้แรก แล้วเบิ้ลต่อได้ — ระบบรวม lot, หา <b style={css('color:#7658E8')}>avg entry</b> และ <b style={css('color:#7658E8')}>Max DD</b> ให้อัตโนมัติ
               </div>
             )}
 
             {/* Feeling on Entry / SL / TP */}
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · Entry</div><Sel value={V.dFeelEntry} onChange={V.setFeelEntry} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelEntry ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelEntry.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · SL</div><Sel value={V.dFeelSL} onChange={V.setFeelSL} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelSL ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Feeling · TP</div><Sel value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelTP ? '#ECEAE3' : '#6a6a72' }}><option value="">เลือก…</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Feeling · Entry</div><Sel value={V.dFeelEntry} onChange={V.setFeelEntry} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelEntry ? '#24202B' : '#9A93A1' }}><option value="">เลือก…</option>{V.optsFeelEntry.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Feeling · SL</div><Sel value={V.dFeelSL} onChange={V.setFeelSL} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelSL ? '#24202B' : '#9A93A1' }}><option value="">เลือก…</option>{V.optsFeelSL.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Feeling · TP</div><Sel value={V.dFeelTP} onChange={V.setFeelTP} className="hv-focus rtm-select" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;font-size:14px;outline:none;cursor:pointer'), color: V.dFeelTP ? '#24202B' : '#9A93A1' }}><option value="">เลือก…</option>{V.optsFeelTP.map(o => (<option key={o} value={o}>{o}</option>))}</Sel></div>
             </div>
 
             {/* MFE / capture — how far price ran, and how much you kept after TP. (Drawdown lives in the legs DD) */}
-            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#C9A65F;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#C9A65F" strokeWidth="1.8"><path d="M4 14l5-5 4 3 7-8" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>MFE · เก็บกำไร <span style={css('text-transform:none;letter-spacing:0;color:#83838C;font-size:11px')}>· ใส่ราคา TP + ราคาสุดเทรนด์ แล้วระบบคำนวณ MFE ให้เอง</span></div>
+            <div style={css('height:1px;background:rgba(49,35,73,.07);margin:2px 0')}></div>
+            <div style={css('font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#6747D8;display:flex;align-items:center;gap:8px')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#6747D8" strokeWidth="1.8"><path d="M4 14l5-5 4 3 7-8" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round"/></svg>MFE · เก็บกำไร <span style={css('text-transform:none;letter-spacing:0;color:#928B9B;font-size:11px')}>· ใส่ราคา TP + ราคาสุดเทรนด์ แล้วระบบคำนวณ MFE ให้เอง</span></div>
             {/* price-driven MFE: exit(TP) price + peak price → system derives how far the trend ran, no contract size needed */}
             <div style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ราคา TP / จุดออก</div><input value={V.dExitPrice} onChange={V.setExitPrice} placeholder="e.g. 25900" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>ราคาสุดเทรนด์ <span style={css('color:#83838C')}>peak</span></div><input value={V.dPeakPrice} onChange={V.setPeakPrice} placeholder="e.g. 26000" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Avg entry <span style={css('color:#83838C')}>· จากไม้</span></div><div style={{ ...css('width:100%;border-radius:10px;padding:12px 15px;font-size:14.5px;font-family:JetBrains Mono;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09)'), color: V.dAvgEntry ? '#E2C588' : '#6a6a72' }}>{V.dAvgEntry || 'ใส่ราคาเข้าในไม้ก่อน'}</div></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>ราคา TP / จุดออก</div><input value={V.dExitPrice} onChange={V.setExitPrice} placeholder="e.g. 25900" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;color:#24202B;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>ราคาสุดเทรนด์ <span style={css('color:#928B9B')}>peak</span></div><input value={V.dPeakPrice} onChange={V.setPeakPrice} placeholder="e.g. 26000" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;color:#24202B;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Avg entry <span style={css('color:#928B9B')}>· จากไม้</span></div><div style={{ ...css('width:100%;border-radius:10px;padding:12px 15px;font-size:14.5px;font-family:JetBrains Mono;background:rgba(0,0,0,.22);border:1px solid rgba(49,35,73,.09)'), color: V.dAvgEntry ? '#7658E8' : '#9A93A1' }}>{V.dAvgEntry || 'ใส่ราคาเข้าในไม้ก่อน'}</div></div>
             </div>
             {V.dMfeAuto
-              ? (<div style={css('font-size:11.5px;color:#5FC08D;display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#5FC08D" strokeWidth="2.2"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>คำนวณ MFE อัตโนมัติจากราคาแล้ว — เต็มเทรนด์ {V.dExc ? V.dExc.mfeStr : ''} · เก็บได้ {V.dExc ? V.dExc.capStr : ''} · หลัง TP เหลือ {V.dExc ? V.dExc.ranAfter : ''}</div>)
+              ? (<div style={css('font-size:11.5px;color:#1C9B68;display:flex;align-items:center;gap:6px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#1C9B68" strokeWidth="2.2"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>คำนวณ MFE อัตโนมัติจากราคาแล้ว — เต็มเทรนด์ {V.dExc ? V.dExc.mfeStr : ''} · เก็บได้ {V.dExc ? V.dExc.capStr : ''} · หลัง TP เหลือ {V.dExc ? V.dExc.ranAfter : ''}</div>)
               : (<div style={css('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>
-                  <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>หรือใส่ MFE เป็น $ เอง <span style={css('color:#83838C')}>(ถ้าไม่มีราคา)</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#ECEAE3;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
-                  <div style={css('display:flex;align-items:flex-end')}><div style={css('font-size:11.5px;color:#6f6a5c;line-height:1.5;padding-bottom:4px')}>Max DD ของรอบดูได้ที่ <b style={css('color:#9A9AA4')}>DD ของแต่ละไม้</b> ด้านบน — ไม่ต้องกรอกซ้ำ</div></div>
+                  <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>หรือใส่ MFE เป็น $ เอง <span style={css('color:#928B9B')}>(ถ้าไม่มีราคา)</span></div><input value={V.dMfe} onChange={V.setMfe} placeholder="e.g. 520" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:12px 15px;color:#24202B;font-size:14.5px;outline:none;font-family:JetBrains Mono')} /></div>
+                  <div style={css('display:flex;align-items:flex-end')}><div style={css('font-size:11.5px;color:#6f6a5c;line-height:1.5;padding-bottom:4px')}>Max DD ของรอบดูได้ที่ <b style={css('color:#746E7D')}>DD ของแต่ละไม้</b> ด้านบน — ไม่ต้องกรอกซ้ำ</div></div>
                 </div>)}
             {V.dExc && (
               <div>
-                <div style={css('position:relative;height:30px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);overflow:hidden')}>
-                  <div style={css('position:absolute;top:0;bottom:0;left:0;right:0;background:linear-gradient(90deg,rgba(95,192,141,.42),rgba(226,197,136,.16))')}></div>
-                  <div style={{ ...css('position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,rgba(226,197,136,.28),rgba(226,197,136,.28) 6px,transparent 6px,transparent 12px);border-left:1px dashed #E2C588'), left: V.dExc.exit + '%', right: 0 }}></div>
+                <div style={css('position:relative;height:30px;border-radius:9px;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.09);overflow:hidden')}>
+                  <div style={css('position:absolute;top:0;bottom:0;left:0;right:0;background:linear-gradient(90deg,rgba(28,155,104,.42),rgba(139,108,240,.16))')}></div>
+                  <div style={{ ...css('position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,rgba(139,108,240,.28),rgba(139,108,240,.28) 6px,transparent 6px,transparent 12px);border-left:1px dashed #7658E8'), left: V.dExc.exit + '%', right: 0 }}></div>
                   <div title="จุดที่คุณออก (TP)" style={{ ...css('position:absolute;top:-4px;bottom:-4px;width:3px;background:#fff;z-index:3;box-shadow:0 0 0 1px #000'), left: V.dExc.exit + '%' }}></div>
                 </div>
-                <div style={css('display:flex;justify-content:space-between;margin-top:6px;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#83838C')}>entry</span><span style={css('color:#E2C588')}>หลัง TP วิ่งต่อ {V.dExc.ranAfter}</span><span style={css('color:#5FC08D')}>peak {V.dExc.mfeStr}</span></div>
+                <div style={css('display:flex;justify-content:space-between;margin-top:6px;font-family:JetBrains Mono;font-size:11px')}><span style={css('color:#928B9B')}>entry</span><span style={css('color:#7658E8')}>หลัง TP วิ่งต่อ {V.dExc.ranAfter}</span><span style={css('color:#1C9B68')}>peak {V.dExc.mfeStr}</span></div>
                 <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px')}>
-                  <div className="liquid-glass" style={css('padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>เก็บได้ของ peak</div><div style={{ ...css('font-family:JetBrains Mono;font-size:19px;font-weight:600'), color: V.dExc.cap >= 80 ? '#5FC08D' : (V.dExc.cap >= 55 ? '#E2C588' : '#DC6A63') }}>{V.dExc.capStr}</div></div>
-                  <div className="liquid-glass" style={css('padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:5px')}>หลัง TP วิ่งต่อ (หมู)</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:600;color:#E2C588')}>${V.dExc.pig}</div></div>
+                  <div className="liquid-glass" style={css('padding:11px 13px;border-radius:11px;background:rgba(49,35,73,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:5px')}>เก็บได้ของ peak</div><div style={{ ...css('font-family:JetBrains Mono;font-size:19px;font-weight:600'), color: V.dExc.cap >= 80 ? '#1C9B68' : (V.dExc.cap >= 55 ? '#7658E8' : '#E25462') }}>{V.dExc.capStr}</div></div>
+                  <div className="liquid-glass" style={css('padding:11px 13px;border-radius:11px;background:rgba(49,35,73,.03)')}><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:5px')}>หลัง TP วิ่งต่อ (หมู)</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:600;color:#7658E8')}>${V.dExc.pig}</div></div>
                 </div>
-                <div style={{ ...css('margin-top:12px;border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.55'), background: V.dExc.cls === 'good' ? 'rgba(95,192,141,.1)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.12)' : 'rgba(220,106,99,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(95,192,141,.35)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.4)' : 'rgba(220,106,99,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
+                <div style={{ ...css('margin-top:12px;border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.55'), background: V.dExc.cls === 'good' ? 'rgba(28,155,104,.1)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.12)' : 'rgba(226,84,98,.1)'), border: '1px solid ' + (V.dExc.cls === 'good' ? 'rgba(28,155,104,.35)' : (V.dExc.cls === 'warn' ? 'rgba(224,177,90,.4)' : 'rgba(226,84,98,.35)')), color: V.dExc.cls === 'good' ? '#9FF0D3' : (V.dExc.cls === 'warn' ? '#F0C98A' : '#FFC2C9') }}>{V.dExc.msg}</div>
               </div>
             )}
             </>)}
             {/* Core result — the only numeric inputs required for comparable expectancy. */}
-            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div style={css('font-size:12px;color:#9A9AA4;margin-bottom:2px')}><b style={css('color:#C9A65F')}>Result</b> · three numbers for accurate Net P&amp;L and R</div>
+            <div style={css('height:1px;background:rgba(49,35,73,.07);margin:2px 0')}></div>
+            <div style={css('font-size:12px;color:#746E7D;margin-bottom:2px')}><b style={css('color:#6747D8')}>Result</b> · three numbers for accurate Net P&amp;L and R</div>
             <div className="rtm-trade-summary-grid" style={css('display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Risk (1R) <span style={css('color:#83838C')}>(USD)</span></div><input value={V.dRisk} onChange={V.setRisk} placeholder="e.g. 100" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} />{V.dRiskHint && !V.dRisk && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('display:inline-block;margin-top:5px;font-size:9.5px;color:#7BA7D9;cursor:pointer')}>Use estimated ${V.dRiskHint.val}</span>}</div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Commission / Swap <span style={css('color:#83838C')}>(รวมทุกไม้)</span></div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>P&amp;L (USD) <span style={css('color:#83838C')}>ก่อนหักค่าธรรมเนียม</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(255,255,255,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Risk (1R) <span style={css('color:#928B9B')}>(USD)</span></div><input value={V.dRisk} onChange={V.setRisk} placeholder="e.g. 100" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;font-family:JetBrains Mono')} />{V.dRiskHint && !V.dRisk && <span onClick={V.dRiskHint.fill} className="hv-op" style={css('display:inline-block;margin-top:5px;font-size:9.5px;color:#4D7FE8;cursor:pointer')}>Use estimated ${V.dRiskHint.val}</span>}</div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Commission / Swap <span style={css('color:#928B9B')}>(รวมทุกไม้)</span></div><input value={V.dCommission} onChange={V.setCommission} placeholder="e.g. 3.20" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;font-family:JetBrains Mono')} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>P&amp;L (USD) <span style={css('color:#928B9B')}>ก่อนหักค่าธรรมเนียม</span></div><input value={V.dPnl} onChange={V.setPnl} placeholder="1240 or -680" className="hv-focus" style={{ ...css('width:100%;background:rgba(49,35,73,.04);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;font-family:JetBrains Mono'), border: '1px solid ' + V.pnlBorder, color: V.pnlInputColor }} /></div>
             </div>
-            <div className="liquid-glass" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border-radius:12px;padding:12px 14px;background:linear-gradient(100deg,rgba(201,166,95,.08),rgba(255,255,255,.02));border:1px solid rgba(201,166,95,.2)')}>
-              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Total risk (1R)</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#ECEAE3')}>{V.dSummary.totalRiskStr}</div></div>
-              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Commission</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#9A9AA4')}>{V.dSummary.commStr}</div></div>
-              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>Net P&amp;L</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.netColor }}>{V.dSummary.netStr}</div></div>
-              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#83838C;margin-bottom:3px')}>ได้กี่ R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.rColor }}>{V.dSummary.rStr}</div></div>
+            <div className="liquid-glass" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border-radius:12px;padding:12px 14px;background:linear-gradient(100deg,rgba(118,88,232,.08),rgba(49,35,73,.02));border:1px solid rgba(118,88,232,.2)')}>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Total risk (1R)</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#24202B')}>{V.dSummary.totalRiskStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Commission</div><div style={css('font-family:JetBrains Mono;font-size:16px;font-weight:600;color:#746E7D')}>{V.dSummary.commStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>Net P&amp;L</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.netColor }}>{V.dSummary.netStr}</div></div>
+              <div><div style={css('font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#928B9B;margin-bottom:3px')}>ได้กี่ R</div><div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:700'), color: V.dSummary.rColor }}>{V.dSummary.rStr}</div></div>
             </div>
-            {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#C9A65F;margin-top:-4px')}>ⓘ ใส่ Risk (1R) เพื่อให้ Avg R และ Edge Gate คำนวณจากความเสี่ยงจริงของไม้</div>)}
-            <div style={css('height:1px;background:rgba(255,255,255,.07);margin:2px 0')}></div>
-            <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:#ECEAE3;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
+            {V.dSummary.riskMissing && (<div style={css('font-size:11px;color:#6747D8;margin-top:-4px')}>ⓘ ใส่ Risk (1R) เพื่อให้ Avg R และ Edge Gate คำนวณจากความเสี่ยงจริงของไม้</div>)}
+            <div style={css('height:1px;background:rgba(49,35,73,.07);margin:2px 0')}></div>
+            <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Notes / why you entered</div><textarea value={V.dNotes} onChange={V.setNotes} placeholder="Why this trade? On plan? How did you feel?" rows="7" className="hv-focus" style={css('width:100%;min-height:160px;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:13px 16px;color:#24202B;font-size:14.5px;outline:none;resize:vertical;line-height:1.65')}></textarea></div>
             <div>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Images / chart screenshots <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#746E7D;letter-spacing:.04em')}>Images / chart screenshots <span style={css('color:#928B9B')}>(multiple)</span></div>{V.canAddImg && <span onClick={V.addImg} className="hv-op" style={css('font-size:11.5px;color:#6747D8;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:10px')}>
                 {V.tradeImgs.map((im) => (
                   <ImageSlot key={im.n} slotId={'trade-' + im.tid + '-img-' + im.n} value={this.state.images['trade-' + im.tid + '-img-' + im.n]} onChange={(p) => this.setImage('trade-' + im.tid + '-img-' + im.n, p)} rounded placeholder="Drop a chart image" style={{ width: '100%', height: '120px' }} />
@@ -4739,13 +4874,13 @@ class App extends React.Component {
             </div>
             <div style={css('display:flex;gap:12px;margin-top:4px')}>
               {V.canDelete && (
-                <div onClick={V.deleteTrade} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
+                <div onClick={V.deleteTrade} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(226,84,98,.4);color:#E25462;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
               )}
               {V.canDuplicate && (
-                <div onClick={V.duplicateTrade} className="hv-lift" title="Duplicate as new trade" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(201,166,95,.35);color:#E2C588;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Duplicate</div>
+                <div onClick={V.duplicateTrade} className="hv-lift" title="Duplicate as new trade" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(118,88,232,.35);color:#7658E8;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Duplicate</div>
               )}
-              <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveTrade} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.cancelTrade} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(49,35,73,.12);color:#746E7D;font-size:14px;font-weight:600;cursor:pointer')}>{V.draftIsNew ? 'Cancel' : 'Close'}</div>
+              <div onClick={V.saveTrade} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#7658E8,#6747D8);color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.draftIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -4754,28 +4889,28 @@ class App extends React.Component {
   }
 
   renderFieldCfgModal(V) {
-    const inp = 'flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 12px;color:#ECEAE3;font-size:12px;outline:none';
+    const inp = 'flex:1;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:8px;padding:7px 12px;color:#24202B;font-size:12px;outline:none';
     return (
       <div onClick={V.closeFieldCfg} style={css('position:fixed;inset:0;z-index:34;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px);z-index:2')}>
-            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:21px;color:#ECEAE3')}>Edit filter options</div></div>
-            <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(49,35,73,.07);position:sticky;top:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px);z-index:2')}>
+            <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:4px')}>Trade analysis</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:21px;color:#24202B')}>Edit filter options</div></div>
+            <div onClick={V.closeFieldCfg} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
           </div>
           <div style={css('padding:8px 26px 24px')}>
-            <div style={css('font-size:12px;color:#83838C;line-height:1.55;margin:12px 0 16px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
+            <div style={css('font-size:12px;color:#928B9B;line-height:1.55;margin:12px 0 16px')}>Define the choices for each field once here — they become the options you can pick when logging a trade and the filters on the log. Drag order with the arrows; ✕ removes a choice (past trades keep their value).</div>
             {V.fieldCfgVM.map((f) => (
               <div key={f.key} style={css('margin-bottom:16px')}>
-                <div style={css('font-size:11px;font-weight:600;color:#E2C588;margin-bottom:7px;letter-spacing:.03em')}>{f.label} <span style={css('color:#83838C;font-weight:400')}>· {f.opts.length}</span></div>
+                <div style={css('font-size:11px;font-weight:600;color:#7658E8;margin-bottom:7px;letter-spacing:.03em')}>{f.label} <span style={css('color:#928B9B;font-weight:400')}>· {f.opts.length}</span></div>
                 <div style={css('display:flex;flex-direction:column;gap:5px;margin-bottom:7px')}>
                   {f.opts.length ? f.opts.map((o, oi) => (
-                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:8px;padding:3px 7px 3px 9px;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)')}>
-                      <input defaultValue={o} title="Click to edit — fixes this choice on every past trade too" onBlur={(e) => V.renameFieldOpt(f.key, o, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); } }} className="hv-focus" style={css('flex:1;font-size:12px;color:#ECEAE3;background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 7px;outline:none')} />
-                      <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
-                      <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#83838C;font-size:12px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
-                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#83838C;font-size:11.5px;padding:0 5px')}>✕</span>
+                    <div key={o} className="hv-chk" style={css('display:flex;align-items:center;gap:8px;padding:3px 7px 3px 9px;border-radius:8px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07)')}>
+                      <input defaultValue={o} title="Click to edit — fixes this choice on every past trade too" onBlur={(e) => V.renameFieldOpt(f.key, o, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.target.blur(); } }} className="hv-focus" style={css('flex:1;font-size:12px;color:#24202B;background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 7px;outline:none')} />
+                      <span onClick={() => V.moveFieldOpt(f.key, o, -1)} className="hv-op" style={{ ...css('cursor:pointer;color:#928B9B;font-size:12px;padding:0 3px'), opacity: oi === 0 ? 0.25 : 1 }}>▲</span>
+                      <span onClick={() => V.moveFieldOpt(f.key, o, 1)} className="hv-op" style={{ ...css('cursor:pointer;color:#928B9B;font-size:12px;padding:0 3px'), opacity: oi === f.opts.length - 1 ? 0.25 : 1 }}>▼</span>
+                      <span onClick={() => V.removeFieldOpt(f.key, o)} className="hv-deltext" style={css('cursor:pointer;color:#928B9B;font-size:11.5px;padding:0 5px')}>✕</span>
                     </div>
-                  )) : <div style={css('font-size:11.5px;color:#83838C;padding:3px 2px')}>No choices yet — add one below.</div>}
+                  )) : <div style={css('font-size:11.5px;color:#928B9B;padding:3px 2px')}>No choices yet — add one below.</div>}
                 </div>
                 <div style={css('display:flex;gap:8px')}>
                   <input placeholder={'Add a choice for ' + f.label + ', then Enter'} onKeyDown={(e) => { if (e.key === 'Enter') { V.addFieldOpt(f.key, e.target.value); e.target.value = ''; } }} className="hv-focus" style={css(inp)} />
@@ -4783,8 +4918,8 @@ class App extends React.Component {
               </div>
             ))}
           </div>
-          <div style={css('display:flex;justify-content:flex-end;gap:12px;padding:16px 26px;border-top:1px solid rgba(255,255,255,.07);position:sticky;bottom:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px)')}>
-            <div onClick={V.closeFieldCfg} className="hv-save rtm-press" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+          <div style={css('display:flex;justify-content:flex-end;gap:12px;padding:16px 26px;border-top:1px solid rgba(49,35,73,.07);position:sticky;bottom:0;background:rgba(18,18,24,.94);backdrop-filter:blur(8px)')}>
+            <div onClick={V.closeFieldCfg} className="hv-save rtm-press" style={css('padding:11px 26px;border-radius:11px;background:linear-gradient(150deg,#7658E8,#6747D8);color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -4794,41 +4929,41 @@ class App extends React.Component {
   renderPlanModal(V) {
     return (
       <div onClick={V.planClose} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(120deg,rgba(201,166,95,.16),rgba(155,140,255,.08))')}>
-            <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(201,166,95,.18),transparent 70%);pointer-events:none')}></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:540px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.25);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('position:relative;overflow:hidden;padding:24px 26px;border-bottom:1px solid rgba(49,35,73,.07);background:linear-gradient(120deg,rgba(118,88,232,.16),rgba(139,108,240,.08))')}>
+            <div style={css('position:absolute;top:-40%;right:-5%;width:40%;height:160%;background:radial-gradient(circle,rgba(118,88,232,.18),transparent 70%);pointer-events:none')}></div>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
               <div>
-                <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F')}>{V.planTag}</span></div>
-                <div style={css('font-family:\'Instrument Serif\',serif;font-size:23px;color:#ECEAE3')}>{V.planTitle}</div>
-                <div style={css('font-size:12.5px;color:#9A9AA4;margin-top:4px')}>Prepare before the new period starts · <span style={css('color:#E2C588')}>{V.planLabel}</span></div>
+                <div style={css('display:flex;align-items:center;gap:8px;margin-bottom:6px')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7658E8" strokeWidth="1.8"><path d="M12 8v4l3 2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9"/></svg><span style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8')}>{V.planTag}</span></div>
+                <div style={css('font-family:\'Instrument Serif\',serif;font-size:23px;color:#24202B')}>{V.planTitle}</div>
+                <div style={css('font-size:12.5px;color:#746E7D;margin-top:4px')}>Prepare before the new period starts · <span style={css('color:#7658E8')}>{V.planLabel}</span></div>
               </div>
-              <div onClick={V.planClose} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+              <div onClick={V.planClose} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
             </div>
           </div>
           <div style={css('padding:10px 8px')}>
             {V.planItems.map((c, i) => (
               <div key={i} className="hv-chk" style={{ ...css('display:flex;align-items:center;gap:14px;padding:14px 20px;transition:.14s'), borderTop: c.border }}>
-                <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1a1408" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={c.toggle} style={{ ...css('width:22px;height:22px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.16s'), border: c.boxBorder, background: c.boxBg }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#FFFFFF" strokeWidth="3" style={{ opacity: c.checkOp }}><path d="M5 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 {c.editing ? (
-                  <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#ECEAE3;background:rgba(0,0,0,.25);border:1px solid rgba(201,166,95,.4);border-radius:7px;padding:5px 10px;outline:none')} />
+                  <input defaultValue={c.text} onBlur={c.commit} onKeyDown={c.key} autoFocus style={css('flex:1;font-size:14px;color:#24202B;background:rgba(0,0,0,.25);border:1px solid rgba(118,88,232,.4);border-radius:7px;padding:5px 10px;outline:none')} />
                 ) : (
                   <Fragment>
                     <span onClick={c.toggle} style={{ ...css('flex:1;font-size:14px;cursor:pointer'), color: c.textColor, textDecoration: c.strike }}>{c.text}</span>
-                    <div onClick={c.edit} className="hv-edittext" style={css('flex:none;color:#83838C;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-                    <div onClick={c.del} className="hv-deltext" style={css('flex:none;color:#83838C;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+                    <div onClick={c.edit} className="hv-edittext" style={css('flex:none;color:#928B9B;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                    <div onClick={c.del} className="hv-deltext" style={css('flex:none;color:#928B9B;cursor:pointer;transition:.14s')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
                   </Fragment>
                 )}
               </div>
             ))}
-            <div style={css('display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.05)')}>
-              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(201,166,95,.4);display:flex;align-items:center;justify-content:center;color:#C9A65F')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
-              <input placeholder="Add an item, then Enter" onKeyDown={V.planAddKey} style={css('flex:1;font-size:14px;color:#ECEAE3;background:transparent;border:none;outline:none')} />
+            <div style={css('display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid rgba(49,35,73,.05)')}>
+              <div style={css('width:22px;height:22px;border-radius:7px;flex:none;border:1.5px dashed rgba(118,88,232,.4);display:flex;align-items:center;justify-content:center;color:#6747D8')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <input placeholder="Add an item, then Enter" onKeyDown={V.planAddKey} style={css('flex:1;font-size:14px;color:#24202B;background:transparent;border:none;outline:none')} />
             </div>
           </div>
-          <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.07)')}>
-            <span style={css('font-size:12px;color:#83838C;font-family:JetBrains Mono')}>Done {V.planFrac}</span>
-            <div onClick={V.planClose} className="hv-save rtm-press" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
+          <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-top:1px solid rgba(49,35,73,.07)')}>
+            <span style={css('font-size:12px;color:#928B9B;font-family:JetBrains Mono')}>Done {V.planFrac}</span>
+            <div onClick={V.planClose} className="hv-save rtm-press" style={css('padding:11px 22px;border-radius:11px;background:linear-gradient(150deg,#7658E8,#6747D8);color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>Done</div>
           </div>
         </div>
       </div>
@@ -4839,34 +4974,34 @@ class App extends React.Component {
     const p = V.txnModal;
     return (
       <div onClick={V.closeTxns} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('position:sticky;top:0;z-index:2;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(18,18,24,.92);backdrop-filter:blur(8px)')}>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:520px;max-width:94vw;max-height:88vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.22);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('position:sticky;top:0;z-index:2;padding:22px 26px;border-bottom:1px solid rgba(49,35,73,.07);background:rgba(18,18,24,.92);backdrop-filter:blur(8px)')}>
             <div style={css('display:flex;justify-content:space-between;align-items:flex-start')}>
-              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{p.name}</div></div>
-              <div onClick={V.closeTxns} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+              <div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:4px')}>Deposit / withdrawal history</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#24202B')}>{p.name}</div></div>
+              <div onClick={V.closeTxns} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer;flex:none')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
             </div>
             <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px')}>
-              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Total in</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#5FC08D')}>{p.depositedStr}</div></div>
-              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Withdrawn</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.withdrawnStr !== '$0' ? '#DC6A63' : '#9A9AA4' }}>{p.withdrawnStr}</div></div>
-              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Net capital</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#ECEAE3')}>{p.netCapStr}</div></div>
-              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#83838C;margin-bottom:3px')}>Equity</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#E2C588')}>{p.equityStr}</div></div>
+              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Total in</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#1C9B68')}>{p.depositedStr}</div></div>
+              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Withdrawn</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px'), color: p.withdrawnStr !== '$0' ? '#E25462' : '#746E7D' }}>{p.withdrawnStr}</div></div>
+              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Net capital</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#24202B')}>{p.netCapStr}</div></div>
+              <div><div style={css('font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#928B9B;margin-bottom:3px')}>Equity</div><div style={css('font-family:JetBrains Mono;font-size:13px;color:#7658E8')}>{p.equityStr}</div></div>
             </div>
             <div style={css('display:flex;gap:8px;margin-top:14px')}>
-              <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#5FC08D;background:rgba(95,192,141,.1);border:1px solid rgba(95,192,141,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>Deposit</span>
-              <span onClick={p.withdraw} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#DC6A63;background:rgba(220,106,99,.1);border:1px solid rgba(220,106,99,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>Withdraw</span>
+              <span onClick={p.deposit} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#1C9B68;background:rgba(28,155,104,.1);border:1px solid rgba(28,155,104,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>Deposit</span>
+              <span onClick={p.withdraw} className="hv-lift" style={css('flex:1;text-align:center;font-size:12px;font-weight:600;color:#E25462;background:rgba(226,84,98,.1);border:1px solid rgba(226,84,98,.3);border-radius:8px;padding:9px;cursor:pointer;transition:.14s')}>Withdraw</span>
             </div>
           </div>
           <div style={css('padding:8px 12px 16px')}>
-            {p.movements.length === 0 && <div style={css('padding:36px 20px;text-align:center;font-size:13px;color:#83838C')}>No deposits or withdrawals yet</div>}
+            {p.movements.length === 0 && <div style={css('padding:36px 20px;text-align:center;font-size:13px;color:#928B9B')}>No deposits or withdrawals yet</div>}
             {p.movements.map((m) => (
               <div key={m.id} className="hv-chk" style={css('display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;transition:.14s')}>
                 <div style={css('display:flex;align-items:center;gap:12px')}>
-                  <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: m.isW ? '#DC6A63' : '#5FC08D' }}></span>
-                  <div><div style={{ ...css('font-size:13px;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.isW ? 'Withdraw' : 'Deposit'}</div><div style={css('font-size:11px;color:#83838C;font-family:JetBrains Mono')}>{m.date} · balance {m.runStr}</div></div>
+                  <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: m.isW ? '#E25462' : '#1C9B68' }}></span>
+                  <div><div style={{ ...css('font-size:13px;font-weight:600'), color: m.isW ? '#E25462' : '#1C9B68' }}>{m.isW ? 'Withdraw' : 'Deposit'}</div><div style={css('font-size:11px;color:#928B9B;font-family:JetBrains Mono')}>{m.date} · balance {m.runStr}</div></div>
                 </div>
                 <div style={css('display:flex;align-items:center;gap:12px')}>
-                  <span style={{ ...css('font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: m.isW ? '#DC6A63' : '#5FC08D' }}>{m.amtStr}</span>
-                  <span onClick={m.del} title="Delete this entry" className="hv-visdel" style={css('width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#83838C;cursor:pointer;transition:.14s;flex:none')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+                  <span style={{ ...css('font-family:JetBrains Mono;font-size:14px;font-weight:600'), color: m.isW ? '#E25462' : '#1C9B68' }}>{m.amtStr}</span>
+                  <span onClick={m.del} title="Delete this entry" className="hv-visdel" style={css('width:26px;height:26px;border-radius:7px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#928B9B;cursor:pointer;transition:.14s;flex:none')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
                 </div>
               </div>
             ))}
@@ -4879,15 +5014,15 @@ class App extends React.Component {
   renderResetModal(V) {
     return (
       <div onClick={V.closeReset} style={css('position:fixed;inset:0;z-index:40;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} style={css('width:440px;max-width:92vw;border-radius:20px;background:linear-gradient(180deg,#1a1014,#0e0e13);border:1px solid rgba(220,106,99,.3);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both;padding:28px 28px 24px;text-align:center')}>
-          <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#DC6A63" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <div onClick={V.stop} style={css('width:440px;max-width:92vw;border-radius:20px;background:linear-gradient(180deg,#1a1014,#0e0e13);border:1px solid rgba(226,84,98,.3);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both;padding:28px 28px 24px;text-align:center')}>
+          <div style={{ width: 54, height: 54, margin: '0 auto 16px', borderRadius: 14, background: 'rgba(226,84,98,.12)', border: '1px solid rgba(226,84,98,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#E25462" strokeWidth="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
-          <div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3;margin-bottom:10px')}>Reset all data?</div>
-          <div style={css('font-size:13.5px;color:#9A9AA4;line-height:1.6;margin-bottom:22px')}>Trades, portfolios, playbooks and referenced images will be deleted and reset to defaults. <b style={css('color:#DC6A63')}>This cannot be undone.</b></div>
+          <div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#24202B;margin-bottom:10px')}>Reset all data?</div>
+          <div style={css('font-size:13.5px;color:#746E7D;line-height:1.6;margin-bottom:22px')}>Trades, portfolios, playbooks and referenced images will be deleted and reset to defaults. <b style={css('color:#E25462')}>This cannot be undone.</b></div>
           <div style={css('display:flex;gap:12px')}>
-            <div onClick={V.closeReset} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.14);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>Cancel</div>
-            <div onClick={V.doReset} className="hv-deloutline" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(220,106,99,.5);background:rgba(220,106,99,.12);color:#DC6A63;font-size:14px;font-weight:700;cursor:pointer;transition:.14s')}>Confirm reset</div>
+            <div onClick={V.closeReset} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(49,35,73,.14);color:#746E7D;font-size:14px;font-weight:600;cursor:pointer')}>Cancel</div>
+            <div onClick={V.doReset} className="hv-deloutline" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(226,84,98,.5);background:rgba(226,84,98,.12);color:#E25462;font-size:14px;font-weight:700;cursor:pointer;transition:.14s')}>Confirm reset</div>
           </div>
         </div>
       </div>
@@ -4897,12 +5032,12 @@ class App extends React.Component {
   renderSetupModal(V) {
     return (
       <div onClick={V.closeSetup} style={css('position:fixed;inset:0;z-index:30;background:rgba(4,4,7,.74);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fade .25s both')}>
-        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(201,166,95,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#C9A65F;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#ECEAE3')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#9A9AA4;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
+        <div onClick={V.stop} className="rtm-scroll liquid-glass" style={css('width:660px;max-width:94vw;max-height:90vh;overflow-y:auto;border-radius:20px;background:rgba(19,19,22,.88);border:1px solid rgba(118,88,232,.2);box-shadow:0 50px 120px -30px rgba(0,0,0,.95);animation:modalIn .32s cubic-bezier(.25,.9,.3,1) both')}>
+          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-bottom:1px solid rgba(49,35,73,.07);position:sticky;top:0;background:rgba(18,18,24,.92);backdrop-filter:blur(8px);z-index:2')}><div><div style={css('font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6747D8;margin-bottom:4px')}>{V.setupModalTag}</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:22px;color:#24202B')}>{V.setupModalTitle}</div></div><div onClick={V.closeSetup} className="hv-close" style={css('width:34px;height:34px;border-radius:9px;border:1px solid rgba(49,35,73,.1);display:flex;align-items:center;justify-content:center;color:#746E7D;cursor:pointer')}><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>
           <div style={css('padding:24px 26px;display:flex;flex-direction:column;gap:16px')}>
             <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:14px')}>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup name</div><input value={V.sName} onChange={V.setSName} placeholder="e.g. Rally" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-              <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Setup colour</div><div style={css('display:flex;gap:8px;align-items:center;height:42px')}>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Setup name</div><input value={V.sName} onChange={V.setSName} placeholder="e.g. Rally" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none')} /></div>
+              <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Setup colour</div><div style={css('display:flex;gap:8px;align-items:center;height:42px')}>
                 {V.accentChoices.map((ac, i) => (
                   <div key={i} onClick={ac.pick} className="hv-scale" style={{ ...css('width:28px;height:28px;border-radius:8px;cursor:pointer;transition:.14s'), background: ac.color, border: ac.border }}></div>
                 ))}
@@ -4911,20 +5046,20 @@ class App extends React.Component {
             {V.showSetupStats && (
               <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
                 {V.setupStats.map((s, i) => (
-                  <div key={i} style={css('padding:12px 14px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)')}><div style={css('font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#83838C;margin-bottom:6px')}>{s.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px;font-weight:600'), color: s.c }}>{s.v}</div></div>
+                  <div key={i} style={css('padding:12px 14px;border-radius:11px;background:rgba(49,35,73,.03);border:1px solid rgba(49,35,73,.06)')}><div style={css('font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#928B9B;margin-bottom:6px')}>{s.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:16px;font-weight:600'), color: s.c }}>{s.v}</div></div>
                 ))}
               </div>
             )}
             {V.canBumpSetup && (
-              <div className="rtm-version-panel" style={css('display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 15px;border-radius:12px;background:linear-gradient(110deg,rgba(155,140,255,.09),rgba(255,255,255,.02));border:1px solid rgba(155,140,255,.24)')}>
-                <div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#BFAEFF;margin-bottom:5px')}>Current ruleset · v{V.setupVersion}</div><div style={css('font-size:11.5px;color:#8D8995;line-height:1.5')}>สถิติใช้เฉพาะ trades ของเวอร์ชันนี้ · เมื่อแก้ description/entry conditions หลังมีข้อมูล ระบบจะเปิดเวอร์ชันใหม่ให้อัตโนมัติ {V.versionHistoryN > 0 ? '· history ' + V.versionHistoryN : ''}</div></div>
-                <span onClick={V.bumpSetupVersion} className="rtm-press" style={css('flex:none;font-size:11.5px;font-weight:700;color:#0B0713;padding:9px 12px;border-radius:9px;cursor:pointer;background:linear-gradient(135deg,#BFAEFF,#E48AC8)')}>Create v{V.setupVersion + 1}</span>
+              <div className="rtm-version-panel" style={css('display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 15px;border-radius:12px;background:linear-gradient(110deg,rgba(139,108,240,.09),rgba(49,35,73,.02));border:1px solid rgba(139,108,240,.24)')}>
+                <div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#8B6CF0;margin-bottom:5px')}>Current ruleset · v{V.setupVersion}</div><div style={css('font-size:11.5px;color:#8D8995;line-height:1.5')}>สถิติใช้เฉพาะ trades ของเวอร์ชันนี้ · เมื่อแก้ description/entry conditions หลังมีข้อมูล ระบบจะเปิดเวอร์ชันใหม่ให้อัตโนมัติ {V.versionHistoryN > 0 ? '· history ' + V.versionHistoryN : ''}</div></div>
+                <span onClick={V.bumpSetupVersion} className="rtm-press" style={css('flex:none;font-size:11.5px;font-weight:700;color:#0B0713;padding:9px 12px;border-radius:9px;cursor:pointer;background:linear-gradient(135deg,#8B6CF0,#E48AC8)')}>Create v{V.setupVersion + 1}</span>
               </div>
             )}
-            <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>Short description</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="e.g. Uptrend continuation, enter on pullback" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none')} /></div>
-            <div><div style={css('font-size:12px;color:#9A9AA4;margin-bottom:8px;letter-spacing:.04em')}>How to use / entry conditions</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="Describe how to use this setup, when to enter, where to set SL/TP..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:11px 14px;color:#ECEAE3;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
+            <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>Short description</div><input value={V.sDesc} onChange={V.setSDesc} placeholder="e.g. Uptrend continuation, enter on pullback" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none')} /></div>
+            <div><div style={css('font-size:12px;color:#746E7D;margin-bottom:8px;letter-spacing:.04em')}>How to use / entry conditions</div><textarea value={V.sUsage} onChange={V.setSUsage} placeholder="Describe how to use this setup, when to enter, where to set SL/TP..." rows="5" className="hv-focus" style={css('width:100%;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:10px;padding:11px 14px;color:#24202B;font-size:14px;outline:none;resize:none;line-height:1.6')}></textarea></div>
             <div>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#9A9AA4;letter-spacing:.04em')}>Example entry charts for this setup <span style={css('color:#83838C')}>(multiple)</span></div>{V.canAddSetupImg && <span onClick={V.addSetupImg} className="hv-op" style={css('font-size:11.5px;color:#C9A65F;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
+              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:9px')}><div style={css('font-size:11px;color:#746E7D;letter-spacing:.04em')}>Example entry charts for this setup <span style={css('color:#928B9B')}>(multiple)</span></div>{V.canAddSetupImg && <span onClick={V.addSetupImg} className="hv-op" style={css('font-size:11.5px;color:#6747D8;cursor:pointer;display:flex;align-items:center;gap:4px')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>Add image</span>}</div>
               <div style={css('display:grid;grid-template-columns:repeat(2,1fr);gap:10px')}>
                 {V.setupImgs.map((im) => (
                   <ImageSlot key={im.n} slotId={im.slotId} value={this.state.images[im.slotId]} onChange={(p) => this.setImage(im.slotId, p)} rounded placeholder="Drop an example chart" style={{ width: '100%', height: '220px' }} />
@@ -4933,10 +5068,10 @@ class App extends React.Component {
             </div>
             <div style={css('display:flex;gap:12px;margin-top:4px')}>
               {V.canDeleteSetup && (
-                <div onClick={V.deleteSetup} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(220,106,99,.4);color:#DC6A63;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
+                <div onClick={V.deleteSetup} className="hv-deloutline" style={css('flex:none;padding:13px 18px;border-radius:11px;border:1px solid rgba(226,84,98,.4);color:#E25462;font-size:14px;font-weight:600;cursor:pointer;transition:.14s')}>Delete</div>
               )}
-              <div onClick={V.cancelSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);color:#9A9AA4;font-size:14px;font-weight:600;cursor:pointer')}>{V.setupIsNew ? 'Cancel' : 'Close'}</div>
-              <div onClick={V.saveSetup} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#E2C588,#C9A65F);color:#1a1408;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
+              <div onClick={V.cancelSetup} className="hv-cancel" style={css('flex:1;text-align:center;padding:13px;border-radius:11px;border:1px solid rgba(49,35,73,.12);color:#746E7D;font-size:14px;font-weight:600;cursor:pointer')}>{V.setupIsNew ? 'Cancel' : 'Close'}</div>
+              <div onClick={V.saveSetup} className="hv-save rtm-press" style={css('flex:1.4;text-align:center;padding:13px;border-radius:11px;background:linear-gradient(150deg,#7658E8,#6747D8);color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer;transition:.15s')}>{V.setupIsNew ? 'Save' : 'Save & close'}</div>
             </div>
           </div>
         </div>
@@ -4957,94 +5092,94 @@ class App extends React.Component {
       ? curView === 'log' && V.journalMode === k
       : curView === k;
     return (
-      <div style={css('position:fixed;inset:0;display:flex;background:radial-gradient(92% 72% at 62% -14%,rgba(120,78,255,.11),transparent 60%),radial-gradient(62% 58% at 105% 42%,rgba(218,71,151,.045),transparent 70%),linear-gradient(180deg,#0b0a10 0%,#070709 52%,#000 100%)')}>
+      <div className="rtm-app-shell" style={css('position:fixed;inset:0;display:flex;background:#F7F5FB')}>
 
-        <div style={css('position:absolute;inset:0;pointer-events:none;overflow:hidden')}>
+        <div className="rtm-shell-ambient" style={css('position:absolute;inset:0;pointer-events:none;overflow:hidden')}>
           <div style={css('position:absolute;top:-12%;right:8%;width:42%;height:55%;background:radial-gradient(circle,rgba(155,111,255,.075),transparent 66%);animation:drift1 20s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(123,167,217,.032),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
-          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(255,255,255,.026),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;bottom:-16%;left:2%;width:40%;height:58%;background:radial-gradient(circle,rgba(77,127,232,.032),transparent 66%);animation:drift2 26s ease-in-out infinite')}></div>
+          <div style={css('position:absolute;top:34%;left:42%;width:34%;height:46%;background:radial-gradient(circle,rgba(49,35,73,.026),transparent 66%);animation:drift1 30s ease-in-out infinite')}></div>
           {/* fine light seam along the very top — the "polished edge" of the surface */}
-          <div style={css('position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(226,197,136,.34) 22%,rgba(226,197,136,.5) 50%,rgba(226,197,136,.34) 78%,transparent)')}></div>
+          <div style={css('position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(139,108,240,.34) 22%,rgba(139,108,240,.5) 50%,rgba(139,108,240,.34) 78%,transparent)')}></div>
         </div>
 
         {/* MAIN COLUMN */}
         <div style={css('position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column')}>
 
           {/* TOPBAR — hero-style navbar: logo · name · page links · clock · actions */}
-          <div style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:11px 24px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.012);backdrop-filter:blur(14px)')}>
+          <div className="rtm-topbar" style={css('position:relative;z-index:40;flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;padding:11px 24px;border-bottom:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.012);backdrop-filter:blur(14px)')}>
             <div style={css('display:flex;align-items:center;gap:14px;min-width:0')}>
-              <div className="rtm-logo" style={css('width:32px;height:32px;border-radius:10px;flex:none;background:linear-gradient(145deg,rgba(201,166,95,.34),rgba(201,166,95,.06));box-shadow:0 0 0 1px rgba(201,166,95,.28),0 6px 18px -8px rgba(201,166,95,.55);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#E2C588" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              <div className="rtm-logo" style={css('width:32px;height:32px;border-radius:10px;flex:none;background:linear-gradient(145deg,rgba(118,88,232,.34),rgba(118,88,232,.06));box-shadow:0 0 0 1px rgba(118,88,232,.28),0 6px 18px -8px rgba(118,88,232,.55);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7658E8" strokeWidth="1.7"><path d="M3 17l5-5 4 3 6-8" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               {V.editName ? (
-                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;background:rgba(201,166,95,.08);border:1px solid rgba(201,166,95,.4);border-radius:8px;padding:3px 10px;outline:none;width:190px')} />
+                <input defaultValue={V.accountName} onBlur={V.commitName} onKeyDown={V.onNameKey} autoFocus style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#24202B;background:rgba(118,88,232,.08);border:1px solid rgba(118,88,232,.4);border-radius:8px;padding:3px 10px;outline:none;width:190px')} />
               ) : (
-                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:7px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#ECEAE3;letter-spacing:-.01em;white-space:nowrap')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#83838C" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+                <div onClick={V.startName} title="Click to rename" className="hv-op" style={css('display:flex;align-items:center;gap:7px;cursor:text')}><span style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#24202B;letter-spacing:-.01em;white-space:nowrap')}>{V.accountName}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#928B9B" strokeWidth="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               )}
             </div>
-            <div className="liquid-glass" style={css('display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;flex-wrap:wrap;justify-content:center')}>
+            <div className="rtm-main-nav" style={css('display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;flex-wrap:wrap;justify-content:center')}>
               {NAV_LINKS.map(([k, label, go]) => (
-                <span key={k} onClick={go} className="hv-navlink rtm-press" style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: navActive(k) ? '#fff' : 'rgba(255,255,255,.55)', background: navActive(k) ? 'rgba(255,255,255,.1)' : 'transparent' }}>{label}</span>
+                <span key={k} onClick={go} className={'hv-navlink rtm-press' + (navActive(k) ? ' active' : '')} style={{ ...css('position:relative;z-index:1;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s'), color: navActive(k) ? '#fff' : '#746E7D', background: navActive(k) ? '#24202B' : 'transparent' }}>{label}</span>
               ))}
             </div>
             <div style={css('display:flex;align-items:center;gap:10px')}>
-              <div title={V.todayLabel + ' · ' + V.tzAbbr} style={css('display:flex;align-items:center;gap:8px;background:rgba(201,166,95,.07);border:1px solid rgba(201,166,95,.18);border-radius:999px;padding:6px 13px')}>
-                <span style={{ ...css('width:6px;height:6px;border-radius:50%;background:#5FC08D;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
-                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#E2C588;line-height:1')}>{V.clock}</span>
+              <div title={V.todayLabel + ' · ' + V.tzAbbr} style={css('display:flex;align-items:center;gap:8px;background:rgba(118,88,232,.07);border:1px solid rgba(118,88,232,.18);border-radius:999px;padding:6px 13px')}>
+                <span style={{ ...css('width:6px;height:6px;border-radius:50%;background:#1C9B68;flex:none'), animation: 'pulse 2.4s infinite' }}></span>
+                <span id="rtm-clock" style={css('font-family:\'JetBrains Mono\',monospace;font-size:13.5px;font-weight:600;letter-spacing:.02em;color:#7658E8;line-height:1')}>{V.clock}</span>
               </div>
-              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#E2C588,#C9A65F);display:flex;align-items:center;justify-content:center;color:#1a1408;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(201,166,95,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
+              <div onClick={V.openNew} title="Log a trade (N)" className="hv-addbtn rtm-press" style={css('width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(150deg,#7658E8,#6747D8);display:flex;align-items:center;justify-content:center;color:#FFFFFF;cursor:pointer;transition:.16s;box-shadow:0 8px 20px -8px rgba(118,88,232,.8)')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg></div>
               {!V.isBacktestMode && <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
-                <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#ECEAE3;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#9A9AA4" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
+                <div onClick={V.togglePortMenu} className="hv-port liquid-glass" style={css('display:flex;align-items:center;gap:8px;background:rgba(49,35,73,.04);border:1px solid rgba(49,35,73,.12);border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:#24202B;cursor:pointer;transition:.15s')}>{V.currentPortfolioName}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#746E7D" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></div>
                 {V.showPortMenu && (
-                  <div className="rtm-scroll" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 288, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 11px 6px', fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase', color: '#6a6a72' }}><span>Portfolio</span><span>คงเหลือ</span></div>
-                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#E2C588' : '#ECEAE3' }}>
+                  <div className="rtm-scroll rtm-popover" style={{ position: 'absolute', top: '110%', right: 0, zIndex: 30, minWidth: 288, maxHeight: '60vh', overflowY: 'auto', background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(118,88,232,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 11px 6px', fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase', color: '#9A93A1' }}><span>Portfolio</span><span>คงเหลือ</span></div>
+                    <div onClick={() => V.selectPortfolio('all')} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === 'all' ? '#7658E8' : '#24202B' }}>
                       <span>All portfolio</span>
-                      <span title="รวมทุกพอร์ต" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 600, color: '#E2C588', whiteSpace: 'nowrap' }}>{V.allBalStr}</span>
+                      <span title="รวมทุกพอร์ต" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 600, color: '#7658E8', whiteSpace: 'nowrap' }}>{V.allBalStr}</span>
                     </div>
                     {V.portMenu.map((p) => (
-                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#E2C588' : '#ECEAE3' }}>
+                      <div key={p.id} onClick={() => V.selectPortfolio(p.id)} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: V.currentPortfolioId === p.id ? '#7658E8' : '#24202B' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', flex: 'none', background: p.tint }}></span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
-                          <span title="ยอดคงเหลือปัจจุบัน" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#B7A981', whiteSpace: 'nowrap' }}>{p.balStr}</span>
-                          <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#83838C', cursor: 'pointer' }}>✕</span>
+                          <span title="ยอดคงเหลือปัจจุบัน" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#7563A6', whiteSpace: 'nowrap' }}>{p.balStr}</span>
+                          <span onClick={(e) => V.delPortfolio(p.id, e)} className="hv-deltext" style={{ color: '#928B9B', cursor: 'pointer' }}>✕</span>
                         </span>
                       </div>
                     ))}
                     {V.orphanRow && (
-                      <div title="ออเดอร์ของพอร์ตที่ถูกลบไปแล้ว — ยังนับใน P&L รวม แต่ไม่มีพอร์ตเป็นเจ้าของ" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 11px', borderRadius: 8, fontSize: 12, color: '#83838C' }}>
+                      <div title="ออเดอร์ของพอร์ตที่ถูกลบไปแล้ว — ยังนับใน P&L รวม แต่ไม่มีพอร์ตเป็นเจ้าของ" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 11px', borderRadius: 8, fontSize: 12, color: '#928B9B' }}>
                         <span>ไม่ได้จัดกลุ่ม · {V.orphanRow.n} ไม้</span>
                         <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11.5 }}>{V.orphanRow.netStr}</span>
                       </div>
                     )}
-                    <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', fontSize: 13, color: '#C9A65F' }}>+ Add / manage portfolios</div>
+                    <div onClick={V.openAccount} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 11px', marginTop: 4, borderTop: '1px solid rgba(49,35,73,.07)', cursor: 'pointer', fontSize: 13, color: '#6747D8' }}>+ Add / manage portfolios</div>
                   </div>
                 )}
               </div>}
               <div style={{ position: 'relative' }} onMouseDown={(e) => e.stopPropagation()}>
-                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,166,95,.12)', border: '1px solid rgba(201,166,95,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#E2C588', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
+                <div onClick={V.toggleUserMenu} title="My account" className="hv-lift" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(118,88,232,.12)', border: '1px solid rgba(118,88,232,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#7658E8', cursor: 'pointer', fontFamily: "'Instrument Serif',serif", transition: '.15s' }}>{V.avatarLetter}</div>
                 {V.showUserMenu && (
-                  <div style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(201,166,95,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
-                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#9A9AA4', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'My account'}</div>
+                  <div className="rtm-popover" style={{ position: 'absolute', top: '120%', right: 0, zIndex: 30, minWidth: 220, background: 'rgba(16,16,19,.97)', backdropFilter: 'blur(16px)', border: '1px solid rgba(118,88,232,.2)', borderRadius: 12, boxShadow: '0 24px 60px -20px rgba(0,0,0,.9)', padding: 6, animation: 'pop .18s both' }}>
+                    <div style={{ padding: '10px 12px', fontSize: 12, color: '#746E7D', borderBottom: '1px solid rgba(49,35,73,.07)', marginBottom: 4, wordBreak: 'break-all' }}>{V.userEmail || 'My account'}</div>
                     {/* มาตรวัดพื้นที่ใช้งาน */}
-                    <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#9A9AA4', marginBottom: 5 }}><span>Images</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: V.storageImgColor }}>{V.storageImgText}</span></div>
-                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden', marginBottom: 11 }}><div style={{ height: '100%', borderRadius: 99, width: V.storageReady ? V.storageImgWidth : '0%', background: V.storageImgColor, transition: 'width .5s' }}></div></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#9A9AA4', marginBottom: 5 }}><span>Data</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: '#7BA7D9' }}>{V.storageDataText}</span></div>
-                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 99, width: V.storageDataWidth, background: '#7BA7D9', transition: 'width .5s' }}></div></div>
+                    <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid rgba(49,35,73,.07)', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#746E7D', marginBottom: 5 }}><span>Images</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: V.storageImgColor }}>{V.storageImgText}</span></div>
+                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(49,35,73,.08)', overflow: 'hidden', marginBottom: 11 }}><div style={{ height: '100%', borderRadius: 99, width: V.storageReady ? V.storageImgWidth : '0%', background: V.storageImgColor, transition: 'width .5s' }}></div></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#746E7D', marginBottom: 5 }}><span>Data</span><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10.5, color: '#4D7FE8' }}>{V.storageDataText}</span></div>
+                      <div style={{ height: 6, borderRadius: 99, background: 'rgba(49,35,73,.08)', overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 99, width: V.storageDataWidth, background: '#4D7FE8', transition: 'width .5s' }}></div></div>
                       {V.storageNearFull && (
-                        <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(); }} style={{ marginTop: 11, padding: '9px 11px', borderRadius: 9, background: 'rgba(220,106,99,.12)', border: '1px solid rgba(220,106,99,.4)', cursor: 'pointer' }}>
-                          <div style={{ fontSize: 11.5, color: '#DC6A63', fontWeight: 600, marginBottom: 2 }}>⚠ Storage almost full ({V.storagePctNum}%)</div>
-                          <div style={{ fontSize: 10.5, color: '#9A9AA4' }}>Tap to back up, then archive old trades in Account</div>
+                        <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(); }} style={{ marginTop: 11, padding: '9px 11px', borderRadius: 9, background: 'rgba(226,84,98,.12)', border: '1px solid rgba(226,84,98,.4)', cursor: 'pointer' }}>
+                          <div style={{ fontSize: 11.5, color: '#E25462', fontWeight: 600, marginBottom: 2 }}>⚠ Storage almost full ({V.storagePctNum}%)</div>
+                          <div style={{ fontSize: 10.5, color: '#746E7D' }}>Tap to back up, then archive old trades in Account</div>
                         </div>
                       )}
                     </div>
-                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(false); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>สำรองข้อมูล · เฉพาะตัวเลข<span style={{ fontSize: 10.5, color: '#83838C' }}>เล็ก · ทำบ่อยได้</span></div>
-                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(true); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>สำรองข้อมูล · รวมรูปทั้งหมด<span style={{ fontSize: 10.5, color: '#83838C' }}>{V.lastBackupStr}</span></div>
-                    <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#ECEAE3' }}>Account &amp; portfolios</div>
-                    <div onClick={V.openReset} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63', borderTop: '1px solid rgba(255,255,255,.07)', marginTop: 4 }}>Reset all data</div>
-                    <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#DC6A63' }}>Sign out</div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(false); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#24202B' }}>สำรองข้อมูล · เฉพาะตัวเลข<span style={{ fontSize: 10.5, color: '#928B9B' }}>เล็ก · ทำบ่อยได้</span></div>
+                    <div onClick={() => { this.setState({ showUserMenu: false }); this.backupJournal(true); }} className="hv-chk" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#24202B' }}>สำรองข้อมูล · รวมรูปทั้งหมด<span style={{ fontSize: 10.5, color: '#928B9B' }}>{V.lastBackupStr}</span></div>
+                    <div onClick={V.openAccount} className="hv-chk" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#24202B' }}>Account &amp; portfolios</div>
+                    <div onClick={V.openReset} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#E25462', borderTop: '1px solid rgba(49,35,73,.07)', marginTop: 4 }}>Reset all data</div>
+                    <div onClick={V.signOut} className="hv-deltext" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#E25462' }}>Sign out</div>
                   </div>
                 )}
               </div>
@@ -5055,18 +5190,18 @@ class App extends React.Component {
           <div className="rtm-scroll" ref={(el) => { this._scrollRoot = el; }} style={css('flex:1;min-height:0;overflow-y:auto;overflow-x:hidden')}>
             {V.backupWarn && (
               <div style={{ ...css('display:flex;align-items:center;gap:12px;margin:14px 28px 0;padding:11px 15px;border-radius:12px;font-size:12.5px;animation:rise .5s both'),
-                background: V.backupWarn.level === 'high' ? 'linear-gradient(100deg,rgba(220,106,99,.16),rgba(255,255,255,.02))' : 'linear-gradient(100deg,rgba(224,177,90,.14),rgba(255,255,255,.02))',
-                border: '1px solid ' + (V.backupWarn.level === 'high' ? 'rgba(220,106,99,.42)' : 'rgba(224,177,90,.4)'),
+                background: V.backupWarn.level === 'high' ? 'linear-gradient(100deg,rgba(226,84,98,.16),rgba(49,35,73,.02))' : 'linear-gradient(100deg,rgba(224,177,90,.14),rgba(49,35,73,.02))',
+                border: '1px solid ' + (V.backupWarn.level === 'high' ? 'rgba(226,84,98,.42)' : 'rgba(224,177,90,.4)'),
                 color: V.backupWarn.level === 'high' ? '#FFC2C9' : '#F0C98A' }}>
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke={V.backupWarn.level === 'high' ? '#DC6A63' : '#E0B15A'} strokeWidth="1.8" style={{ flex: 'none' }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke={V.backupWarn.level === 'high' ? '#E25462' : '#E0B15A'} strokeWidth="1.8" style={{ flex: 'none' }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span style={css('flex:1;min-width:0;line-height:1.5')}>{V.backupWarn.msg}</span>
-                <span onClick={V.doBackupLight} className="rtm-press" style={css('flex:none;font-size:12px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;color:#1a1408;background:linear-gradient(180deg,#E2C588,#C9A65F)')}>สำรองเลย</span>
-                <span onClick={V.doBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#9A9AA4;white-space:nowrap')}>รวมรูป</span>
-                <span onClick={V.snoozeBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#83838C;white-space:nowrap')}>ไว้ก่อน</span>
+                <span onClick={V.doBackupLight} className="rtm-press" style={css('flex:none;font-size:12px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8)')}>สำรองเลย</span>
+                <span onClick={V.doBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#746E7D;white-space:nowrap')}>รวมรูป</span>
+                <span onClick={V.snoozeBackup} className="hv-op" style={css('flex:none;font-size:11.5px;cursor:pointer;color:#928B9B;white-space:nowrap')}>ไว้ก่อน</span>
               </div>
             )}
             {V.isAccount && this.renderAccount(V)}
-            {V.isDash && this.renderDashboard(V)}
+            {V.isDash && this.renderPremiumDashboard(V)}
             {V.isCal && this.renderCalendar(V)}
             {V.isLog && this.renderTradeLog(V)}
             {V.isAna && this.renderAnalytics(V)}
