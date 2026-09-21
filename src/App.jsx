@@ -4,14 +4,18 @@ import { ImageSlot } from './ImageSlot.jsx';
 import { loadJournal, saveJournal, getImageUrl, deleteImages, wipeImages, imageUsage } from './dataStore.js';
 import {
   commissionCost,
+  dataQualityReport,
+  edgeDriftReport,
   equityDrawdownPercent,
   finiteNumber,
+  monteCarloRisk,
   netPnlFromTrade,
   positionRisk,
   realizedRFromNetTrade,
   setupEvidenceFromNetTrades,
   summarizeNetTrades,
   tradeLegs,
+  walkForwardReport,
 } from './tradeMath.js';
 const { Fragment } = React;
 
@@ -482,6 +486,7 @@ class App extends React.Component {
     logFilter: 'all',
     logSearch: '', logSort: 'date-desc',
     edgeMetric: 'r',   // 'r' = expectancy (avg R) · 'wr' = win rate — see _edgeRules()
+    simulationRiskPct: 1,
     logPage: 0, // pagination จริง: จำกัด DOM ไว้ที่ 50 แถว แม้มีข้อมูลหลายพันไม้
     logToolsOpen: false, // ซ่อนเครื่องมือวิเคราะห์ขั้นสูงไว้ก่อน เพื่อลดความแน่นของหน้า Journal
     tradeAdvancedOpen: false, // quick entry first; context/review fields are one tap away
@@ -503,22 +508,6 @@ class App extends React.Component {
     lastBackup: null, // เวลาที่สำรองข้อมูลครั้งล่าสุด
     lastBackupCount: 0, // จำนวนไม้ ณ ตอนสำรอง — ใช้บอกว่ามีของใหม่ที่ยังไม่ได้สำรองกี่ไม้
     backupSnooze: 0,    // เลื่อนเตือนถึงเวลานี้
-    // ===== Habit tracker (Loop-style grid) =====
-    // Log daily; each habit measured against a per-period target (weekly / monthly only).
-    // Starts empty — you add your own habits. Yearly ambitions live in yearGoals below.
-    habits: [],
-    // habitLogs[habitId][YYYY-MM-DD] = value (bool=1 / measure=amount that day). Empty = day 1.
-    habitLogs: {},
-    // Yearly goals — an editable checklist per year (the dreams the daily discipline serves).
-    yearGoals: {},         // { '2026': [{id,text,done}] }
-    yearGoalYear: new Date().getFullYear(),
-    editYearGoal: null,
-    habitDayOffset: 0,      // scroll day columns back in time (0 = today at the right edge)
-    habitPeriodView: 'monthly', // roll-up lens: weekly | monthly
-    rollupOffset: 0,       // step the roll-up back in time (0 = current week/month)
-    editHabit: null,       // habit id being renamed inline
-    habitCfg: null,        // habit being configured in modal (or new)
-    cellEdit: null,        // measure cell being typed "habitId|date"
   };
 
   // เก็บค่าเริ่มต้น (factory defaults) ไว้ก่อนโหลดข้อมูลคลาวด์ — ใช้ตอน Reset journal
@@ -531,9 +520,9 @@ class App extends React.Component {
       periodItems: { weekly: {}, monthly: {}, yearly: {} },
       checks: clone(s.checks), visionItems: clone(s.visionItems), setups: clone(s.setups),
       portfolios: clone(s.portfolios), currentPortfolioId: 'all',
-      habits: clone(s.habits), habitLogs: {}, yearGoals: {},
       goal: s.goal, tags: clone(s.tags), tradeFieldOpts: clone(s.tradeFieldOpts), trades: [], images: {},
       journalMode: 'backtest',
+      simulationRiskPct: s.simulationRiskPct,
       planReminders: s.planReminders, dismissedReminders: {},
       draft: null, draftIsNew: false, sDraft: null, setupIsNew: false, // ล้าง draft ที่ค้างด้วย
     };
@@ -588,23 +577,10 @@ class App extends React.Component {
       storagePctNum: Math.round(usedPct),
     };
   }
-  // ล้างนิสัย "ตัวอย่าง" (demo) ที่เคย seed ไว้เวอร์ชันก่อน ออกครั้งเดียวตอนโหลด
-  // — ระบุจาก id h1–h5 + ชื่อที่ตรงกับชุด demo เท่านั้น (นิสัยจริงของผู้ใช้ใช้ id เป็น timestamp จึงไม่โดน)
-  _stripDemoHabits(data) {
-    const DEMO = { h1: ['Journal every trade', 'จดเทรดทุกไม้'], h2: ['Weekly review', 'รีวิวผลเทรด'], h3: ['Read', 'อ่านหนังสือ'], h4: ['Exercise', 'ออกกำลังกาย'], h5: ['Meditate', 'นั่งสมาธิ'] };
-    if (!Array.isArray(data.habits)) return data;
-    const removed = [];
-    const habits = data.habits.filter(h => { const isDemo = DEMO[h.id] && DEMO[h.id].includes(h.name); if (isDemo) removed.push(h.id); return !isDemo; });
-    if (!removed.length) return data;
-    const logs = { ...(data.habitLogs || {}) }; removed.forEach(id => delete logs[id]);
-    this._demoCleaned = true; // ให้บันทึกทับคลาวด์หลังโหลด เพื่อให้หายถาวร
-    return { ...data, habits, habitLogs: logs };
-  }
   async _loadFromCloud() {
     let data = null;
     try { data = await loadJournal(); } catch (e) { console.error(e); }
     if (data && Object.keys(data).length) {
-      data = this._stripDemoHabits(data);
       this._imgOk = true;   // we really read the journal, so state.images is the truth from here on
       this.setState({ ...data, images: data.images || {} }, () => { this._loaded = true; if (this._demoCleaned) this._persist(); this._checkPlanReminder(); });
     } else {
@@ -679,13 +655,13 @@ class App extends React.Component {
       checks: s.checks, visionItems: s.visionItems, setups: s.setups, trades: s.trades,
       images: s.images, portfolios: s.portfolios, currentPortfolioId: s.currentPortfolioId,
       goal: s.goal, tags: s.tags, tradeFieldOpts: s.tradeFieldOpts,
-      habits: s.habits, habitLogs: s.habitLogs, yearGoals: s.yearGoals,
       planReminders: s.planReminders, dismissedReminders: s.dismissedReminders,
       lastBackup: s.lastBackup, lastBackupCount: s.lastBackupCount, backupSnooze: s.backupSnooze,
       // how you like to READ the analysis is a preference, not a transient filter — remember it.
       // (Search, quick filters and sort stay transient on purpose: a stale filter on reload
       // would silently hide trades.)
       edgeMetric: s.edgeMetric, logDim: s.logDim, feelMoment: s.feelMoment, journalMode: s.journalMode,
+      simulationRiskPct: s.simulationRiskPct,
       // draft ที่ยังพิมค้าง (ออโต้เซฟ กันข้อมูลหายเวลาเผลอปิด/รีเฟรช)
       draft: s.draft, draftIsNew: s.draftIsNew, sDraft: s.sDraft, setupIsNew: s.setupIsNew,
     };
@@ -1719,179 +1695,6 @@ class App extends React.Component {
     return { avgPct, counted, fullCount, missed, spark: spark.slice(-14) };
   }
 
-  // ===== Habit tracker (Loop-style) =====
-  _fmtNum(n) { const v = Number(n) || 0; return Number.isInteger(v) ? v.toLocaleString('en-US') : v.toLocaleString('en-US', { maximumFractionDigits: 1 }); }
-  _iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  _todayISO() { return this._iso(new Date()); }
-  _curMonthKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
-  _periodKeyFor(period, dateISO) {
-    const d = new Date(dateISO + 'T00:00:00');
-    if (period === 'weekly') return this._isoWeekKey(d);
-    if (period === 'yearly') return String(d.getFullYear());
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  }
-  // ป้ายรอบปัจจุบันเป็นภาษาอังกฤษ (weekly=ช่วงวันของสัปดาห์ · monthly=July 2026 · yearly=2026)
-  _EN_MONS() { return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']; }
-  _EN_MONS_SHORT() { return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; }
-  _periodLabel(period) {
-    const d = new Date(); const M = this._EN_MONS_SHORT();
-    if (period === 'yearly') return String(d.getFullYear());
-    if (period === 'weekly') {
-      const mon = new Date(d); const wd = (mon.getDay() + 6) % 7; mon.setDate(mon.getDate() - wd);
-      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-      const a = M[mon.getMonth()] + ' ' + mon.getDate();
-      const b = (sun.getMonth() === mon.getMonth() ? sun.getDate() : M[sun.getMonth()] + ' ' + sun.getDate());
-      return a + '–' + b;
-    }
-    return this._EN_MONS()[d.getMonth()] + ' ' + d.getFullYear();
-  }
-  _recentDays(n, offset = 0) {
-    const out = []; const t = new Date();
-    for (let i = 0; i < n; i++) { const d = new Date(t); d.setDate(t.getDate() - (i + offset)); out.push(d); }
-    return out; // ใหม่→เก่า
-  }
-  // ไล่คีย์รอบตามปฏิทินจากวันเริ่มถึงวันนี้ (รวมรอบที่ไม่มี log ด้วย เพื่อคิด streak/consistency ให้ถูก)
-  _enumPeriods(period, fromISO, toISO) {
-    const out = [];
-    if (period === 'weekly') {
-      let d = new Date(fromISO + 'T00:00:00'); const end = new Date(toISO + 'T00:00:00'); const seen = {}; let guard = 0;
-      while (d <= end && guard++ < 6000) { const k = this._isoWeekKey(d); if (!seen[k]) { seen[k] = 1; out.push(k); } d.setDate(d.getDate() + 7); }
-      const ek = this._isoWeekKey(end); if (!seen[ek]) out.push(ek);
-    } else if (period === 'yearly') {
-      let y = Number(fromISO.slice(0, 4)); const ey = Number(toISO.slice(0, 4)); let guard = 0;
-      while (y <= ey && guard++ < 6000) { out.push(String(y)); y++; }
-    } else {
-      let d = new Date(Number(fromISO.slice(0, 4)), Number(fromISO.slice(5, 7)) - 1, 1);
-      const end = new Date(Number(toISO.slice(0, 4)), Number(toISO.slice(5, 7)) - 1, 1); let guard = 0;
-      while (d <= end && guard++ < 6000) { out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); d.setMonth(d.getMonth() + 1); }
-    }
-    return out;
-  }
-  _habitStats(h) {
-    const logs = (this.state.habitLogs && this.state.habitLogs[h.id]) || {};
-    const dates = Object.keys(logs).filter(dt => (Number(logs[dt]) || 0) > 0).sort();
-    const target = Number(h.target) || 0; const need = target > 0 ? target : 1;
-    const byPeriod = {};
-    dates.forEach(dt => { const pk = this._periodKeyFor(h.period, dt); const add = h.kind === 'bool' ? 1 : (Number(logs[dt]) || 0); byPeriod[pk] = (byPeriod[pk] || 0) + add; });
-    const curPk = this._periodKeyFor(h.period, this._todayISO());
-    const curSum = byPeriod[curPk] || 0;
-    const curPct = target > 0 ? Math.round(curSum / target * 100) : (curSum > 0 ? 100 : 0);
-    const done = curSum >= need;
-    if (!dates.length) return { curSum: 0, curPct: 0, done: false, streak: 0, best: 0, consistency: 0, target, need };
-    const periods = this._enumPeriods(h.period, dates[0], this._todayISO());
-    const succ = periods.map(pk => (byPeriod[pk] || 0) >= need);
-    let i = periods.length - 1; if (!succ[i]) i--; // ข้ามรอบปัจจุบันถ้ายังไม่ถึงเป้า (กำลังทำอยู่)
-    let streak = 0; while (i >= 0 && succ[i]) { streak++; i--; }
-    let best = 0, run = 0; succ.forEach(s => { if (s) { run++; if (run > best) best = run; } else run = 0; });
-    let num = 0; succ.forEach(s => { if (s) num++; });
-    let denom = periods.length; if (!succ[periods.length - 1]) denom = Math.max(1, periods.length - 1);
-    const consistency = denom ? Math.round(num / denom * 100) : 0;
-    return { curSum, curPct, done, streak, best, consistency, target, need, dayStreak: this._dayStreak(logs), bestDayStreak: this._bestDayStreak(dates), rate30: this._rate30(logs) };
-  }
-  // ต่อเนื่องกี่วัน (นับวันติดกันที่มี log จนถึงวันนี้ — ถ้าวันนี้ยังไม่ทำ นับถึงเมื่อวาน)
-  _dayStreak(logs) {
-    let ds = 0; const cur = new Date();
-    if (!((Number(logs[this._iso(cur)]) || 0) > 0)) cur.setDate(cur.getDate() - 1);
-    let g = 0; while ((Number(logs[this._iso(cur)]) || 0) > 0 && g++ < 4000) { ds++; cur.setDate(cur.getDate() - 1); }
-    return ds;
-  }
-  _bestDayStreak(datesAsc) {
-    let best = 0, run = 0, prev = null;
-    datesAsc.forEach(d => { const cur = new Date(d + 'T00:00:00'); if (prev && (cur - prev) === 86400000) run++; else run = 1; if (run > best) best = run; prev = cur; });
-    return best;
-  }
-  _rate30(logs) {
-    let n = 0; const t = new Date();
-    for (let k = 0; k < 30; k++) { const d = new Date(t); d.setDate(t.getDate() - k); if ((Number(logs[this._iso(d)]) || 0) > 0) n++; }
-    return Math.round(n / 30 * 100);
-  }
-  // ข้อมูลรอบ (สัปดาห์/เดือน) ที่ถอยหลังไป offset รอบ — ใช้ทั้งป้ายและคำนวณ progress
-  _periodInfo(periodType, offset) {
-    const t = new Date(); const M = this._EN_MONS(); const Ms = this._EN_MONS_SHORT();
-    if (periodType === 'weekly') {
-      const d = new Date(t); d.setDate(d.getDate() - offset * 7);
-      const mon = new Date(d); const wd = (mon.getDay() + 6) % 7; mon.setDate(mon.getDate() - wd);
-      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-      const label = (offset === 0 ? 'This week · ' : '') + Ms[mon.getMonth()] + ' ' + mon.getDate() + '–' + (sun.getMonth() === mon.getMonth() ? sun.getDate() : Ms[sun.getMonth()] + ' ' + sun.getDate());
-      return { key: this._isoWeekKey(d), label };
-    }
-    const d = new Date(t.getFullYear(), t.getMonth() - offset, 1);
-    return { key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: (offset === 0 ? 'This month · ' : '') + M[d.getMonth()] + ' ' + d.getFullYear() };
-  }
-  // ===== connected weekly ↔ monthly targets =====
-  // A habit's target is anchored to one base period (week or month). The other period's
-  // target is DERIVED so weekly & monthly stay consistent: 4 weeks ≈ 1 month.
-  //   5×/week  → 20×/month   ·   300 pages/month → 75 pages/week
-  _WPM() { return 4; }
-  _weeklyBase(h) { const t = Number(h.target) || 0; return h.period === 'monthly' ? t / this._WPM() : t; }
-  _targetFor(h, periodType) {
-    const raw = periodType === 'weekly' ? this._weeklyBase(h) : this._weeklyBase(h) * this._WPM();
-    // keep neat: whole number for counts / big values, otherwise one decimal
-    return raw >= 10 || Number.isInteger(raw) ? Math.round(raw) : Math.round(raw * 10) / 10;
-  }
-  _habitPeriodProgress(h, periodType, offset) {
-    const logs = (this.state.habitLogs && this.state.habitLogs[h.id]) || {};
-    const info = this._periodInfo(periodType, offset);
-    let sum = 0;
-    Object.keys(logs).forEach(dt => { const v = Number(logs[dt]) || 0; if (v > 0 && this._periodKeyFor(periodType, dt) === info.key) sum += (h.kind === 'bool' ? 1 : v); });
-    const target = this._targetFor(h, periodType); const need = target > 0 ? target : 1;
-    const pct = target > 0 ? Math.round(sum / target * 100) : (sum > 0 ? 100 : 0);
-    return { sum, target, pct: Math.min(100, pct), done: sum >= need, remaining: Math.max(0, target - sum), label: info.label, key: info.key };
-  }
-  pageRollup(delta) { this.setState({ rollupOffset: Math.max(0, this.state.rollupOffset + delta) }); }
-  resetRollup() { this.setState({ rollupOffset: 0 }); }
-  // ===== yearly goals (editable checklist per year) =====
-  _yearGoalsFor(y) { return (this.state.yearGoals && this.state.yearGoals[String(y)]) || []; }
-  addYearGoal(text) { text = String(text || '').trim(); if (!text) return; const y = String(this.state.yearGoalYear); const g = this._yearGoalsFor(y).concat([{ id: 'yg' + Date.now(), text, done: false }]); this.setState({ yearGoals: { ...this.state.yearGoals, [y]: g } }); this._save(); }
-  toggleYearGoal(id) { const y = String(this.state.yearGoalYear); const g = this._yearGoalsFor(y).map(x => x.id === id ? { ...x, done: !x.done } : x); this.setState({ yearGoals: { ...this.state.yearGoals, [y]: g } }); this._save(); }
-  delYearGoal(id) { const y = String(this.state.yearGoalYear); const g = this._yearGoalsFor(y).filter(x => x.id !== id); this.setState({ yearGoals: { ...this.state.yearGoals, [y]: g } }); this._save(); }
-  editYearGoalItem(id) { this.setState({ editYearGoal: id }); }
-  commitYearGoal(id, e) { const v = String(e && e.target ? e.target.value : '').trim(); const y = String(this.state.yearGoalYear); const g = this._yearGoalsFor(y).map(x => x.id === id ? { ...x, text: v || x.text } : x); this.setState({ yearGoals: { ...this.state.yearGoals, [y]: g }, editYearGoal: null }); this._save(); }
-  stepYearGoal(delta) { this.setState({ yearGoalYear: this.state.yearGoalYear + delta }); }
-  _setHabitLog(id, dateISO, value) {
-    const logs = JSON.parse(JSON.stringify(this.state.habitLogs || {}));
-    if (!logs[id]) logs[id] = {};
-    const v = Number(value) || 0;
-    if (v > 0) logs[id][dateISO] = v; else delete logs[id][dateISO];
-    this.setState({ habitLogs: logs, cellEdit: null }); this._save();
-  }
-  toggleHabitDay(id, dateISO) { const cur = ((this.state.habitLogs || {})[id] || {})[dateISO]; this._setHabitLog(id, dateISO, cur ? 0 : 1); }
-  openCell(id, dateISO) { this.setState({ cellEdit: id + '|' + dateISO }); }
-  commitCell(id, dateISO, e) { const v = parseFloat(String(e && e.target ? e.target.value : '').replace(/[^0-9.]/g, '')) || 0; this._setHabitLog(id, dateISO, v); }
-  pageHabitDays(delta) { this.setState({ habitDayOffset: Math.max(0, this.state.habitDayOffset + delta) }); }
-  resetHabitDays() { this.setState({ habitDayOffset: 0 }); }
-  // habit CRUD
-  openHabitCfg(h) { this.setState({ habitCfg: h ? { ...h } : { id: null, name: '', kind: 'bool', unit: 'times', target: 3, period: 'weekly', accent: '#6747D8' } }); }
-  closeHabitCfg() { this.setState({ habitCfg: null }); }
-  patchHabitCfg(patch) { this.setState({ habitCfg: { ...this.state.habitCfg, ...patch } }); }
-  saveHabitCfg() {
-    const c = this.state.habitCfg; if (!c || !String(c.name).trim()) { this.setState({ habitCfg: null }); return; }
-    const clean = {
-      id: c.id || ('h' + Date.now()), name: String(c.name).trim(),
-      kind: c.kind === 'measure' ? 'measure' : 'bool', unit: (c.unit || (c.kind === 'measure' ? 'units' : 'times')),
-      target: Math.max(0, Number(c.target) || 0), period: c.period === 'weekly' ? 'weekly' : 'monthly', accent: c.accent || '#6747D8',
-    };
-    let habits = this.state.habits.slice();
-    const idx = habits.findIndex(x => x.id === clean.id);
-    if (idx >= 0) habits[idx] = clean; else habits = habits.concat([clean]);
-    this.setState({ habits, habitCfg: null }); this._save();
-  }
-  delHabit(id) {
-    if (!window.confirm('Delete this habit and all its history?')) return;
-    const habits = this.state.habits.filter(x => x.id !== id);
-    const logs = { ...this.state.habitLogs }; delete logs[id];
-    this.setState({ habits, habitLogs: logs, habitCfg: null }); this._save();
-  }
-  renameHabit(id, e) { const v = String(e && e.target ? e.target.value : '').trim(); const habits = this.state.habits.map(x => x.id === id ? { ...x, name: v || x.name } : x); this.setState({ habits, editHabit: null }); this._save(); }
-  reorderHabit(fromId, toId) {
-    if (!fromId || !toId || fromId === toId) return;
-    const arr = this.state.habits.slice();
-    const from = arr.findIndex(x => x.id === fromId), to = arr.findIndex(x => x.id === toId);
-    if (from < 0 || to < 0) return; const [m] = arr.splice(from, 1); arr.splice(to, 0, m);
-    this.setState({ habits: arr }); this._save();
-  }
-  setHabitPeriodView(v) { this.setState({ habitPeriodView: v, rollupOffset: 0 }); }
-
   // ===== เตือนวางแผนล่วงหน้า =====
   // คืน reminder ที่ครบกำหนด (ก่อนขึ้นสัปดาห์/เดือนใหม่ ≤2 วัน)
   _dueReminders() {
@@ -2383,11 +2186,7 @@ class App extends React.Component {
       // Missing risk cannot silently fall back to planned R:R and manufacture an edge.
       const xs = closedRows.filter(t => t._pnlValid && this._posRisk(t) > 0);
       const evidence = setupEvidenceFromNetTrades(xs);
-      const quality = closedRows.length ? Math.round(closedRows.reduce((sum, t) => {
-        const context = !!((t.ltf || t.mtf || t.htf || this._legRetest(t) || this._legFibo(t) || this._entryModel(t)) + '').trim();
-        const checks = [!!t.setupId, !!String(t.sym || '').trim(), this._posRisk(t) > 0, !!this._asDate(t.date), !!t.entryTime && !!t.exitTime, t._pnlValid, context];
-        return sum + checks.filter(Boolean).length / checks.length;
-      }, 0) / closedRows.length * 100) : 0;
+      const quality = dataQualityReport(closedRows).score;
       return {
         ...evidence,
         pf: evidence.profitFactor,
@@ -2423,6 +2222,82 @@ class App extends React.Component {
         open: () => this.openSetup(s.id),
       };
     });
+    const qualityReport = dataQualityReport(trades);
+    const qualityColor = qualityReport.score >= 85 ? '#53D69A' : (qualityReport.score >= 70 ? '#F0B75E' : '#FF6B7A');
+    const dataQuality = {
+      ...qualityReport,
+      color: qualityColor,
+      grade: qualityReport.score >= 85 ? 'Research ready' : (qualityReport.score >= 70 ? 'Needs cleanup' : 'Not reliable yet'),
+      missing: qualityReport.missing.slice(0, 4).map((field) => ({ ...field, pct: qualityReport.count ? Math.round(field.count / qualityReport.count * 100) : 0 })),
+      bySetup: qualityReport.bySetup.slice(0, 4).map((row) => ({
+        ...row,
+        name: row.setupId === '__missing__' ? 'No setup' : ((setups.find((setup) => setup.id === row.setupId) || {}).name || 'Unknown setup'),
+        color: row.score >= 85 ? '#53D69A' : (row.score >= 70 ? '#F0B75E' : '#FF6B7A'),
+      })),
+    };
+    const walkForwardRaw = walkForwardReport(trades, { windowSize: 30, step: 15, maxWindows: 6 });
+    const walkForward = {
+      ...walkForwardRaw,
+      positiveRateLabel: Math.round(walkForwardRaw.positiveRate) + '%',
+      windows: walkForwardRaw.windows.map((window) => ({
+        ...window,
+        avgRLabel: (window.avgR >= 0 ? '+' : '−') + Math.abs(window.avgR).toFixed(2) + 'R',
+        pfLabel: Number.isFinite(window.profitFactor) ? window.profitFactor.toFixed(2) : '∞',
+        ddLabel: '−' + window.maxDrawdownR.toFixed(1) + 'R',
+        color: window.pass ? '#53D69A' : '#FF6B7A',
+        rangeLabel: String(window.start || '').slice(5) + ' → ' + String(window.end || '').slice(5),
+      })),
+    };
+    const driftRows = setups.map((setup) => {
+      const btRows = backtestAll.filter(t => t.setupId === setup.id && this._isCurrentSetupVersion(t, setup));
+      const fwRows = forwardAll.filter(t => t.setupId === setup.id && this._isCurrentSetupVersion(t, setup));
+      const report = edgeDriftReport(btRows, fwRows, { windowSize: 30, minForward: 15 });
+      const color = report.status === 'stable' ? '#53D69A' : (report.status === 'watch' ? '#F0B75E' : (report.status === 'at-risk' ? '#FF6B7A' : '#8D8798'));
+      const statusLabel = report.status === 'stable' ? 'Stable' : (report.status === 'watch' ? 'Watch' : (report.status === 'at-risk' ? 'At risk' : 'Collecting'));
+      return {
+        id: setup.id,
+        name: setup.name || '(untitled)',
+        color,
+        status: report.status,
+        statusLabel,
+        ready: report.ready,
+        btN: report.baseline.n,
+        fwN: report.recent.n,
+        baselineR: (report.baseline.avgR >= 0 ? '+' : '−') + Math.abs(report.baseline.avgR).toFixed(2) + 'R',
+        recentR: (report.recent.avgR >= 0 ? '+' : '−') + Math.abs(report.recent.avgR).toFixed(2) + 'R',
+        deltaR: (report.deltaR >= 0 ? '+' : '−') + Math.abs(report.deltaR).toFixed(2) + 'R',
+        note: report.ready
+          ? (report.status === 'stable' ? 'Recent forward expectancy remains above the backtest evidence floor.' : (report.status === 'watch' ? 'Forward expectancy is positive but below the backtest evidence floor.' : 'Recent forward expectancy is negative. Freeze size and inspect execution/regime.'))
+          : (Math.max(report.neededBacktest, report.neededForward) + ' more valid samples needed'),
+      };
+    }).sort((a, b) => {
+      const order = { 'at-risk': 0, watch: 1, stable: 2, collecting: 3 };
+      return order[a.status] - order[b.status];
+    });
+    const simulationR = trades
+      .filter(t => t.status !== 'OPEN' && t._pnlValid && this._posRisk(t) > 0)
+      .map(realizedRFromNetTrade);
+    // Bootstrap is intentionally cached: typing in a note or opening a menu must not
+    // rerun 120,000 path steps when the underlying trade sample did not change.
+    const simulationRiskPct = st.simulationRiskPct || 1;
+    const monteKey = { trades: st.trades, mode: activeMode, portfolio: cpId, risk: simulationRiskPct };
+    const monteHit = this._monteCache
+      && this._monteCache.key.trades === monteKey.trades
+      && this._monteCache.key.mode === monteKey.mode
+      && this._monteCache.key.portfolio === monteKey.portfolio
+      && this._monteCache.key.risk === monteKey.risk;
+    const monteCarloRaw = monteHit
+      ? this._monteCache.value
+      : monteCarloRisk(simulationR, { riskPct: simulationRiskPct, simulations: 1200, horizon: 100 });
+    if (!monteHit) this._monteCache = { key: monteKey, value: monteCarloRaw };
+    const pct1 = (value) => (Number(value) || 0).toFixed(1) + '%';
+    const monteCarlo = {
+      ...monteCarloRaw,
+      ruinLabel: monteCarloRaw.ready ? pct1(monteCarloRaw.riskOfRuinPct) : '—',
+      medianDdLabel: monteCarloRaw.ready ? pct1(monteCarloRaw.medianMaxDrawdownPct) : '—',
+      p95DdLabel: monteCarloRaw.ready ? pct1(monteCarloRaw.p95MaxDrawdownPct) : '—',
+      medianEndLabel: monteCarloRaw.ready ? ((monteCarloRaw.medianEndingPct >= 0 ? '+' : '−') + Math.abs(monteCarloRaw.medianEndingPct).toFixed(1) + '%') : '—',
+    };
     const readySetups = setupGates.filter(s => s.btPass).length;
     const confirmedSetups = setupGates.filter(s => s.stage === 'confirmed').length;
     const backtestClosed = backtestAll.filter(t => t.status !== 'OPEN').length;
@@ -2916,125 +2791,6 @@ class App extends React.Component {
       allClear: ds.counted > 0 && ds.missed.length === 0,
     };
 
-    // ---- Habit tracker grid (one clean Monday→Sunday week per view) ----
-    const HB_MONS = this._EN_MONS();
-    const HB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const _now2 = new Date(); const hbMonthName = HB_MONS[_now2.getMonth()] + ' ' + _now2.getFullYear();
-    const HB_COLS = 7; const HB_MSHORT = this._EN_MONS_SHORT();
-    const todayISO2 = this._todayISO();
-    // Monday of the viewed week (habitDayOffset now counts WEEKS back), then Mon→Sun
-    const _wkMon = new Date(_now2); const _wd0 = (_wkMon.getDay() + 6) % 7; _wkMon.setDate(_wkMon.getDate() - _wd0 - st.habitDayOffset * 7);
-    const dayColDates = []; for (let i = 0; i < 7; i++) { const d = new Date(_wkMon); d.setDate(_wkMon.getDate() + i); dayColDates.push(d); }
-    const dayCols = dayColDates.map(d => {
-      const iso = this._iso(d);
-      return { iso, dow: HB_DOW[d.getDay()], day: d.getDate(), isToday: iso === todayISO2, isFuture: iso > todayISO2, weekend: d.getDay() === 0 || d.getDay() === 6 };
-    });
-    // week range label, e.g. "Jun 30 – Jul 6"
-    const _gf = dayColDates[0], _gl = dayColDates[6];
-    const gridRangeLabel = HB_MSHORT[_gf.getMonth()] + ' ' + _gf.getDate() + ' – ' + (_gl.getMonth() === _gf.getMonth() ? _gl.getDate() : HB_MSHORT[_gl.getMonth()] + ' ' + _gl.getDate()) + (_gl.getFullYear() !== _now2.getFullYear() ? ' ' + _gl.getFullYear() : '');
-    const perLabel = { weekly: 'per week', monthly: 'per month' };
-    // view period drives BOTH the grid's period-% column and the roll-up (weekly ↔ monthly connected)
-    const rv = st.habitPeriodView === 'weekly' ? 'weekly' : 'monthly';
-    const roff = st.rollupOffset;
-    const habitStatsAll = [];
-    const habitRows = st.habits.map((h) => {
-      const sta = this._habitStats(h); habitStatsAll.push({ h, sta });
-      const gp = this._habitPeriodProgress(h, rv, 0); // progress in the selected view period (this week/this month)
-      const logs = (st.habitLogs && st.habitLogs[h.id]) || {};
-      const isMeasure = h.kind === 'measure';
-      const cells = dayCols.map(dc => {
-        const raw = Number(logs[dc.iso]) || 0;
-        return {
-          key: h.id + '|' + dc.iso, isToday: dc.isToday, isFuture: dc.isFuture, weekend: dc.weekend,
-          has: raw > 0, isMeasure, display: isMeasure && raw > 0 ? this._fmtNum(raw) : '',
-          editing: st.cellEdit === (h.id + '|' + dc.iso),
-          onClick: dc.isFuture ? undefined : (isMeasure ? () => this.openCell(h.id, dc.iso) : () => this.toggleHabitDay(h.id, dc.iso)),
-          commit: (e) => this.commitCell(h.id, dc.iso, e),
-        };
-      });
-      return {
-        id: h.id, name: h.name, accent: h.accent, isMeasure,
-        targetLabel: this._fmtNum(h.target) + ' ' + (h.unit || 'times') + ' / ' + (h.period === 'weekly' ? 'week' : 'month'),
-        curPct: Math.min(100, gp.pct), done: gp.done,
-        ring: h.accent, // วงล้อใช้สีประจำนิสัย
-        streak: sta.dayStreak, best: sta.bestDayStreak, consistency: sta.consistency,
-        cells,
-        editing: st.editHabit === h.id, startRename: () => this.setState({ editHabit: h.id }),
-        rename: (e) => this.renameHabit(h.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
-        cfg: () => this.openHabitCfg(h), del: () => this.delHabit(h.id),
-        dragging: st.dragId === ('h:' + h.id),
-        onDragStart: (e) => { this.setState({ dragId: 'h:' + h.id }); if (e && e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', h.id); } catch (_) {} } },
-        onDragEnter: () => { const dz = this.state.dragId; if (dz && dz.startsWith('h:') && dz !== ('h:' + h.id)) this.reorderHabit(dz.slice(2), h.id); },
-        onDragEnd: () => this.setState({ dragId: null }),
-      };
-    });
-    const gcols = '226px repeat(' + dayCols.length + ', minmax(46px,1fr)) 134px';
-
-    // ---- Progress roll-up (Weekly / Monthly). Every habit appears in both — the target
-    // for the OFF-period is derived (5×/week ⇒ 20×/month), so the two views stay connected. ----
-    const rollRows = st.habits.map((h) => {
-      const pp = this._habitPeriodProgress(h, rv, roff);
-      const sta = this._habitStats(h);
-      return {
-        id: h.id, name: h.name, accent: h.accent, done: pp.done,
-        cur: this._fmtNum(pp.sum), target: this._fmtNum(pp.target), unit: h.unit || '',
-        pct: pp.pct, remaining: this._fmtNum(pp.remaining), remainPct: Math.max(0, 100 - pp.pct),
-        streak: sta.dayStreak, best: sta.bestDayStreak,
-        badge: pp.done ? 'On target' : (pp.target > 0 ? this._fmtNum(pp.remaining) + ' ' + (h.unit || '') + ' to go' : '—'),
-      };
-    });
-    const rollMet = rollRows.filter(r => r.done).length;
-    const rollPct = rollRows.length ? Math.round(rollMet / rollRows.length * 100) : 0;
-    const rollInfo = this._periodInfo(rv, roff);
-    const habitRollup = {
-      view: rv, isW: rv === 'weekly', isM: rv === 'monthly',
-      setW: () => this.setHabitPeriodView('weekly'), setM: () => this.setHabitPeriodView('monthly'),
-      periodLabel: rollInfo.label, atPresent: roff === 0,
-      older: () => this.pageRollup(1), newer: () => this.pageRollup(-1), reset: () => this.resetRollup(),
-      rows: rollRows, met: rollMet, total: rollRows.length, pct: rollPct,
-      pctColor: rollPct >= 80 ? GREEN : (rollPct >= 50 ? GOLD : RED), offset: 327 - 327 * rollPct / 100,
-      empty: rollRows.length === 0,
-      hasAnyHabit: st.habits.length > 0, gridEmpty: st.habits.length === 0,
-    };
-
-    // ---- Yearly goals (editable checklist per year) ----
-    const ygY = st.yearGoalYear; const ygList = this._yearGoalsFor(ygY);
-    const ygDone = ygList.filter(g => g.done).length;
-    const yearGoalsVM = {
-      year: ygY, done: ygDone, total: ygList.length, pct: ygList.length ? Math.round(ygDone / ygList.length * 100) : 0,
-      atThisYear: ygY >= _now2.getFullYear(),
-      prev: () => this.stepYearGoal(-1), next: () => this.stepYearGoal(1),
-      items: ygList.map(g => ({
-        id: g.id, text: g.text, done: g.done, editing: st.editYearGoal === g.id,
-        toggle: () => this.toggleYearGoal(g.id), del: () => this.delYearGoal(g.id), edit: () => this.editYearGoalItem(g.id),
-        commit: (e) => this.commitYearGoal(g.id, e), key: (e) => { if (e.key === 'Enter') e.target.blur(); },
-      })),
-      addKey: (e) => { if (e.key === 'Enter') { this.addYearGoal(e.target.value); e.target.value = ''; } },
-    };
-
-    // habit config modal
-    const hc = st.habitCfg;
-    const habitCfgVM = hc ? {
-      isNew: !hc.id, name: hc.name, kind: hc.kind, unit: hc.unit, target: hc.target, period: hc.period, accent: hc.accent,
-      setName: (e) => this.patchHabitCfg({ name: e.target.value }),
-      pickBool: () => this.patchHabitCfg({ kind: 'bool', unit: hc.unit === 'pages' ? 'times' : hc.unit }),
-      pickMeasure: () => this.patchHabitCfg({ kind: 'measure', unit: hc.unit === 'times' ? 'pages' : hc.unit }),
-      setUnit: (e) => this.patchHabitCfg({ unit: e.target.value }),
-      setTarget: (e) => this.patchHabitCfg({ target: e.target.value.replace(/[^0-9.]/g, '') }),
-      pickWeekly: () => this.patchHabitCfg({ period: 'weekly' }), pickMonthly: () => this.patchHabitCfg({ period: 'monthly' }),
-      setAccent: (a) => this.patchHabitCfg({ accent: a }),
-      save: () => this.saveHabitCfg(), close: () => this.closeHabitCfg(), del: hc.id ? () => this.delHabit(hc.id) : null,
-      accents: ['#6747D8', '#1C9B68', '#4D7FE8', '#E25462', '#8B6CF0', '#5FD0C8', '#E2A34B'],
-      // live "connected" hint: the derived target for the other period
-      derivedHint: (() => {
-        const n = Number(hc.target) || 0; const u = hc.unit || 'times';
-        if (n <= 0) return '';
-        return hc.period === 'weekly'
-          ? ('≈ ' + this._fmtNum(this._targetFor(hc, 'monthly')) + ' ' + u + ' / month')
-          : ('≈ ' + this._fmtNum(this._targetFor(hc, 'weekly')) + ' ' + u + ' / week');
-      })(),
-    } : null;
-
     // pre-trade — คีย์ตามวันที่จริง → รีเซ็ตเองทุกวัน
     const _pd = new Date();
     const preKey = _pd.getFullYear() + '-' + String(_pd.getMonth() + 1).padStart(2, '0') + '-' + String(_pd.getDate()).padStart(2, '0');
@@ -3463,17 +3219,14 @@ class App extends React.Component {
       anaPf: activeMode === 'backtest' ? (Number.isFinite(activeGate.pf) ? activeGate.pf.toFixed(2) : (activeGate.n ? '∞' : '0.00')) : S.kPf,
       anaDD: activeMode === 'backtest' ? ('−' + activeGate.maxDD.toFixed(1) + 'R') : S.kDD, anaR: S.kR,
       edgeFinder: S.edgeFinder, executionAudit,
+      dataQuality, walkForward, driftRows, monteCarlo,
+      simulationRiskPct,
+      setSimulationRiskPct: (e) => this.setState({ simulationRiskPct: Math.max(.25, Math.min(5, Number(e.target.value) || 1)) }, () => this._save()),
       openNew: () => this.openNew(), openNewSetup: () => this.openNewSetup(),
       // checklist
       checkTab: tab, tabWeekly: () => this.setState({ checkTab: 'weekly' }), tabMonthly: () => this.setState({ checkTab: 'monthly' }), tabYearly: () => this.setState({ checkTab: 'yearly' }),
       wkTabStyle: this._segStyle(isWeekly), moTabStyle: this._segStyle(tab === 'monthly'), yrTabStyle: this._segStyle(isYearly),
       periods, checkItems, checkPeriodLabel, disc, checkListHint: 'Tap to check · pencil to edit · × to delete',
-      // habit tracker
-      habitRows, dayCols, gcols, habitRollup, habitCfgVM, yearGoalsVM, habitMonthName: hbMonthName,
-      gridRangeLabel: (st.habitDayOffset === 0 ? 'This week · ' : '') + gridRangeLabel,
-      habitDayOffset: st.habitDayOffset, habitAtPresent: st.habitDayOffset === 0,
-      pageHabitOlder: () => this.pageHabitDays(1), pageHabitNewer: () => this.pageHabitDays(-1), resetHabitDays: () => this.resetHabitDays(),
-      addHabit: () => this.openHabitCfg(null),
       periodOffset, pageOlder: () => this.pagePeriod(1), pageNewer: () => this.pagePeriod(-1), pageReset: () => this.pageReset(), atPresent: periodOffset === 0,
       readyPct: readyPct + '%', readyOffset: 327 - 327 * readyPct / 100, readyStroke: ringStroke(readyPct), readyMsg: ringMsg(readyPct), readyFrac: cdone + ' / ' + items.length + ' ข้อ',
       addCheckKey: (e) => { if (e.key === 'Enter') { this.addPeriodItem(scope, periodKey, e.target.value); e.target.value = ''; } },
@@ -3667,141 +3420,6 @@ class App extends React.Component {
           <div className="rtm-goal-track"><div style={{ width: V.milestoneWidth }}></div><span>Backtest never changes this goal</span></div>
           <div className="rtm-goal-value"><b>{V.milestonePct}</b>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus/> : <button onClick={V.startGoal}>Edit target</button>}</div>
         </section>
-      </div>
-    );
-  }
-
-  renderDashboard(V) {
-    return (
-      <div style={css('padding:24px 28px 40px;display:flex;flex-direction:column;gap:16px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div className="rtm-system-map rtm-insight-hero liquid-glass" style={css('position:relative;overflow:hidden;padding:30px 30px 24px;border-radius:22px;background:linear-gradient(125deg,rgba(108,77,255,.13),rgba(49,35,73,.018) 46%,rgba(236,72,153,.09));border:1px solid rgba(171,139,255,.25);box-shadow:0 30px 90px -44px rgba(125,88,255,.88);animation:rise .55s both')}>
-          <div className="rtm-mesh rtm-mesh-a"></div><div className="rtm-mesh rtm-mesh-b"></div>
-          <div className="rtm-hero-head" style={css('position:relative;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);align-items:stretch;gap:28px;margin-bottom:24px')}>
-            <div style={css('display:flex;flex-direction:column;justify-content:center;min-height:178px')}>
-              <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:13px')}><span className="rtm-live-pip"></span><span style={css('font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#8B6CF0')}>Evidence-first trade journal</span></div>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:clamp(36px,4.3vw,58px);color:#24202B;line-height:.98;letter-spacing:-.025em;max-width:760px')}>See the edge.<br/><span className="rtm-gradient-text">Remove the guesswork.</span></div>
-              <div style={css('font-size:13px;color:#746E7D;margin-top:15px;line-height:1.65;max-width:660px')}>ค้นหา setup จาก Backtest แยกตาม ruleset version แล้วพิสูจน์ซ้ำด้วย Forward test — ทุกการตัดสินใจอิง R, drawdown และหลักฐาน out-of-sample</div>
-            </div>
-            <div onClick={V.focusAction.click} className="rtm-focus-card rtm-press" style={{ ...css('position:relative;padding:20px 21px;border-radius:17px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:rgba(8,7,14,.7);backdrop-filter:blur(18px);transition:.2s'), border: '1px solid ' + V.focusAction.color + '55' }}>
-              <div className="rtm-focus-glow" style={{ background: 'radial-gradient(circle,' + V.focusAction.color + '42,transparent 68%)' }}></div>
-              <div style={css('position:relative')}><div style={{ ...css('font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px'), color: V.focusAction.color }}>{V.focusAction.eyebrow}</div><div style={css('font-family:Instrument Serif;font-size:24px;line-height:1.05;color:#24202B;margin-bottom:10px')}>{V.focusAction.title}</div><div style={css('font-size:11.5px;color:#8F8A99;line-height:1.6')}>{V.focusAction.body}</div></div>
-              <div style={css('position:relative;display:flex;align-items:center;justify-content:space-between;margin-top:17px')}><span style={{ ...css('font-size:11.5px;font-weight:700'), color: V.focusAction.color }}>{V.focusAction.cta}</span><span className="rtm-arrow">→</span></div>
-            </div>
-          </div>
-          <div style={css('position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px')}>
-            <div className="rtm-flow-line"></div>
-            {[
-              { n: '01', t: 'Backtest', v: V.backtestClosed + ' samples', s: 'ค้นหา pattern และกติกา', c: '#4D7FE8', click: V.goBacktest, live: V.backtestClosed > 0 },
-              { n: '02', t: 'Edge Gate', v: V.readySetups + ' setup ready', s: 'Training + chronological holdout', c: '#7658E8', click: V.showBacktestAnalytics, live: V.readySetups > 0 },
-              { n: '03', t: 'Forward Test', v: V.forwardClosed + ' samples', s: 'ยืนยันผลแบบ out-of-sample', c: '#8B6CF0', click: V.goForward, live: V.readySetups > 0 },
-              { n: '04', t: 'Trading goal', v: V.milestonePct, s: V.confirmedSetups + ' confirmed edge · Forward only', c: '#1C9B68', click: V.showForwardAnalytics, live: V.confirmedSetups > 0 },
-            ].map((x, i) => (
-              <div key={x.n} onClick={x.click} className={'rtm-stage-card rtm-press' + (x.live ? ' is-live' : '')} style={{ ...css('position:relative;z-index:1;padding:15px 15px 14px;border-radius:13px;cursor:pointer;background:rgba(9,9,12,.78);transition:.18s'), border: '1px solid ' + (x.live ? x.c + '66' : 'rgba(49,35,73,.08)'), animationDelay: (i * .08) + 's' }}>
-                <div style={css('display:flex;align-items:center;justify-content:space-between;margin-bottom:12px')}><span style={{ ...css('font-family:JetBrains Mono;font-size:10px;letter-spacing:.08em'), color: x.c }}>{x.n}</span><span className={x.live ? 'rtm-stage-dot' : ''} style={{ width: 7, height: 7, borderRadius: '50%', background: x.live ? x.c : '#3d3d45', boxShadow: x.live ? ('0 0 15px ' + x.c) : 'none' }}></span></div>
-                <div style={css('font-size:13.5px;font-weight:700;color:#24202B;margin-bottom:5px')}>{x.t}</div><div style={{ ...css('font-family:JetBrains Mono;font-size:13px;font-weight:600;margin-bottom:7px'), color: x.c }}>{x.v}</div><div style={css('font-size:10.5px;color:#918B99;line-height:1.45')}>{x.s}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={css('display:flex;align-items:center;justify-content:space-between;gap:14px')}>
-          <div style={css('font-size:11.5px;color:#928B9B')}>Viewing metrics from <b style={css('color:#24202B')}>{V.modeLabel}</b> data only</div>
-          <div className="liquid-glass" style={css('display:flex;gap:3px;padding:4px;border-radius:999px')}>
-            <span onClick={V.selectBacktest} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: V.isBacktestMode ? '#071018' : '#928B9B', background: V.isBacktestMode ? 'linear-gradient(180deg,#5E86D6,#4D7FE8)' : 'transparent' }}>Backtest</span>
-            <span onClick={V.selectForward} className="rtm-press" style={{ ...css('font-size:11.5px;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s'), color: !V.isBacktestMode ? '#07140e' : '#928B9B', background: !V.isBacktestMode ? 'linear-gradient(180deg,#1C9B68,#1C9B68)' : 'transparent' }}>Forward</span>
-          </div>
-        </div>
-
-        <div className="rtm-kpi-grid" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:11px')}>
-          {[
-            { l: V.isBacktestMode ? 'Closed samples' : 'Closed trades', v: String(V.totalClosed), c: '#8B6CF0' },
-            { l: 'Avg R', v: V.kR, c: '#8B6CF0' },
-            { l: 'Profit factor', v: V.kPf, c: '#4D7FE8' },
-            { l: 'Max drawdown', v: V.kDD, c: '#E25462' },
-          ].map((m, i) => (
-            <div key={m.l} className="rtm-kpi-card liquid-glass" style={{ ...css('position:relative;overflow:hidden;padding:17px 18px;border-radius:14px;background:linear-gradient(180deg,' + m.c + '14,rgba(49,35,73,.014));border:1px solid rgba(49,35,73,.075);animation:rise .5s both;transition:.18s'), animationDelay: (.04 + i * .05) + 's' }}><div className="rtm-kpi-line" style={{ background: m.c }}></div><div style={css('font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#85808F;margin-bottom:9px')}>{m.l}</div><div style={{ ...css('font-family:\'JetBrains Mono\';font-size:23px;font-weight:650'), color: m.c }}><CountUp value={m.v} /></div></div>
-          ))}
-        </div>
-
-        <div className="liquid-glass" style={css('display:grid;grid-template-columns:220px 1fr 120px;align-items:center;gap:20px;padding:16px 20px;border-radius:15px;background:linear-gradient(105deg,rgba(28,155,104,.06),rgba(118,88,232,.06));border:1px solid rgba(118,88,232,.16);animation:rise .5s .26s both')}>
-          <div><div style={css('font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#1C9B68;margin-bottom:5px')}>Forward goal · real P&amp;L only</div><div style={css('font-family:Instrument Serif;font-size:20px;color:#24202B')}>{V.milestoneEquity} <span style={css('font-family:Plus Jakarta Sans;font-size:10.5px;color:#928B9B')}>of {V.goalStr}</span></div></div>
-          <div><div style={css('height:8px;border-radius:99px;background:rgba(0,0,0,.38);overflow:hidden;position:relative')}><div className="rtm-progress" style={{ height: '100%', borderRadius: 99, width: V.milestoneWidth, background: 'linear-gradient(90deg,#1C9B68,#7658E8)', transition: 'width .8s ease' }}></div></div><div style={css('display:flex;justify-content:space-between;font-size:9.5px;color:#5f5f67;margin-top:6px')}><span>Backtest excluded</span><span>{V.confirmedSetups} edge confirmed</span></div></div>
-          <div style={css('text-align:right')}><div style={css('font-family:JetBrains Mono;font-size:20px;font-weight:700;color:#7658E8')}>{V.milestonePct}</div>{V.editGoal ? <input defaultValue={V.goalNum} onBlur={V.commitGoal} onKeyDown={V.onGoalKey} autoFocus style={css('width:110px;margin-top:4px;background:rgba(0,0,0,.35);border:1px solid rgba(118,88,232,.45);border-radius:7px;padding:5px 7px;color:#24202B;font-size:11px;font-family:JetBrains Mono;outline:none;text-align:right')} /> : <span onClick={V.startGoal} className="hv-op" style={css('font-size:9.5px;color:#928B9B;cursor:pointer')}>Edit target</span>}</div>
-        </div>
-
-        <div className="rtm-dashboard-grid" style={css('display:grid;grid-template-columns:1.7fr 1fr;gap:16px')}>
-          <div className="hv-brd-gold liquid-glass" style={css('padding:20px 22px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .55s .28s both;transition:.18s')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Growth <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>· cumulative P&amp;L</span></div><div style={css('font-size:11.5px;color:#928B9B;margin-top:2px')}>Growth from trading · “breakeven” line = 0</div></div><div style={css('display:flex;gap:5px')}>
-              {['ALL', '3M', '1M'].map((rg) => (
-                <span key={rg} onClick={() => V.setEqRange(rg)} style={V.eqRange === rg ? css('font-size:11px;font-family:JetBrains Mono;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);padding:5px 11px;border-radius:7px;cursor:pointer') : css('font-size:11px;font-family:JetBrains Mono;color:#746E7D;padding:5px 11px;border-radius:7px;border:1px solid rgba(49,35,73,.1);cursor:pointer')}>{rg}</span>
-              ))}
-            </div></div>
-            <EquityCurve line={V.equityLine} area={V.equityArea} points={V.equityPoints} lastY={V.equityLastY} zeroY={V.equityZeroY} />
-            {V.isBacktestMode ? (
-              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(49,35,73,.06)')}>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Closed samples</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#5E86D6')}>{V.totalClosed}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Cumulative result</div><div style={{ ...css('font-family:JetBrains Mono;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Avg R</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#8B6CF0')}>{V.kR}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Data quality</div><div style={css('font-family:JetBrains Mono;font-size:14px;color:#7658E8')}>{V.selectedQuality}</div></div>
-              </div>
-            ) : (
-              <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(49,35,73,.06)')}>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Net capital (in−out)</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#746E7D')}>{V.capitalInStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Cumulative P&amp;L</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.netProfitColor }}>{V.netProfitStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>{V.hasCashFlow ? 'Withdrawn' : 'Peak'}</div><div style={{ ...css('font-family:\'JetBrains Mono\',monospace;font-size:14px'), color: V.hasCashFlow ? '#E25462' : '#4D7FE8' }}>{V.hasCashFlow ? V.cashOutStr : V.equityPeakStr}</div></div>
-                <div><div style={css('font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#928B9B;margin-bottom:5px')}>Current equity</div><div style={css('font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#7658E8')}>{V.balanceStr}</div></div>
-              </div>
-            )}
-          </div>
-          <div style={css('display:flex;flex-direction:column;gap:16px')}>
-            <div className="hv-brd-green" style={css('padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);display:flex;align-items:center;gap:20px;animation:rise .55s .32s both;transition:.18s')}>
-              <div className="rtm-donut" style={{ ...css('position:relative;width:96px;height:96px;border-radius:50%;flex:none'), background: V.donut }}><div style={css('position:absolute;inset:10px;border-radius:50%;background:#0c0c10;display:flex;align-items:center;justify-content:center;flex-direction:column')}><span style={css('font-family:\'JetBrains Mono\';font-size:21px;font-weight:600;color:#1C9B68')}><CountUp value={V.kWin} /></span><span style={css('font-size:10px;color:#928B9B;letter-spacing:.1em')}>WIN RATE</span></div></div>
-              <div><div style={css('font-size:11px;color:#928B9B;margin-bottom:8px')}>{V.totalClosed} trades total</div><div style={css('font-size:13.5px;color:#1C9B68;font-family:JetBrains Mono;margin-bottom:4px')}>● {V.winsN} wins</div><div style={css('font-size:13.5px;color:#E25462;font-family:JetBrains Mono')}>● {V.lossesN} losses</div>{V.archNote ? <div style={css('font-size:10.5px;color:#4D7FE8;margin-top:7px;line-height:1.4')}>{V.archNote}</div> : null}</div>
-            </div>
-            <div className="hv-brd-gold liquid-glass" style={css('flex:1;padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.025);border:1px solid rgba(49,35,73,.07);animation:rise .55s .36s both;transition:.18s')}>
-              <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>By setup</div><span style={css('font-size:11px;color:#928B9B')}>net P&amp;L</span></div>
-              <div style={css('display:flex;flex-direction:column;gap:11px')}>
-                {V.setupBars.map((s, i) => (
-                  <div key={i}><div style={css('display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px')}><span style={css('color:#24202B')}>{s.name} <span style={css('color:#928B9B;font-size:10.5px;font-family:JetBrains Mono')}>{s.meta}</span></span><span style={{ ...css('font-family:JetBrains Mono'), color: s.color }}>{s.pnl}</span></div><div style={css('height:6px;border-radius:99px;background:rgba(49,35,73,.06);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:99px'), background: s.color, width: s.w, animationDelay: (i * 0.08) + 's' }}></div></div></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={css('display:grid;grid-template-columns:1.55fr 1fr;gap:16px')}>
-          <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);animation:rise .55s .4s both;background:rgba(49,35,73,.02);padding:20px 22px')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:16px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Edge snapshot <span style={css('font-size:12px;color:#928B9B;font-family:\'Plus Jakarta Sans\'')}>· how the system behaves</span></div><span onClick={V.goAna} className="hv-op" style={css('font-size:12px;color:#6747D8;cursor:pointer')}>Analytics →</span></div>
-            <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:12px')}>
-              {[
-                { l: 'Expectancy / trade', v: V.expectancyStr, c: '#7658E8', s: 'avg $ per trade' },
-                { l: 'Profit factor', v: V.anaPf, c: '#4D7FE8', s: 'gross win ÷ loss' },
-                { l: 'Green days', v: V.consistencyStr, c: '#1C9B68', s: 'days in profit' },
-                { l: 'Avg MFE', v: V.edge.avgMfe, c: V.edge.avgMfeColor, s: 'how far price runs per trade' },
-                { l: 'Avg captured', v: V.edge.avgCapture, c: V.edge.avgCaptureColor, s: 'of the best move, on winners' },
-                { l: 'Avg TF aligned', v: V.edge.avgAlign, c: '#B79CE8', s: 'timeframes in agreement' },
-              ].map((m, i) => (
-                <div key={i} className="liquid-glass" style={css('padding:14px 15px;border-radius:13px;background:linear-gradient(180deg,' + m.c + '12,rgba(49,35,73,.01));border:1px solid rgba(49,35,73,.06);border-top:2px solid ' + m.c)}>
-                  <div style={css('font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#928B9B;margin-bottom:8px')}>{m.l}</div>
-                  <div style={{ ...css('font-family:JetBrains Mono;font-size:20px;font-weight:600;line-height:1'), color: m.c }}>{m.v}</div>
-                  <div style={css('font-size:10px;color:#9A93A1;margin-top:7px;line-height:1.35')}>{m.s}</div>
-                </div>
-              ))}
-            </div>
-            {(!V.edge.heatReady && !V.edge.capReady) && <div style={css('font-size:11.5px;color:#9A93A1;margin-top:14px;line-height:1.5')}>Fill <b style={css('color:#746E7D')}>MFE</b> (how far price ran) on your trades in the log modal to unlock the capture edge metrics.</div>}
-          </div>
-          <div className="liquid-glass" style={css('padding:18px 20px;border-radius:16px;background:rgba(49,35,73,.02);border:1px solid rgba(49,35,73,.07);animation:rise .55s .44s both')}>
-            <div style={css('display:flex;justify-content:space-between;align-items:center;margin-bottom:14px')}><div style={css('font-family:\'Instrument Serif\',serif;font-size:16px;color:#24202B')}>{V.dashMonthShort} · daily P&amp;L</div><span onClick={V.goCal} style={css('font-size:12px;color:#6747D8;cursor:pointer')}>Calendar →</span></div>
-            <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px')}>
-              {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>(<div key={i} style={{ ...css('text-align:center;font-size:10px'), color: i >= 5 ? '#6a5f48' : '#928B9B' }}>{d}</div>))}
-            </div>
-            <div style={css('display:grid;grid-template-columns:repeat(7,1fr);gap:5px')}>
-              {V.heat.map((d, i) => (
-                <div key={i} title={d.title} className="hv-scale" style={{ ...css('aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:JetBrains Mono;cursor:default;transition:.14s'), background: d.bg, color: d.fg, border: d.border }}>{d.label}</div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     );
   }
@@ -4065,6 +3683,39 @@ class App extends React.Component {
           <div style={css('padding:13px 15px;border-radius:12px;background:rgba(226,84,98,.06);border:1px solid rgba(226,84,98,.14)')}><div style={css('font-size:9.5px;color:#746E7D;margin-bottom:8px')}>DEVIATED · {V.executionAudit.offN} trades</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#E25462')}>{V.executionAudit.offR}</div><div style={css('font-size:10px;color:#746E7D;margin-top:6px')}>Win rate {V.executionAudit.offWr}</div></div>
           <div style={css('padding:13px 15px;border-radius:12px;background:rgba(118,88,232,.07);border:1px solid rgba(118,88,232,.15)')}><div style={css('font-size:9.5px;color:#746E7D;margin-bottom:8px')}>EDGE LOST TO EXECUTION</div><div style={css('font-family:JetBrains Mono;font-size:19px;font-weight:700;color:#7658E8')}>{V.executionAudit.leak}</div><div style={css('font-size:10px;color:#746E7D;margin-top:6px')}>{V.executionAudit.ready ? 'comparison active' : 'เก็บอย่างน้อย 10 ไม้ที่ติดป้าย'}</div></div>
         </div>
+        <div className="rtm-research-suite">
+          <section className="rtm-research-card liquid-glass rtm-quality-card">
+            <div className="rtm-suite-head"><div><span>DATA QUALITY</span><h3>Can this sample be trusted?</h3></div><b style={{ color: V.dataQuality.color }}>{V.dataQuality.score}%</b></div>
+            <div className="rtm-quality-summary">
+              <div className="rtm-quality-ring" style={{ background: `conic-gradient(${V.dataQuality.color} 0% ${V.dataQuality.score}%, rgba(255,255,255,.07) ${V.dataQuality.score}% 100%)` }}><div><strong>{V.dataQuality.score}</strong><small>/ 100</small></div></div>
+              <div><strong style={{ color: V.dataQuality.color }}>{V.dataQuality.grade}</strong><p>{V.dataQuality.researchReady} of {V.dataQuality.count} closed trades have both outcome and real 1R.</p></div>
+            </div>
+            <div className="rtm-missing-list">
+              {V.dataQuality.missing.length ? V.dataQuality.missing.map((field) => <div key={field.key}><span>{field.label}</span><b>{field.count} missing · {field.pct}%</b></div>) : <div className="is-complete">All research fields are complete.</div>}
+            </div>
+            {!!V.dataQuality.bySetup.length && <div className="rtm-quality-setups">{V.dataQuality.bySetup.map((setup) => <span key={setup.setupId}><i style={{ background: setup.color }}></i>{setup.name}<b>{setup.score}%</b></span>)}</div>}
+          </section>
+
+          <section className="rtm-research-card liquid-glass">
+            <div className="rtm-suite-head"><div><span>WALK-FORWARD</span><h3>Does the edge survive over time?</h3></div>{V.walkForward.ready && <b>{V.walkForward.positiveRateLabel}</b>}</div>
+            {V.walkForward.ready ? <div className="rtm-window-list">
+              {V.walkForward.windows.map((window) => <div key={window.index} className="rtm-window-row"><i style={{ background: window.color }}></i><span><small>Window {window.index} · {window.rangeLabel}</small><strong>{window.avgRLabel}</strong></span><b style={{ color: window.color }}>PF {window.pfLabel}</b><em>{window.ddLabel}</em></div>)}
+            </div> : <div className="rtm-suite-empty"><strong>{V.walkForward.nextNeeded} trades to go</strong><p>Walk-forward starts at 30 valid R observations and advances in 15-trade steps.</p></div>}
+          </section>
+
+          <section className="rtm-research-card liquid-glass">
+            <div className="rtm-suite-head"><div><span>EDGE DRIFT</span><h3>Backtest vs. recent forward</h3></div><small>Latest 30</small></div>
+            <div className="rtm-drift-list">
+              {V.driftRows.length ? V.driftRows.slice(0, 5).map((row) => <div key={row.id} className="rtm-drift-row" title={row.note}><i style={{ background: row.color, boxShadow: `0 0 14px ${row.color}55` }}></i><span><strong>{row.name}</strong><small>BT {row.btN} · FW {row.fwN}</small></span><b>{row.baselineR} → {row.recentR}</b><em style={{ color: row.color }}>{row.statusLabel}</em></div>) : <div className="rtm-suite-empty"><p>Create a setup to start drift monitoring.</p></div>}
+            </div>
+            <p className="rtm-suite-note">A warning freezes size for review; it does not rewrite the setup mid-sample.</p>
+          </section>
+
+          <section className="rtm-research-card liquid-glass">
+            <div className="rtm-suite-head"><div><span>MONTE CARLO</span><h3>What can the same edge feel like?</h3></div><Sel value={String(V.simulationRiskPct)} onChange={V.setSimulationRiskPct} className="rtm-risk-select"><option value="0.25">0.25% risk</option><option value="0.5">0.50% risk</option><option value="1">1.00% risk</option><option value="2">2.00% risk</option><option value="3">3.00% risk</option></Sel></div>
+            {V.monteCarlo.ready ? <Fragment><div className="rtm-sim-grid"><div><small>Risk of 50% loss</small><strong className="is-danger">{V.monteCarlo.ruinLabel}</strong></div><div><small>Median max DD</small><strong>{V.monteCarlo.medianDdLabel}</strong></div><div><small>Stress max DD · P95</small><strong>{V.monteCarlo.p95DdLabel}</strong></div><div><small>Median after 100 trades</small><strong className="is-positive">{V.monteCarlo.medianEndLabel}</strong></div></div><p className="rtm-suite-note">1,200 deterministic bootstrap paths · empirical R sampled with replacement. This models sequence risk, not future certainty or regime change.</p></Fragment> : <div className="rtm-suite-empty"><strong>{V.monteCarlo.nextNeeded} valid R trades to go</strong><p>Simulation unlocks at 20 closed trades with real risk and outcome.</p></div>}
+          </section>
+        </div>
         <div className="rtm-stagger" style={css('display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;animation:rise .5s .03s both')}>
           {[
             { l: 'Expectancy / trade', v: V.expectancyStr, c: '#7658E8' },
@@ -4318,258 +3969,6 @@ class App extends React.Component {
     );
   }
   // ช่องกริดหนึ่งช่อง (วันหนึ่งของนิสัยหนึ่ง)
-  _renderHabitCell(c, accent) {
-    if (c.isFuture) return <div key={c.key} style={css('display:flex;align-items:center;justify-content:center')}><span style={css('width:7px;height:7px;border-radius:50%;background:rgba(49,35,73,.05)')}></span></div>;
-    const wrap = 'display:flex;align-items:center;justify-content:center;position:relative';
-    if (c.isMeasure) {
-      if (c.editing) return <div key={c.key} style={css(wrap)}><input autoFocus defaultValue={c.display} onBlur={c.commit} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} inputMode="decimal" style={{ width: 42, textAlign: 'center', fontSize: 12.5, fontFamily: 'JetBrains Mono', color: '#24202B', background: 'rgba(0,0,0,.4)', border: '1px solid ' + accent, borderRadius: 8, padding: '4px 2px', outline: 'none' }} /></div>;
-      return (
-        <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
-          {c.has
-            ? <span className="hb-fill" style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;padding:4px 7px;border-radius:8px;line-height:1'), color: accent, background: accent + '24', border: '1px solid ' + accent + '55' }}>{c.display}</span>
-            : <span style={{ ...css('font-size:15px;color:rgba(49,35,73,.16)'), fontWeight: 300 }}>+</span>}
-        </div>
-      );
-    }
-    return (
-      <div key={c.key} onClick={c.onClick} className="hb-cell" style={css(wrap + ';cursor:pointer')}>
-        {c.has
-          ? <span className="hb-fill" style={{ ...css('width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center'), background: 'radial-gradient(circle at 35% 30%,' + accent + ',' + accent + 'cc)', boxShadow: '0 2px 10px ' + accent + '55' }}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#12100b" strokeWidth="3.2"><path className="hb-draw" d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-          : <span style={{ ...css('width:22px;height:22px;border-radius:50%'), border: '1.6px solid rgba(49,35,73,.14)' }}></span>}
-      </div>
-    );
-  }
-  _renderHabitRow(r, V, idx) {
-    return (
-      <div key={r.id} className="hb-row" onDragEnter={r.onDragEnter} onDragOver={(e) => e.preventDefault()} style={{ ...css('display:grid;align-items:center;border-top:1px solid rgba(49,35,73,.05);min-height:52px'), gridTemplateColumns: V.gcols, opacity: r.dragging ? 0.4 : 1, animation: 'rise .45s both', animationDelay: (0.04 * idx) + 's' }}>
-        {/* ชื่อ นิสัย */}
-        <div className="hb-namecell" style={css('display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;min-width:0')}>
-          <span draggable onDragStart={r.onDragStart} onDragEnd={r.onDragEnd} title="Drag to reorder" style={css('flex:none;cursor:grab;color:#4a4a52;display:flex;font-size:13px;line-height:1;letter-spacing:-2px')}>⋮⋮</span>
-          <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '88' }}></span>
-          <div style={css('min-width:0;flex:1')}>
-            {r.editing
-              ? <input autoFocus defaultValue={r.name} onBlur={r.rename} onKeyDown={r.key} style={{ width: '100%', fontSize: 13.5, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(118,88,232,.4)', borderRadius: 6, padding: '3px 7px', outline: 'none' }} />
-              : <div onClick={r.startRename} title="Click to rename" style={css('font-size:13.5px;color:#24202B;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25')}>{r.name}</div>}
-            <div style={css('font-size:10px;color:#928B9B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px')}>{r.targetLabel}</div>
-          </div>
-          <div className="hb-actions" style={css('flex:none;display:flex;gap:5px')}>
-            <span onClick={r.cfg} title="Settings" className="hv-op" style={css('color:#746E7D;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 005 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H1a2 2 0 110-4h.1A1.6 1.6 0 002.6 5l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V1a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H23a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" transform="scale(.72) translate(4.7 4.7)" /></svg></span>
-            <span onClick={r.del} title="Delete" className="hv-deltext" style={css('color:#928B9B;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
-          </div>
-        </div>
-        {/* ช่องรายวัน */}
-        {r.cells.map(c => this._renderHabitCell(c, r.accent))}
-        {/* สถิติรอบนี้ */}
-        <div style={css('display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:6px 12px 6px 4px')}>
-          <div style={css('text-align:right')}>
-            <div style={{ ...css('font-family:JetBrains Mono;font-size:12px;font-weight:600;line-height:1'), color: r.ring }}>{r.curPct}%</div>
-            <div title="Consecutive days" style={css('font-size:11px;color:#9CA0A6;margin-top:2px;white-space:nowrap')}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span> {r.streak}</span> : <span style={css('color:#9A93A1')}>—</span>}</div>
-          </div>
-          <div style={css('position:relative;flex:none')}>{this._hbRing(r.curPct, r.ring, 54)}<div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}>{r.done ? <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={r.ring} strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg> : <span style={{ ...css('width:7px;height:7px;border-radius:50%'), background: r.ring }}></span>}</div></div>
-        </div>
-      </div>
-    );
-  }
-  _renderHabitCfg(V) {
-    const m = V.habitCfgVM; if (!m) return null;
-    return (
-      <div onClick={m.close} style={css('position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(4px);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s both')}>
-        <div onClick={(e) => e.stopPropagation()} style={css('width:100%;max-width:440px;border-radius:20px;background:linear-gradient(180deg,#171410,#100d0a);border:1px solid rgba(118,88,232,.2);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:popIn .3s cubic-bezier(.2,.8,.3,1.2) both')}>
-          <div style={css('padding:18px 22px;border-bottom:1px solid rgba(49,35,73,.06);display:flex;justify-content:space-between;align-items:center')}>
-            <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>{m.isNew ? 'New habit' : 'Habit settings'}</div>
-            <span onClick={m.close} className="hv-close" style={css('cursor:pointer;color:#746E7D;display:flex')}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
-          </div>
-          <div style={css('padding:20px 22px;display:flex;flex-direction:column;gap:16px')}>
-            <div>
-              <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Habit name</div>
-              <input autoFocus defaultValue={m.name} onChange={m.setName} placeholder="e.g. Read, Journal every trade" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <div style={css('font-size:11.5px;color:#B9B9C0;margin-bottom:7px')}>How to measure</div>
-              <div className="rtm-segwrap">
-                <span onClick={m.pickBool} className={'rtm-seg' + (m.kind === 'bool' ? ' on' : '')} style={{ flex: 1 }}>Yes / No</span>
-                <span onClick={m.pickMeasure} className={'rtm-seg' + (m.kind === 'measure' ? ' on' : '')} style={{ flex: 1 }}>Enter amount</span>
-              </div>
-            </div>
-            <div style={css('display:flex;gap:12px')}>
-              <div style={css('flex:1')}>
-                <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Target per period</div>
-                <input defaultValue={m.target} onChange={m.setTarget} inputMode="decimal" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono' }} />
-              </div>
-              <div style={css('flex:1')}>
-                <div style={css('font-size:12px;color:#746E7D;margin-bottom:8px')}>Unit</div>
-                <input defaultValue={m.unit} onChange={m.setUnit} placeholder="times / pages / min" style={{ width: '100%', fontSize: 14, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(49,35,73,.12)', borderRadius: 10, padding: '10px 12px', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-            </div>
-            <div>
-              <div style={css('font-size:11.5px;color:#B9B9C0;margin-bottom:7px')}>Count target per</div>
-              <div className="rtm-segwrap">
-                <span onClick={m.pickWeekly} className={'rtm-seg' + (m.period === 'weekly' ? ' on' : '')} style={{ flex: 1 }}>Week</span>
-                <span onClick={m.pickMonthly} className={'rtm-seg' + (m.period === 'monthly' ? ' on' : '')} style={{ flex: 1 }}>Month</span>
-              </div>
-              <div style={css('font-size:11.5px;color:#8a8a92;margin-top:8px;line-height:1.55')}>Weekly &amp; monthly stay linked (4 weeks ≈ 1 month).{m.derivedHint ? <span style={css('color:#6747D8')}> {m.derivedHint}</span> : null}</div>
-              <div style={css('font-size:11px;color:#8a8a92;margin-top:5px;line-height:1.5')}>Yearly ambitions go in “Yearly goals” below the tracker.</div>
-            </div>
-            <div>
-              <div style={css('font-size:11px;color:#746E7D;margin-bottom:8px')}>Colour</div>
-              <div style={css('display:flex;gap:9px')}>
-                {m.accents.map(a => <span key={a} onClick={() => m.setAccent(a)} style={{ ...css('width:26px;height:26px;border-radius:50%;cursor:pointer;transition:.14s'), background: a, border: m.accent === a ? '2px solid #fff' : '2px solid transparent', transform: m.accent === a ? 'scale(1.12)' : 'scale(1)', boxShadow: '0 2px 8px ' + a + '66' }}></span>)}
-              </div>
-            </div>
-          </div>
-          <div style={css('padding:16px 22px;border-top:1px solid rgba(49,35,73,.06);display:flex;justify-content:space-between;align-items:center')}>
-            {m.del ? <span onClick={m.del} className="hv-deltext" style={css('font-size:13px;color:#E25462;cursor:pointer')}>Delete habit</span> : <span></span>}
-            <div style={css('display:flex;gap:10px')}>
-              <span onClick={m.close} className="hv-close" style={css('font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer;color:#24202B;background:rgba(49,35,73,.05);border:1px solid rgba(49,35,73,.12)')}>Cancel</span>
-              <span onClick={m.save} className="hv-lift" style={css('font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8)')}>Save</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  renderChecklist(V) {
-    const R = V.habitRollup; const YG = V.yearGoalsVM;
-    return (
-      <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
-        <div style={css('display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;animation:rise .5s both')}>
-          <div><div className="rtm-head" style={css('font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#6747D8;margin-bottom:6px')}>Habit tracker</div><div style={css('font-family:\'Instrument Serif\',serif;font-size:28px;color:#24202B')}>Habits &amp; Discipline <span style={css('font-style:italic;color:#7658E8')}>— build the streak</span></div></div>
-          <span onClick={V.addHabit} className="hv-setbtn rtm-press" style={css('font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;color:#FFFFFF;background:linear-gradient(180deg,#7658E8,#6747D8);display:flex;align-items:center;gap:6px;transition:.14s')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>New habit</span>
-        </div>
-
-        {/* daily grid */}
-        <div className="liquid-glass" style={css('border-radius:16px;border:1px solid rgba(49,35,73,.07);background:rgba(49,35,73,.02);overflow:hidden;animation:rise .5s .05s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid rgba(49,35,73,.06);gap:14px;flex-wrap:wrap')}>
-            <div style={css('display:flex;align-items:baseline;gap:12px')}>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:19px;color:#24202B')}>{V.gridRangeLabel}</div>
-              <div style={css('font-size:12px;color:#7d7d86')}>Tap a box to log · number cells: tap to type an amount · drag to reorder</div>
-            </div>
-            <div style={css('display:flex;align-items:center;gap:8px')}>
-              {!V.habitAtPresent && <span onClick={V.resetHabitDays} className="rtm-press" style={css('font-size:12px;font-weight:600;padding:0 13px;height:32px;line-height:32px;border-radius:8px;border:1px solid rgba(118,88,232,.3);background:rgba(118,88,232,.1);color:#7658E8;cursor:pointer')}>Today</span>}
-              <span onClick={V.pageHabitOlder} title="Previous week" className="rtm-press" style={css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-              <span onClick={V.habitAtPresent ? undefined : V.pageHabitNewer} title="Next week" className="rtm-press" style={{ ...css('width:32px;height:32px;border-radius:8px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: V.habitAtPresent ? 'default' : 'pointer', opacity: V.habitAtPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
-            </div>
-          </div>
-          <div style={css('overflow-x:auto')} className="rtm-scroll">
-            <div style={css('min-width:640px')}>
-              <div style={{ ...css('display:grid;align-items:end;padding-bottom:2px'), gridTemplateColumns: V.gcols }}>
-                <div style={css('padding:10px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a92')}>Habit</div>
-                {V.dayCols.map((d, i) => (
-                  <div key={i} style={css('text-align:center;padding:9px 0 7px')}>
-                    <div style={{ ...css('font-size:11px;font-weight:600;letter-spacing:.02em'), color: d.isToday ? '#7658E8' : (d.weekend ? '#8a7a52' : '#9CA0A6') }}>{d.dow}</div>
-                    <div style={{ ...css('font-family:JetBrains Mono;font-size:13.5px;font-weight:600;margin-top:3px;width:28px;height:28px;line-height:28px;border-radius:8px;margin-left:auto;margin-right:auto'), color: d.isToday ? '#FFFFFF' : '#24202B', background: d.isToday ? 'linear-gradient(180deg,#7658E8,#6747D8)' : 'transparent' }}>{d.day}</div>
-                  </div>
-                ))}
-                <div style={css('text-align:right;padding:10px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a92')}>Streak</div>
-              </div>
-              {R.gridEmpty
-                ? <div style={css('padding:52px 20px;text-align:center;border-top:1px solid rgba(49,35,73,.05)')}><div style={css('font-size:15px;color:#B9B9C0;margin-bottom:8px')}>No habits yet</div><div style={css('font-size:13px;color:#7d7d86')}>Press “New habit” to start building your discipline.</div></div>
-                : V.habitRows.map((r, i) => this._renderHabitRow(r, V, i))}
-            </div>
-          </div>
-          {!R.gridEmpty && <div onClick={V.addHabit} className="hv-goldbg" style={css('display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid rgba(49,35,73,.05);color:#6747D8;font-size:13px;cursor:pointer;transition:.14s')}>
-            <span style={css('width:22px;height:22px;border-radius:7px;border:1.5px dashed rgba(118,88,232,.4);display:flex;align-items:center;justify-content:center')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>New habit
-          </div>}
-        </div>
-
-        {/* progress roll-up: weekly / monthly, streak + % to goal */}
-        <div style={css('border-radius:16px;border:1px solid rgba(118,88,232,.2);background:linear-gradient(180deg,rgba(118,88,232,.06),rgba(49,35,73,.012));overflow:hidden;margin-top:16px;animation:rise .5s .12s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(49,35,73,.06);gap:12px;flex-wrap:wrap')}>
-            <div style={css('display:flex;align-items:center;gap:10px')}>
-              <span style={css('font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#6747D8')}>Progress</span>
-              <span onClick={R.older} title="Previous" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-              <span style={css('font-size:13px;color:#D6D2C6;min-width:120px;text-align:center')}>{R.periodLabel}</span>
-              <span onClick={R.atPresent ? undefined : R.newer} title="Next" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: R.atPresent ? 'default' : 'pointer', opacity: R.atPresent ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
-            </div>
-            <div className="rtm-segwrap">
-              <span onClick={R.setW} className={'rtm-seg' + (R.isW ? ' on' : '')}>Weekly</span>
-              <span onClick={R.setM} className={'rtm-seg' + (R.isM ? ' on' : '')}>Monthly</span>
-            </div>
-          </div>
-          {R.empty
-            ? <div style={css('padding:34px 20px;text-align:center;color:#7d7d86;font-size:13.5px')}>Add a habit to see its weekly &amp; monthly progress here.</div>
-            : (
-              <div style={css('display:grid;grid-template-columns:190px 1fr;align-items:stretch')}>
-                <div style={css('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 16px;border-right:1px solid rgba(49,35,73,.06)')}>
-                  <div style={css('position:relative;width:104px;height:104px')}>
-                    <svg viewBox="0 0 120 120" style={css('width:104px;height:104px;transform:rotate(-90deg)')}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(49,35,73,.08)" strokeWidth="10" /><circle cx="60" cy="60" r="52" fill="none" stroke={R.pctColor} strokeWidth="10" strokeLinecap="round" strokeDasharray="327" strokeDashoffset={R.offset} style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.2,.7,.3,1)' }} /></svg>
-                    <div style={css('position:absolute;inset:0;display:flex;align-items:center;justify-content:center')}><span style={{ ...css('font-family:\'JetBrains Mono\';font-size:26px;font-weight:600'), color: R.pctColor }}>{R.pct}%</span></div>
-                  </div>
-                  <div style={css('text-align:center')}><div style={css('font-family:JetBrains Mono;font-size:16px;color:#24202B')}>{R.met} / {R.total}</div><div style={css('font-size:11px;color:#9CA0A6;margin-top:2px')}>targets met</div></div>
-                </div>
-                <div style={css('padding:10px 6px')}>
-                  {R.rows.map((r, i) => (
-                    <div key={r.id} className="hb-row" style={{ ...css('display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:11px'), animation: 'rise .4s both', animationDelay: (0.04 * i) + 's' }}>
-                      <span style={{ ...css('width:9px;height:9px;border-radius:50%;flex:none'), background: r.accent, boxShadow: '0 0 8px ' + r.accent + '99' }}></span>
-                      <div style={css('flex:1;min-width:0')}>
-                        <div style={css('display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px')}>
-                          <span style={css('font-size:14px;color:#24202B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{r.name}</span>
-                          <span style={{ ...css('font-family:JetBrains Mono;font-size:12px;flex:none'), color: r.done ? '#1C9B68' : '#B9B9C0' }}>{r.cur}/{r.target} {r.unit}</span>
-                        </div>
-                        <div style={css('height:8px;border-radius:5px;background:rgba(49,35,73,.07);overflow:hidden')}><div className="bar-grow-x" style={{ ...css('height:100%;border-radius:5px'), width: r.pct + '%', background: r.done ? 'linear-gradient(90deg,#1C9B68,#7DDca0)' : 'linear-gradient(90deg,' + r.accent + ',' + r.accent + 'cc)' }}></div></div>
-                      </div>
-                      <div style={css('flex:none;display:flex;align-items:center;gap:16px')}>
-                        <div style={css('text-align:center;min-width:50px')}>
-                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.streak > 0 ? '#E2A34B' : '#9A93A1' }}>{r.streak > 0 ? <span><span className="hb-flame">🔥</span>{r.streak}</span> : '—'}</div>
-                          <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>current</div>
-                        </div>
-                        <div style={css('text-align:center;min-width:50px')}>
-                          <div style={{ ...css('font-family:JetBrains Mono;font-size:16px;font-weight:600'), color: r.best > 0 ? '#6747D8' : '#9A93A1' }}>{r.best > 0 ? <span><span className="hb-flame">🔥</span>{r.best}</span> : '—'}</div>
-                          <div style={css('font-size:10px;color:#8a8a92;letter-spacing:.04em;text-transform:uppercase;margin-top:1px')}>longest</div>
-                        </div>
-                      </div>
-                      <span style={{ ...css('flex:none;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;white-space:nowrap;text-align:center;box-sizing:border-box'), minWidth: 116, color: r.done ? '#12100b' : '#7658E8', background: r.done ? 'linear-gradient(180deg,#7DDca0,#1C9B68)' : 'rgba(118,88,232,.14)', border: r.done ? 'none' : '1px solid rgba(118,88,232,.3)' }}>{r.badge}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-        </div>
-
-        {/* yearly goals — editable checklist per year (the dreams your discipline serves) */}
-        <div style={css('border-radius:16px;border:1px solid rgba(49,35,73,.08);background:linear-gradient(180deg,rgba(139,108,240,.06),rgba(49,35,73,.012));overflow:hidden;margin-top:16px;animation:rise .5s .16s both')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid rgba(49,35,73,.06);gap:12px;flex-wrap:wrap')}>
-            <div style={css('display:flex;align-items:center;gap:11px')}>
-              <span style={css('font-size:17px')}>🎯</span>
-              <div style={css('font-family:\'Instrument Serif\',serif;font-size:18px;color:#24202B')}>Yearly goals</div>
-              <span style={css('font-size:12px;color:#8a8a92')}>the dreams your daily discipline serves</span>
-            </div>
-            <div style={css('display:flex;align-items:center;gap:10px')}>
-              <span style={css('font-family:JetBrains Mono;font-size:12px;color:#9CA0A6')}>{YG.done}/{YG.total}</span>
-              <div style={css('display:flex;align-items:center;gap:8px')}>
-                <span onClick={YG.prev} title="Previous year" className="rtm-press" style={css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0;cursor:pointer')}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 18l-6-6 6-6" /></svg></span>
-                <span style={css('font-family:JetBrains Mono;font-size:15px;font-weight:600;color:#7658E8;min-width:44px;text-align:center')}>{YG.year}</span>
-                <span onClick={YG.atThisYear ? undefined : YG.next} title="Next year" className="rtm-press" style={{ ...css('width:28px;height:28px;border-radius:7px;border:1px solid rgba(49,35,73,.14);display:flex;align-items:center;justify-content:center;color:#B9B9C0'), cursor: YG.atThisYear ? 'default' : 'pointer', opacity: YG.atThisYear ? 0.3 : 1 }}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M9 18l6-6-6-6" /></svg></span>
-              </div>
-            </div>
-          </div>
-          {YG.items.map((it) => (
-            <div key={it.id} className="hb-row" style={css('display:flex;align-items:center;gap:14px;padding:13px 20px;border-top:1px solid rgba(49,35,73,.04)')}>
-              <span onClick={it.toggle} style={{ ...css('width:23px;height:23px;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.14s'), border: it.done ? '1.5px solid #8B6CF0' : '1.5px solid rgba(49,35,73,.2)', background: it.done ? 'linear-gradient(150deg,#B3A6FF,#8B6CF0)' : 'transparent' }}>{it.done && <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#12100b" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span>
-              {it.editing
-                ? <input autoFocus defaultValue={it.text} onBlur={it.commit} onKeyDown={it.key} style={{ flex: 1, fontSize: 14.5, color: '#24202B', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(139,108,240,.5)', borderRadius: 7, padding: '6px 11px', outline: 'none' }} />
-                : <span onClick={it.edit} style={{ ...css('flex:1;font-size:14.5px;cursor:text'), color: it.done ? '#7d7d86' : '#24202B', textDecoration: it.done ? 'line-through' : 'none' }}>{it.text}</span>}
-              <span onClick={it.del} className="hv-deltext" style={css('flex:none;color:#7d7d86;cursor:pointer;display:flex')}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg></span>
-            </div>
-          ))}
-          <div style={css('display:flex;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid rgba(49,35,73,.05)')}>
-            <span style={css('width:23px;height:23px;border-radius:7px;flex:none;border:1.5px dashed rgba(139,108,240,.45);display:flex;align-items:center;justify-content:center;color:#8B6CF0')}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg></span>
-            <input key={'yg-' + YG.year} placeholder={'Add a goal for ' + YG.year + ', then Enter'} onKeyDown={YG.addKey} style={css('flex:1;font-size:14.5px;color:#24202B;background:transparent;border:none;outline:none')} />
-          </div>
-        </div>
-
-        <div onClick={V.goPlay} title="Edit in the Playbook page" style={css('position:relative;overflow:hidden;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px 26px;border-radius:16px;background:linear-gradient(115deg,rgba(118,88,232,.12),rgba(139,108,240,.07) 55%,rgba(95,208,200,.07));border:1px solid rgba(118,88,232,.22);cursor:pointer;animation:rise .55s .2s both')}>
-          <span style={css('width:24px;height:1px;background:rgba(118,88,232,.45);flex:none')}></span>
-          <span style={{ ...css('font-family:\'Instrument Serif\',serif;font-style:italic;font-size:19px;color:#F3E9D2'), textShadow: '0 2px 14px rgba(118,88,232,.3)' }}>{V.affirmation}</span>
-          <span style={css('width:24px;height:1px;background:rgba(118,88,232,.45);flex:none')}></span>
-          <div style={css('position:absolute;top:0;bottom:0;width:26%;background:linear-gradient(90deg,transparent,rgba(49,35,73,.06),transparent);animation:sweep 6s ease-in-out infinite;pointer-events:none')}></div>
-        </div>
-
-        {this._renderHabitCfg(V)}
-      </div>
-    );
-  }
-
   renderPlaybook(V) {
     return (
       <div style={css('padding:24px 28px 40px;animation:viewIn .45s cubic-bezier(.2,.7,.3,1) both')}>
